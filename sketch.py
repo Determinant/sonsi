@@ -109,6 +109,7 @@ class _builtin_lambda(SpecialOptObj):
                     para_list.append(par.obj)
                     par = par.sib
         body = pc.chd.sib
+        pc.chd.skip = body.skip = False
         return (ProcObj(body, envt, para_list), False)
     def __str__(self):
         return "#<builtin opt lambda>"
@@ -218,6 +219,8 @@ class AbsSynTree(EvalObj):
 
         self.tree = stack[0]
 
+def is_obj(string):
+    return isinstance(string, SyntaxObj)
 def is_identifier(string):
     return isinstance(string, IdObj)
 def is_leaf(node):
@@ -239,7 +242,16 @@ class Environment(object):
         self.binding[name] = eval_obj
     def get_obj(self, id_obj):
         if is_identifier(id_obj):
-            return self.binding[id_obj.name]
+            ptr = self
+            while ptr:
+                try:
+                    t = ptr.binding[id_obj.name]
+                except KeyError:
+                    t = None
+                if t: return t
+                ptr = ptr.prev_envt
+            raise KeyError
+
         else:
             print "Not an id: " + str(id_obj)
             return id_obj
@@ -313,7 +325,7 @@ class Evaluator(object):
         stack = [0] * 100   # Stack 
         ostack = [0] * 100     # Pending operators 
         pc = prog.tree  # Set to the root
-        cont = None
+        cont = Continuation(None, pc, None)
         envt = self.envt
         top = -1 # Stack top
         otop = -1
@@ -332,6 +344,17 @@ class Evaluator(object):
                 print pc
                 pc.skip = not i
                 pc = pc.sib
+
+        def nxt_addr(ret_addr, otop):
+            notop = otop
+            if otop > -1 and ret_addr is ostack[notop]:
+                notop -= 1
+                res = ostack[notop].chd
+                notop -= 1
+            else:
+                res = ret_addr.sib
+            return (res, notop)
+
 
         def push(pc, top, otop):
             ntop = top
@@ -357,7 +380,7 @@ class Evaluator(object):
                     pc.obj.print_() # Step in to resolve operator
                     npc = pc.obj
                 else:
-                    print "Getting operand: " 
+                    print "Getting operand: " + str(pc.obj.name)
                     ntop += 1
                     stack[ntop] = envt.get_obj(pc.obj)
                     if is_special_opt(stack[ntop]):
@@ -379,7 +402,17 @@ class Evaluator(object):
                 pc = pc.sib  # Skip the masked branches
 
             if pc is None:
-                if is_ret_addr(stack[top]):
+
+                if top > 0 and is_ret_addr(stack[top - 1]) and \
+                stack[top - 1].get_addr() is False:
+                    stack[top - 1] = stack[top]
+                    top -= 1
+                    envt = cont.envt
+                    (pc, otop) = nxt_addr(cont.pc, otop)
+                    cont = cont.old_cont
+                    # Revert to the original cont.
+                else:
+    
                     print "Poping..."
                     arg_list = list()
                     while not is_ret_addr(stack[top]):
@@ -389,19 +422,12 @@ class Evaluator(object):
                     print "Arg List: " + str(arg_list)
                     opt = arg_list[0]
                     ret_addr = stack[top].get_addr()
-                    if ret_addr is ostack[otop]:
-                        print "yay!"
-                        otop -= 1
-                        nxt_addr = ostack[otop].chd
-                        otop -= 1
-                    else:
-                        nxt_addr = ret_addr.sib
-
+    
                     if is_builtin_proc(opt):                # Built-in Procedures
                         print "builtin"
                         stack[top] = opt.call(arg_list[1:])
-                        pc = nxt_addr
-
+                        (pc, otop) = nxt_addr(ret_addr, otop)
+    
                     elif is_special_opt(opt):               # Sepecial Operations
                         print "specialopt"
                         (res, flag) = opt.call(arg_list[1:], ret_addr, envt, cont)
@@ -412,16 +438,16 @@ class Evaluator(object):
                             pc = ret_addr.chd # Again
                         else:
                             stack[top] = res # Done
-                            pc = nxt_addr
+                            (pc, otop) = nxt_addr(ret_addr, otop)
                     elif is_user_defined_proc(opt):   # User-defined Procedures
-                        print "body:" + str(opt.body.sib)
-                        ncont = Continuation(evnt, ret_addr, cont)  # Create a new continuation
+                        ncont = Continuation(envt, ret_addr, cont)  # Create a new continuation
                         cont = ncont                          # Make chain
                         envt = Environment(opt.envt)         # New ENV and recover the closure
                         #TODO: Compare the arguments to the parameters
                         for i in xrange(1, len(arg_list)):
-                            envt.add_binding(para_list[i - 1].name, 
+                            envt.add_binding(opt.para_list[i - 1].name, 
                                             arg_list[i])      # Create bindings
+                        stack[top] = RetAddr(False)            # Mark the exit of the continuation
                         pc = opt.body                 # Get to the entry point
                 
                 print_stack()
@@ -434,14 +460,14 @@ class Evaluator(object):
                 print " Done...\n"
         return stack[0]
 
-
+import pdb
 t = Tokenizor()
 e = Evaluator()
 e.envt.add_binding("x", IntObj(100))
 #t.feed("(+ (- (* 10 2) (+ x 4)) (+ 1 2) (/ 25 5))")
 #t.feed("(if (> 2 2) (if (> 2 1) 1 2) 3)")
-t.feed("((lambda (x) (* x x)) 2)")
-#t.feed("(lambda (x) (* x x))")
+t.feed("((lambda (x y) ((lambda (z) (+ z (* x y))) 10)) ((lambda (x y) (+ x y)) 3 2) 4)")
+#t.feed("(lambda (x y) (* x x))")
 a = AbsSynTree(t)
 #a.tree.print_()
 #a.tree.obj.print_()
