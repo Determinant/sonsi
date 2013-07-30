@@ -31,16 +31,72 @@ class StringObj(ValObj):
 
     def __str__(self):
         return "#<String>"
+class BoolObj(ValObj):
+    def __init__(self, b):
+        self.val = b
+    def __str__(self):
+        return "#<Boolean>"
 
 class OptObj(EvalObj):
     pass
+
 class ProcObj(OptObj):
     def __init__(self, prog, env = None):
         self.prog = prog
         self.env = env
-
     def __str__(self):
         return "#<Procedure>"
+
+class SpecialOptObj(OptObj):
+    def prepare(self, pc):
+        pass
+    def call(self, arg_list, pc, envt, cont):
+        pass
+
+class BuiltinProcObj():
+    def __init__(self, f, ext_name):
+        self.handler = f
+        self.ext_name = ext_name
+    def __str__(self):
+        return self.ext_name
+    def call(self, arg_list):
+        return self.handler(arg_list)
+
+def to_bool(obj):
+    if obj.val == False:
+        return BoolObj(False)
+    else:
+        return BoolObj(True)
+
+class _builtin_if(SpecialOptObj):
+    def prepare(self, pc):
+        self.state = 0 # prepare
+        # TODO: check number of arguments 
+        return (True, False, False)
+        # Delay the calculation
+    def pre_call(self, arg_list, pc, envt, cont):
+        self.state = 1 # calling
+        print "Received if signal: " + str(arg_list[0].val)
+        print "And it is regared as: " + str(to_bool(arg_list[0]).val)
+        if (to_bool(arg_list[0])).val:
+            return ((False, True, False), True) # Re-eval
+        else:
+            return ((False, False, True), True) # Re-eval
+    def post_call(self, arg_list, pc, envt, cont):
+        return (arg_list[0], False)
+
+    def call(self, arg_list, pc, envt, cont):
+        if self.state == 0:
+            return self.pre_call(arg_list, pc, envt, cont)
+        else:
+            return self.post_call(arg_list, pc, envt, cont)
+    def __str__(self):
+        return "#<builtint opt if>"
+
+class _builtin_lambda(SpecialOptObj):
+    def prepare(self, pc):
+        # TODO: check number of arguments 
+        return [ False, False ]
 
 class IdObj(SyntaxObj):
     def __init__(self, string):
@@ -82,7 +138,7 @@ class Node(object):
         self.obj = syn_obj
         self.sib = sib
         self.chd = chd
-        self.typ = None # operator operand if-macro if-clause
+        self.skip = None # delay calcuation
     def __str__(self):
         return "#<AST Node>"
     def print_(self):
@@ -129,10 +185,14 @@ class AbsSynTree(EvalObj):
 
 def is_identifier(string):
     return isinstance(string, IdObj)
-def is_val(node):
+def is_leaf(node):
     return node.chd is None
 def is_ret_addr(val):
     return isinstance(val, Node)
+def is_builtin_proc(val):
+    return isinstance(val, BuiltinProcObj)
+def is_special_opt(val):
+    return isinstance(val, SpecialOptObj)
 
 class Environment(object):
     def __init__(self):
@@ -179,11 +239,26 @@ def _builtin_div(arg_list):
         res /= i.val
     return IntObj(res)
 
+def _builtin_lt(arg_list):
+    #TODO: need support to multiple operands
+    return BoolObj(arg_list[0].val < arg_list[1].val)
+
+def _builtin_gt(arg_list):
+    return BoolObj(arg_list[0].val > arg_list[1].val)
+
+def _builtin_eq(arg_list):
+    return BoolObj(arg_list[0].val == arg_list[1].val)
+
 _default_mapping = {
-        "+" : _builtin_plus,
-        "-" : _builtin_minus,
-        "*" : _builtin_times,
-        "/" : _builtin_div}
+        "+" : BuiltinProcObj(_builtin_plus, "builtin proc +"),
+        "-" : BuiltinProcObj(_builtin_minus, "builtin proc -"),
+        "*" : BuiltinProcObj(_builtin_times, "builtin proc *"),
+        "/" : BuiltinProcObj(_builtin_div, "builtin proc /"),
+        "<" : BuiltinProcObj(_builtin_lt, "builtin proc <"),
+        ">" : BuiltinProcObj(_builtin_gt, "builtin proc >"),
+        "=" : BuiltinProcObj(_builtin_eq, "builtin proc ="),
+        "if" : _builtin_if()
+        }
 
 class Evaluator(object):
 
@@ -208,20 +283,31 @@ class Evaluator(object):
                     print stack[i]
             print '----------STACK--------'
         
+        def mask_eval(pc, mask):
+            pc = pc.chd
+            for i in mask:
+                print i
+                print pc
+                pc.skip = not i
+                pc = pc.sib
+
         def push(pc, top):
             ntop = top
-            if is_val(pc):
+            if is_leaf(pc):
                 ntop += 1
                 stack[ntop] = envt.get_obj(pc.obj)
                 npc = pc.sib
                 print "first"
-                print "this val is: " + str(pc.obj)
+                print "this val is: " + str(stack[ntop].val)
             else:
                 ntop += 1
                 stack[ntop] = pc # Return address
                 ntop += 1
                 stack[ntop] = envt.get_obj(pc.obj)
                 npc = pc.chd
+                if is_special_opt(stack[ntop]):
+                    mask = stack[ntop].prepare(pc)
+                    mask_eval(pc, mask)
                 print "second"
             return (npc, ntop)
 
@@ -230,28 +316,38 @@ class Evaluator(object):
         (pc, top) = push(pc, top)
         print_stack()
         print " Done...\n"
-        while is_ret_addr(stack[0]):  # Still need to evaluate
+        while is_ret_addr(stack[0]):    # Still need to evaluate
             print "- Top: " + str(stack[top])
             print "- Pc at: " + str(pc)
+            while pc and pc.skip: 
+                print "skipping masked branch: " + str(pc)
+                pc = pc.sib  # Skip the masked branches
+
             if pc is None:
                 print "Poping..."
                 arg_list = list()
                 while not is_ret_addr(stack[top]):
                     arg_list = [stack[top]] + arg_list
                     top -= 1
-                if is_identifier(arg_list[0]):
-                    arg_list[0] = envt.get_obj(arg_list[0])
-                pc = stack[top].sib
-                stack[top] = arg_list[0](arg_list[1:])
-                print_stack()
-                print "RET to: "
-                if pc:
-                    pc.print_()
-                    if is_identifier(pc.obj):
-                        print pc.obj.name
+                # Top is now pointing to the return address
+                
+                opt = arg_list[0]
+                ret_addr = stack[top]
+                if is_builtin_proc(opt):
+                    stack[top] = opt.call(arg_list[1:])
+                    pc = ret_addr.sib
+                elif is_special_opt(opt):
+                    (res, flag) = opt.call(arg_list[1:], pc, envt, cont)
+                    if flag: # Need to call again
+                        print "AGAIN with the mask: " + str(res)
+                        mask_eval(ret_addr, res)
+                        top += 1
+                        pc = ret_addr.chd # Again
                     else:
-                        print pc.obj.val
-                else: print "NULL"
+                        stack[top] = res # Done
+                        pc = ret_addr.sib
+
+                print_stack()
             else: 
                 print " Pushing..."
                 print_stack()
@@ -262,7 +358,8 @@ class Evaluator(object):
 
 
 t = Tokenizor()
-t.feed("(+ (- (* 10 2) (+ x 4)) (+ 1 2) (/ 25 5))")
+t.feed("(if (> 2 1) 0 1)")
+#t.feed("(+ (- (* 10 2) (+ x 4)) (+ 1 2) (/ 25 5))")
 #t.feed("((lambda (x) (x * x)) 2)")
 a = AbsSynTree(t)
 e = Evaluator()
