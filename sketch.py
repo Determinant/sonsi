@@ -1,15 +1,15 @@
-class SyntaxObj(object):
-    pass
-
-class EvalObj(SyntaxObj):
+class EvalObj(object):
     def __str__(self):
         return "#<Object>"
 
-class ValObj(EvalObj):
+class UnspecObj(EvalObj):
     def __str__(self):
-        return "#<Value>"
+        return "#<Unspecified>"
+    def ext_repr(self):
+        return self.__str__()
 
-class NumberObj(ValObj):
+
+class NumberObj(EvalObj):
     def __str__(selfl):
         return "#<Number>"
 
@@ -18,24 +18,35 @@ class IntObj(NumberObj):
         self.val = int(num)
     def __str__(self):
         return "#<Integer>"
+    def ext_repr(self):
+        return str(self.val)
 
 class FloatObj(NumberObj):
     def __init__(self, num):
         self.val = float(num)
     def __str__(self):
         return "#<Float>"
+    def ext_repr(self):
+        return str(self.val)
 
-class StringObj(ValObj):
+class StringObj(EvalObj):
     def __init__(self, string):
         self.val = string
-
     def __str__(self):
         return "#<String>"
-class BoolObj(ValObj):
+    def ext_repr(self):
+        return self.val
+
+class BoolObj(EvalObj):
     def __init__(self, b):
         self.val = b
     def __str__(self):
         return "#<Boolean>"
+    def ext_repr(self):
+        if self.val:
+            return "#t"
+        else:
+            return "#f"
 
 class OptObj(EvalObj):
     pass
@@ -45,32 +56,36 @@ class ProcObj(OptObj):
         self.body = body
         self.envt = envt
         self.para_list = para_list
-    def __str__(self):
+    def ext_repr(self):
         return "#<Procedure>"
+    def __str__(self):
+        return self.ext_repr()
 
 class SpecialOptObj(OptObj):
-    def prepare(self, pc):
+    def prepare(self):
         pass
     def call(self, arg_list, pc, envt, cont):
         pass
 
 class BuiltinProcObj():
-    def __init__(self, f, ext_name):
+    def __init__(self, f, name):
         self.handler = f
-        self.ext_name = ext_name
+        self.name = name
+    def ext_repr(self):
+        return "#<Builtin Procedure: " + self.name + ">"
     def __str__(self):
-        return self.ext_name
+        return self.ext_repr()
     def call(self, arg_list):
         return self.handler(arg_list)
 
 def to_bool(obj):
-    if obj.val == False:
+    if obj.val is False:
         return BoolObj(False)
     else:
         return BoolObj(True)
 
 class _builtin_if(SpecialOptObj):
-    def prepare(self, pc):
+    def prepare(self):
         self.state = 0 # prepare
         # TODO: check number of arguments 
         return (True, False, False)
@@ -91,11 +106,13 @@ class _builtin_if(SpecialOptObj):
             return self.pre_call(arg_list, pc, envt, cont)
         else:
             return self.post_call(arg_list, pc, envt, cont)
+    def ext_repr(self):
+        return "#<Builtin Macro: if>"
     def __str__(self):
-        return "#<builtin opt if>"
+        return self.ext_repr()
 
 class _builtin_lambda(SpecialOptObj):
-    def prepare(self, pc):
+    def prepare(self):
         # TODO: check number of arguments 
         return (False, False)
     def call(self, arg_list, pc, envt, cont):
@@ -111,14 +128,44 @@ class _builtin_lambda(SpecialOptObj):
         body = pc.chd.sib
         pc.chd.skip = body.skip = False
         return (ProcObj(body, envt, para_list), False)
+    def ext_repr(self):
+        return "#<Builtin Macro: lambda>"
     def __str__(self):
-        return "#<builtin opt lambda>"
+        return self.ext_repr()
 
-class IdObj(SyntaxObj):
+class _builtin_define(SpecialOptObj):
+    def prepare(self):
+        # TODO: check number of arguments 
+        return (False, True)
+    def call(self, arg_list, pc, envt, cont):
+        # TODO: check identifier
+        id = pc.chd.obj
+        envt.add_binding(id, arg_list[0])
+        return (UnspecObj(), False)
+    def ext_repr(self):
+        return "#<Builtin Macro: define>"
+    def __str__(self):
+        return self.ext_repr()
+
+class _builtin_set(SpecialOptObj):
+    def prepare(self):
+        # TODO: check number of arguments 
+        return (False, True)
+    def call(self, arg_list, pc, envt, cont):
+        id = pc.chd.obj
+        if envt.has_obj(id):
+            envt.add_binding(id, arg_list[0])
+        return (UnspecObj(), False)
+    def ext_repr(self):
+        return "#<Builtin Macro: set!>"
+    def __str__(self):
+        return self.ext_repr()
+
+class IdObj(EvalObj):
     def __init__(self, string):
         self.name = string
     def __str__(self):
-        return "#<Identifier>"
+        return "#<Identifier: " + self.name + ">"
     def get_name():
         return self.name
 
@@ -170,8 +217,6 @@ class Node(object):
 class RetAddr(object):
     def __init__(self, addr):
         self.addr = addr
-    def get_addr(self):
-        return self.addr
     def __str__(self):
         return "#<Return Address>"
 
@@ -179,7 +224,6 @@ class AbsSynTree(EvalObj):
 
     def to_obj(self, obj):
         if isinstance(obj, Node): return obj
-        if obj is None: return obj
         try: return IntObj(obj)
         except Exception:
             try: return FloatObj(obj)
@@ -187,7 +231,7 @@ class AbsSynTree(EvalObj):
  
     def to_node(self, obj):
         if isinstance(obj, Node): return obj
-        return Node(self.to_obj(obj))
+        return Node(obj)
         # else the obj is a string
        
     def __init__(self, stream):
@@ -203,7 +247,7 @@ class AbsSynTree(EvalObj):
                     lst = stack[-1:] + lst
                     del stack[-1]
                 if len(lst) > 0:
-                    root = Node(self.to_obj(lst[0]))
+                    root = Node(lst[0])
                     if len(lst) > 1:
                         root.chd = self.to_node(lst[1])
                         ref = root.chd
@@ -214,13 +258,13 @@ class AbsSynTree(EvalObj):
                 else:
                     stack[-1] = self.to_node(None)
             else:
-                stack.append(token)
-            print stack
-
+                stack.append(self.to_obj(token))
+        for i in range(len(stack)):
+            stack[i] = self.to_node(stack[i])
         self.tree = stack[0]
 
 def is_obj(string):
-    return isinstance(string, SyntaxObj)
+    return isinstance(string, EvalObj)
 def is_identifier(string):
     return isinstance(string, IdObj)
 def is_leaf(node):
@@ -238,20 +282,29 @@ class Environment(object):
     def __init__(self, prev_envt = None):
         self.prev_envt = prev_envt
         self.binding = dict()
-    def add_binding(self, name, eval_obj):
-        self.binding[name] = eval_obj
+
+    def add_binding(self, id_obj, eval_obj):
+        self.binding[id_obj.name] = eval_obj
+
+    def has_obj(self, id_obj):
+        ptr = self
+        while ptr:
+            try:
+                t = ptr.binding[id_obj.name]
+                return True
+            except KeyError: 
+                ptr = ptr.prev_envt
+        return False
+
     def get_obj(self, id_obj):
         if is_identifier(id_obj):
             ptr = self
             while ptr:
                 try:
-                    t = ptr.binding[id_obj.name]
+                    return ptr.binding[id_obj.name]
                 except KeyError:
-                    t = None
-                if t: return t
-                ptr = ptr.prev_envt
+                    ptr = ptr.prev_envt
             raise KeyError
-
         else:
             print "Not an id: " + str(id_obj)
             return id_obj
@@ -301,16 +354,17 @@ def _builtin_eq(arg_list):
     return BoolObj(arg_list[0].val == arg_list[1].val)
 
 _default_mapping = {
-        "+" : BuiltinProcObj(_builtin_plus, "builtin proc +"),
-        "-" : BuiltinProcObj(_builtin_minus, "builtin proc -"),
-        "*" : BuiltinProcObj(_builtin_times, "builtin proc *"),
-        "/" : BuiltinProcObj(_builtin_div, "builtin proc /"),
-        "<" : BuiltinProcObj(_builtin_lt, "builtin proc <"),
-        ">" : BuiltinProcObj(_builtin_gt, "builtin proc >"),
-        "=" : BuiltinProcObj(_builtin_eq, "builtin proc ="),
-        "lambda" : _builtin_lambda(),
-        "if" : _builtin_if()
-        }
+        IdObj("+") : BuiltinProcObj(_builtin_plus, "+"),
+        IdObj("-") : BuiltinProcObj(_builtin_minus, "-"),
+        IdObj("*") : BuiltinProcObj(_builtin_times, "*"),
+        IdObj("/") : BuiltinProcObj(_builtin_div, "/"),
+        IdObj("<") : BuiltinProcObj(_builtin_lt, "<"),
+        IdObj(">") : BuiltinProcObj(_builtin_gt, ">"),
+        IdObj("=") : BuiltinProcObj(_builtin_eq, "="),
+        IdObj("lambda") : _builtin_lambda(),
+        IdObj("if") : _builtin_if(),
+        IdObj("define") : _builtin_define(),
+        IdObj("set!") : _builtin_set()}
 
 class Evaluator(object):
 
@@ -359,20 +413,23 @@ class Evaluator(object):
         def push(pc, top, otop):
             ntop = top
             notop = otop
-            pc.print_()
             if is_leaf(pc):
                 print "first"
                 ntop += 1
-                stack[ntop] = envt.get_obj(pc.obj)
+                if pc.skip:
+                    new_obj = pc.obj
+                else:
+                    new_obj = envt.get_obj(pc.obj)
+                stack[ntop] = new_obj
                 npc = pc.sib
                 pc.print_()
-                print "this val is: " + str(stack[ntop].val)
+                #print "this val is: " + str(stack[ntop].val)
             else:
                 print "second"
                 ntop += 1
                 stack[ntop] = RetAddr(pc) # Return address
                 if isinstance(pc.obj, Node):
-                    print "Operand need to be resolved!"
+                    print "Operator need to be resolved!"
                     notop += 1
                     ostack[notop] = pc
                     notop += 1
@@ -380,11 +437,11 @@ class Evaluator(object):
                     pc.obj.print_() # Step in to resolve operator
                     npc = pc.obj
                 else:
-                    print "Getting operand: " + str(pc.obj.name)
+                    print "Getting operator: " + str(pc.obj.name)
                     ntop += 1
                     stack[ntop] = envt.get_obj(pc.obj)
                     if is_special_opt(stack[ntop]):
-                        mask = stack[ntop].prepare(pc)
+                        mask = stack[ntop].prepare()
                         mask_eval(pc, mask)
                     npc = pc.chd
             return (npc, ntop, notop)
@@ -404,7 +461,7 @@ class Evaluator(object):
             if pc is None:
 
                 if top > 0 and is_ret_addr(stack[top - 1]) and \
-                stack[top - 1].get_addr() is False:
+                stack[top - 1].addr is False:
                     stack[top - 1] = stack[top]
                     top -= 1
                     envt = cont.envt
@@ -421,7 +478,7 @@ class Evaluator(object):
                     # Top is now pointing to the return address
                     print "Arg List: " + str(arg_list)
                     opt = arg_list[0]
-                    ret_addr = stack[top].get_addr()
+                    ret_addr = stack[top].addr
     
                     if is_builtin_proc(opt):                # Built-in Procedures
                         print "builtin"
@@ -445,7 +502,7 @@ class Evaluator(object):
                         envt = Environment(opt.envt)         # New ENV and recover the closure
                         #TODO: Compare the arguments to the parameters
                         for i in xrange(1, len(arg_list)):
-                            envt.add_binding(opt.para_list[i - 1].name, 
+                            envt.add_binding(opt.para_list[i - 1], 
                                             arg_list[i])      # Create bindings
                         stack[top] = RetAddr(False)            # Mark the exit of the continuation
                         pc = opt.body                 # Get to the entry point
@@ -460,20 +517,19 @@ class Evaluator(object):
                 print " Done...\n"
         return stack[0]
 
-import pdb
 t = Tokenizor()
 e = Evaluator()
-e.envt.add_binding("x", IntObj(100))
-#t.feed("(+ (- (* 10 2) (+ x 4)) (+ 1 2) (/ 25 5))")
-#t.feed("(if (> 2 2) (if (> 2 1) 1 2) 3)")
-t.feed("((lambda (x y) ((lambda (z) (+ z (* x y))) 10)) ((lambda (x y) (+ x y)) 3 2) 4)")
-#t.feed("(lambda (x y) (* x x))")
-a = AbsSynTree(t)
-#a.tree.print_()
-#a.tree.obj.print_()
-print e.run_expr(a).val
-##t.feed("((lambda (x) (x * x)) 2)")
-#a = AbsSynTree(t)
-#print e.run_expr(a).val
-#a = AbsSynTree(t)
-#print e.run_expr(a).val
+
+import sys, pdb
+
+#ins_set = ("(define x 1)", "(set! x 3)")
+#for ins in ins_set:
+#    print "TEST"
+#    t.feed(ins)
+#    print "Output: " + e.run_expr(AbsSynTree(t)).ext_repr()
+#
+while True:
+    sys.stdout.write("Syasi> ")
+    cmd = sys.stdin.readline()
+    t.feed(cmd)
+    print e.run_expr(AbsSynTree(t)).ext_repr()
