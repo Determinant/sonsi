@@ -233,6 +233,8 @@ class Tokenizor():
                                     .replace(')', ' )')\
                                     .split()
             self.data = ""
+            if len(self.tokenized) == 0:
+                return None
         return self.tokenized.pop(0)
 
 class Node(object):
@@ -285,7 +287,7 @@ class RetAddr(object):
     def __str__(self):
         return "#<Return Address>"
 
-class AbsSynTree(EvalObj):
+class ASTree(EvalObj):
 
     def to_obj(self, obj):
         if isinstance(obj, Node): return obj
@@ -300,10 +302,16 @@ class AbsSynTree(EvalObj):
         # else the obj is a string
        
     def __init__(self, stream):
-        stack = list()
+        self.stream = stream
+        self.stack = list()  # Empty stack
+
+    def absorb(self):
+        stack = self.stack
         while True:
-            token = stream.read()
-            if token is None: break
+            if len(stack) > 0 and stack[0] != '(':
+                return self.to_node(stack.pop(0)) # Got an expression
+            token = self.stream.read()
+            if token is None: return None
             if token == '(':
                 stack.append(token) 
             elif token == ')':
@@ -325,9 +333,6 @@ class AbsSynTree(EvalObj):
                     stack[-1] = self.to_node(None)
             else:
                 stack.append(self.to_obj(token))
-        for i in range(len(stack)):
-            stack[i] = self.to_node(stack[i])
-        self.tree = stack[0]
 
 def is_obj(string):
     return isinstance(string, EvalObj)
@@ -452,7 +457,7 @@ class Evaluator(object):
     def run_expr(self, prog):
         stack = [0] * 100   # Stack 
         ostack = [0] * 100     # Pending operators 
-        pc = prog.tree  # Set to the root
+        pc = prog       # Set to the root
         cont = Continuation(None, pc, None, None)
         envt = self.envt
         top = -1 # Stack top
@@ -612,16 +617,20 @@ import sys, pdb
 #ins_set = ("((lambda (x y) (+ x y)) 1 2)",)
 #ins_set = ("(+ 1 2)",)
 # t.feed(ins_set)
-# a = AbsSynTree(t)
+# a = ASTree(t)
 # print a.tree.chd.print_()
 #for ins in ins_set:
 #     print "TEST"
 #     t.feed(ins)
-#     print e.run_expr(AbsSynTree(t)).ext_repr()
+#     print e.run_expr(ASTree(t)).ext_repr()
 #
+
+a = ASTree(t)
 while True:
     sys.stdout.write("Syasi> ")
-    cmd = sys.stdin.readline()
-    if cmd == "": break
-    t.feed(cmd)
-    print e.run_expr(AbsSynTree(t)).ext_repr()
+    while True:
+        exp = a.absorb()
+        if exp: break
+        cmd = sys.stdin.readline()
+        t.feed(cmd)
+    print e.run_expr(exp).ext_repr()
