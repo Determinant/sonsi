@@ -88,41 +88,40 @@ def to_bool(obj):
 
 # Mark all children of pc as flag
 def _fill_marks(pc, flag):
-    pc = pc.cdr
-    while not (pc is empty_list):
-        pc.func.skip = flag
-        pc = pc.cdr
+    pc = pc.chd
+    while pc:
+        pc.skip = flag
+        pc = pc.sib
 
 class _builtin_if(SpecialOptObj):
     def prepare(self, pc):
         # TODO: check number of arguments 
         # Evaluate the condition first
         self.state = 0 # Prepared
-        pc = pc.cdr
-        pc.func.skip = False
-        pc.cdr.func.skip = True
-        if not (pc.cdr.cdr is empty_list):
-            pc.cdr.cdr.func.skip = True
+        pc = pc.chd
+        pc.skip = False
+        pc.sib.skip = True
+        if pc.sib.sib:
+            pc.sib.sib.skip = True
 
     def pre_call(self, arg_list, pc, envt, cont):
-        pc = pc.car
         # Condition evaluated and the decision is made
         self.state = 1 
         if (to_bool(arg_list[0])).val:
-            pc = pc.cdr
-            pc.func.skip = True
-            pc.cdr.func.skip = False
-            if not (pc.cdr.cdr is empty_list):
+            pc = pc.chd
+            pc.skip = True
+            pc.sib.skip = False
+            if pc.sib.sib:
                 # Eval the former
-                pc.cdr.cdr.func.skip = True
+                pc.sib.sib.skip = True
             return (None, True) # Re-eval
         else:
-            pc = pc.cdr
-            pc.func.skip = True
-            pc.cdr.func.skip = True
-            if not (pc.cdr.cdr is empty_list):
+            pc = pc.chd
+            pc.skip = True
+            pc.sib.skip = True
+            if pc.sib.sib:
                 # Eval the latter
-                pc.cdr.cdr.func.skip = False
+                pc.sib.sib.skip = False
             return (None, True) # Re-eval
 
     def post_call(self, arg_list, pc, envt, cont):
@@ -148,26 +147,28 @@ class _builtin_lambda(SpecialOptObj):
         _fill_marks(pc, True)
 
     def call(self, arg_list, pc, envt, cont):
-        pc = pc.car
         para_list = list()              # paramter list
-        par = pc.cdr.car                # Switch to the first parameter
-        if not (par is empty_list):     # If there is at least one parameter
-            while not (par is empty_list): 
-                para_list.append(par.car)
-                par = par.cdr
+        par = pc.chd                    # Switch to the first parameter
+        if par.obj.obj:                     # If there is at least one parameter
+            para_list.append(par.obj.obj)
+            if par.chd:                 # More paramters?
+                par = par.chd
+                while par: 
+                    para_list.append(par.obj)
+                    par = par.sib
 
         # Clear the flag to avoid side-effects (e.g. proc calling)
         _fill_marks(pc, False)
 
-        pc = pc.cdr.cdr     # Move pc to procedure body
+        pc = pc.chd.sib     # Move pc to procedure body
         #TODO: check body
         body = list()       # store a list of expressions inside <body>
 
-        while not (pc is empty_list):
+        while pc:
             body.append(pc)
-            pc.func.next = None # Make each expression a orphan 
-                                # in order to ease the exit checking
-            pc = pc.cdr
+            pc.next = None  # Make each expression a orphan 
+                            # in order to ease the exit checking
+            pc = pc.sib
 
         return (ProcObj(body, envt, para_list), False)
 
@@ -179,39 +180,37 @@ class _builtin_lambda(SpecialOptObj):
 class _builtin_define(SpecialOptObj):
 
     def prepare(self, pc):
-        if is_arg(pc.cdr):              # Simple value assignment
-            pc.cdr.func.skip = True     # Skip the identifier
-            pc.cdr.cdr.func.skip = False
+        if is_arg(pc.chd):          # Simple value assignment
+            pc.chd.skip = True      # Skip the identifier
+            pc.chd.sib.skip = False
         else:                       # Procedure definition
             _fill_marks(pc, True)   # Skip all parts
 
     def call(self, arg_list, pc, envt, cont):
-        pc = pc.car
         # TODO: check identifier
-        if is_arg(pc.cdr):          # Simple value assignment
-            id = pc.cdr.car             
+        if is_arg(pc.chd):          # Simple value assignment
+            id = pc.chd.obj             
             obj = arg_list[0]
         else:                       # Procedure definition
-            id = pc.cdr.car.car
+            id = pc.chd.obj.obj
             para_list = list()      # Parameter list
-            par = pc.cdr.car
-            if not (par.cdr is empty_list):
-                # If there's at least one parameter
-                par = par.cdr
-                while not (par is empty_list):
-                    para_list.append(par.car)
-                    par = par.cdr
+            par = pc.chd
+            if par.chd:             # If there's at least one parameter
+                par = par.chd
+                while par:
+                    para_list.append(par.obj)
+                    par = par.sib
 
             # Clear the flag to avoid side-effects (e.g. proc calling)
             _fill_marks(pc, False)  
-            pc = pc.cdr.cdr         # Move pc to procedure body
+            pc = pc.chd.sib         # Move pc to procedure body
             #TODO: check body
             body = list()           # store a list of expressions inside <body>
 
-            while not (pc is empty_list):
+            while pc:
                 body.append(pc)
-                pc.func.next = None
-                pc = pc.cdr
+                pc.next = None
+                pc = pc.sib
 
             obj = ProcObj(body, envt, para_list)
         
@@ -226,12 +225,12 @@ class _builtin_define(SpecialOptObj):
 class _builtin_set(SpecialOptObj):
     def prepare(self, pc):
         # TODO: check number of arguments 
-        pc.cdr.func.skip = True     # Skip the identifier
-        pc.cdr.cdr.func.skip = False  
+        pc = pc.chd             
+        pc.skip = True              # Skip the identifier
+        pc.sib.skip = False  
 
     def call(self, arg_list, pc, envt, cont):
-        pc = pc.car
-        id = pc.cdr.car
+        id = pc.chd.obj
         if envt.has_obj(id):
             envt.add_binding(id, arg_list[0])
         return (UnspecObj(), False)
@@ -262,36 +261,52 @@ class Tokenizor():
                 return None
         return self.tokenized.pop(0)
 
-class Prog(object):
-    def __init__(self, skip = False, next = None):
-        self.skip = skip
-        self.next = next
+class Node(object):                     # AST Node
+    def __init__(self, obj, sib):
+        self.obj = obj
+        self.sib = sib
+        self.skip = None                # skip the current branch? (runtime)
+        self.next = sib                 # next instruction         (runtime)
 
-class Data(object):
-    pass
-
-class Cons(object):                     # Construction
-    def __init__(self, car, cdr, func = Data()):
-        self.car = car
-        self.cdr = cdr
-        self.func = func
-    def ext_repr(self):
-        return "#<Cons>"
     def __str__(self):
-        return self.ext_repr()
+        return "#<AST Node>"
+    def __expr__(self):
+        return self.__str__()
+
+class ArgNode(Node):                    # AST Node (Argument)
+    def __init__(self, obj, sib = None):
+        super(ArgNode, self).__init__(obj, sib)
+    def __str__(self):
+        return "#<AST ArgNode>"
+    def __expr__(self):
+        return self.__str__()
+
     def print_(self):
-        print "car: " + str(self.car) + "\n" + \
-              "cdr: " + str(self.cdr) + "\n"
+        print \
+            "======================" + "\n" + \
+            "Obj: " + str(self.obj) + "\n" + \
+            "Sib: " + str(self.sib) + "\n" + \
+            "======================" 
 
-class EmptyList(object):
-    def ext_repr(self):
-        return "()"
+class OptNode(Node):                    # AST Node (Operator)
+    def __init__(self, obj, sib = None, chd = None):
+        super(OptNode, self).__init__(obj, sib)
+        self.chd = chd
+
     def __str__(self):
-        return self.ext_repr()
+        return "#<AST OptNode>"
+    def __expr__(self):
+        return self.__str__()
 
-empty_list = EmptyList()
+    def print_(self):
+        print \
+            "======================" + "\n" + \
+            "Obj: " + str(self.obj) + "\n" + \
+            "Sib: " + str(self.sib) + "\n" + \
+            "Chd: " + str(self.chd) + "\n" + \
+            "======================" 
 
-class RetAddr(object):                  # Return Adress (Refers to an Cons)
+class RetAddr(object):                  # Return Adress (Refers to an AST Node)
     def __init__(self, addr):
         self.addr = addr
     def __str__(self):
@@ -300,11 +315,16 @@ class RetAddr(object):                  # Return Adress (Refers to an Cons)
 class ASTGenerator(EvalObj):            # Abstract Syntax Tree Generator
 
     def to_obj(self, obj):              # Try to convert a string to EvalObj
+        if isinstance(obj, Node): return obj
         try: return IntObj(obj)
         except Exception:
             try: return FloatObj(obj)
             except Exception: return IdObj(obj)
  
+    def to_node(self, obj):             # Try to convert an EvalObj to AST Node
+        if isinstance(obj, Node): return obj
+        return ArgNode(obj)
+       
     def __init__(self, stream):
         self.stream = stream
         self.stack = list()  # Empty stack
@@ -313,8 +333,7 @@ class ASTGenerator(EvalObj):            # Abstract Syntax Tree Generator
         stack = self.stack
         while True:
             if len(stack) > 0 and stack[0] != '(':
-                return Cons(stack.pop(0), empty_list, Prog(0))   
-                                                    # An AST is constructed
+                return self.to_node(stack.pop(0))   # An AST is constructed
             token = self.stream.read()              # Read a new token 
             if token is None: return None           # Feed me!
             if token == '(':
@@ -325,24 +344,25 @@ class ASTGenerator(EvalObj):            # Abstract Syntax Tree Generator
                     lst = stack[-1:] + lst
                     del stack[-1]
                 if len(lst) > 0:                    # At least one elem
-                    root = Cons(lst[0], None, Prog())          # The operator in the list
+                    root = OptNode(lst[0])          # The operator in the list
                     # Collect the operands
-                    ref = root
-                    for i in lst[1:]:
-                        ref.cdr = Cons(i, None, Prog())
-                        ref.func.next = ref.cdr
-                        ref = ref.cdr
-                    ref.cdr = empty_list
+                    if len(lst) > 1:
+                        root.chd = lst[1]
+                        ref = root.chd
+                        for i in lst[2:]:
+                            ref.sib = i
+                            ref.next = ref.sib
+                            ref = ref.sib
                     stack[-1] = root
                 else:                               # Null list
-                    stack[-1] = empty_list
+                    stack[-1] = OptNode(ArgNode(None))
             else:
-                stack.append(self.to_obj(token))    # Found an EvalObj
+                stack.append(ArgNode(self.to_obj(token)))    # Found an EvalObj
 
 def is_id(string):
     return isinstance(string, IdObj)
-def is_arg(pc):
-    return isinstance(pc.car, EvalObj)
+def is_arg(node):
+    return isinstance(node, ArgNode)
 def is_ret_addr(val):
     return isinstance(val, RetAddr)
 def is_builtin_proc(val):
@@ -455,32 +475,66 @@ class Evaluator(object):
         self._add_builtin_routines(self.envt)
     def run_expr(self, prog):
         stack = [0] * 100       # Eval Stack 
+        ostack = [0] * 100      # Operator to be evaluated 
+
         top = -1                # stack top
+        otop = -1               # ostack top
 
         pc = prog               # pc register
         cont = None             # continuation register
         envt = self.envt        # environment register
 
-        def push(pc, top):        # Push EvalObj to the stack
+        def print_stack():
+            print '++++++++++STACK++++++++'
+            if len(stack) > 0:
+                for i in range(0, top + 1):
+                    print stack[i]
+            print '----------STACK--------'
+        
+        def next_addr(ret_addr, otop):  # Get the next instruction (after returning)
+            notop = otop
+            if otop > -1 and ret_addr is ostack[notop]:
+                # If the operator is evaluated successfully
+                # pc should point to its operand
+                notop -= 1
+                res = ostack[notop].chd
+                notop -= 1
+            else:
+                # Normal situation: move to the next operand
+                res = ret_addr.next
+            return (res, notop)
+
+
+        def push(pc, top, otop):        # Push EvalObj to the stack
             ntop = top
-            if is_arg(pc):        # Pure operand 
+            notop = otop
+            if is_arg(pc):              # Pure operand 
                 ntop += 1
-                stack[ntop] = envt.get_obj(pc.car)  # Try to find the binding
-                if is_special_opt(stack[ntop]):
-                    stack[ntop].prepare(pc)
-                npc = pc.func.next      # Move to the next instruction
+                stack[ntop] = envt.get_obj(pc.obj)  # Try to find the binding
+                npc = pc.next           # Move to the next instruction
             else:                       # Found an Operator
                 ntop += 1
-                stack[ntop] = RetAddr(pc)           # Push return address
-                npc = pc.car
+                stack[ntop] = RetAddr(pc)       # Push return address
+                if is_arg(pc.obj):              # Getting operator
+                    ntop += 1
+                    stack[ntop] = envt.get_obj(pc.obj.obj)
+                    if is_special_opt(stack[ntop]):
+                        stack[ntop].prepare(pc)
+                    npc = pc.chd
+                else:                           # Operator need to be evaluated
+                    notop += 1
+                    ostack[notop] = pc
+                    notop += 1
+                    ostack[notop] = pc.obj
+                    npc = pc.obj
 
-            return (npc, ntop)
+            return (npc, ntop, notop)
 
-        (pc, top) = push(pc, top)
+        (pc, top, otop) = push(pc, top, otop)
 
         while is_ret_addr(stack[0]):    # Still need to evaluate
-            while pc and pc.func.skip: 
-                pc = pc.func.next       # Skip the masked branches
+            while pc and pc.skip: 
+                pc = pc.next            # Skip the masked branches
 
             if pc is None:              # All arguments are evaluated, exiting
                arg_list = list()
@@ -499,7 +553,7 @@ class Evaluator(object):
                     if ncur == len(body):   # All exps in the body are evaled
                         stack[top] = arg_list[0]
                         envt = cont.envt
-                        pc = cont.pc.func.next
+                        (pc, otop) = next_addr(cont.pc, otop)
                         cont = cont.old_cont
                     else:
                         pc = body[ncur]     # Load the next exp
@@ -508,16 +562,16 @@ class Evaluator(object):
    
                if is_builtin_proc(opt):                 # Built-in Procedures
                    stack[top] = opt.call(arg_list[1:])
-                   pc = ret_addr.func.next
+                   (pc, otop) = next_addr(ret_addr, otop)
     
                elif is_special_opt(opt):                # Sepecial Operations
                    (res, flag) = opt.call(arg_list[1:], ret_addr, envt, cont)
                    if flag:                             # Need to call again
                        top += 1
-                       pc = ret_addr.car.func.next           # Invoke again
+                       pc = ret_addr.chd                # Invoke again
                    else:
                        stack[top] = res                 # Done
-                       pc = ret_addr.func.next
+                       (pc, otop) = next_addr(ret_addr, otop)
 
                elif is_user_defined_proc(opt):          # User-defined Procedures
                    # Create a new continuation
@@ -531,7 +585,7 @@ class Evaluator(object):
                    stack[top] = RetAddr(False)          # Continuation mark 
                    pc = opt.body[0]                     # Move to the proc entry point
             else: 
-                (pc, top) = push(pc, top)
+                (pc, top, otop) = push(pc, top, otop)
 
         return stack[0]
 
