@@ -1,5 +1,5 @@
-Syasi: Yet Another Scheme Interpreter
----------------------------------------
+Stupid but Obscure Non-recursive Scheme Interpreter
+---------------------------------------------------
 
 * Features:
 
