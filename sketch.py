@@ -1,3 +1,5 @@
+#! /bin/env python
+
 class EvalObj(object):
     def __str__(self):
         return "#<Object>"
@@ -146,8 +148,16 @@ class _builtin_lambda(SpecialOptObj):
                 while par: 
                     para_list.append(par.obj)
                     par = par.sib
-        body = pc.chd.sib
         self._clear_marks(pc, False)
+        pc = pc.chd.sib
+        #TODO: check body
+        body = list()
+        while pc:
+            body.append(pc)
+            t = pc.sib
+            pc.next = None # Detach
+            pc = t
+            # Add exps
         return (ProcObj(body, envt, para_list), False)
     def ext_repr(self):
         return "#<Builtin Macro: lambda>"
@@ -226,15 +236,41 @@ class Tokenizor():
         return self.tokenized.pop(0)
 
 class Node(object):
-    def __init__(self, syn_obj, sib = None, chd = None):
-        self.obj = syn_obj
+    def __init__(self, obj, sib):
+        self.obj = obj
         self.sib = sib
-        self.chd = chd
         self.skip = None    # delay calcuation
+        self.next = sib
     def __str__(self):
         return "#<AST Node>"
     def __expr__(self):
         return self.__str__()
+
+class ArgNode(Node):
+    def __init__(self, obj, sib = None):
+        super(ArgNode, self).__init__(obj, sib)
+    def __str__(self):
+        return "#<AST ArgNode>"
+    def __expr__(self):
+        return self.__str__()
+
+    def print_(self):
+        print \
+            "======================" + "\n" + \
+            "Obj: " + str(self.obj) + "\n" + \
+            "Sib: " + str(self.sib) + "\n" + \
+            "======================" 
+
+class OptNode(Node):
+    def __init__(self, obj, sib = None, chd = None):
+        super(OptNode, self).__init__(obj, sib)
+        self.chd = chd
+
+    def __str__(self):
+        return "#<AST OptNode>"
+    def __expr__(self):
+        return self.__str__()
+
     def print_(self):
         print \
             "======================" + "\n" + \
@@ -260,7 +296,7 @@ class AbsSynTree(EvalObj):
  
     def to_node(self, obj):
         if isinstance(obj, Node): return obj
-        return Node(obj)
+        return ArgNode(obj)
         # else the obj is a string
        
     def __init__(self, stream):
@@ -276,12 +312,13 @@ class AbsSynTree(EvalObj):
                     lst = stack[-1:] + lst
                     del stack[-1]
                 if len(lst) > 0:
-                    root = Node(lst[0])
+                    root = OptNode(lst[0])
                     if len(lst) > 1:
                         root.chd = self.to_node(lst[1])
                         ref = root.chd
                         for i in lst[2:]:
                             ref.sib = self.to_node(i)
+                            ref.next = ref.sib
                             ref = ref.sib
                     stack[-1] = root
                 else:
@@ -296,8 +333,8 @@ def is_obj(string):
     return isinstance(string, EvalObj)
 def is_identifier(string):
     return isinstance(string, IdObj)
-def is_leaf(node):
-    return node.chd is None
+def is_arg(node):
+    return isinstance(node, ArgNode)
 def is_ret_addr(val):
     return isinstance(val, RetAddr)
 def is_builtin_proc(val):
@@ -339,10 +376,13 @@ class Environment(object):
             return id_obj
 
 class Continuation(object):
-    def __init__(self, envt, pc, old_cont):    
+    def __init__(self, envt, pc, old_cont, proc_body, proc_body_cur = 0):    
         self.envt = envt
         self.pc = pc
         self.old_cont = old_cont
+        self.proc_body = proc_body
+        self.proc_body_cur = 0
+        
     def get_envt(self):
         return self.envt
     def get_cont(self):
@@ -383,7 +423,7 @@ def _builtin_eq(arg_list):
     return BoolObj(arg_list[0].val == arg_list[1].val)
 
 def _builtin_display(arg_list):
-    # print arg_list[0].ext_repr()
+    print "Display: " + arg_list[0].ext_repr()
     return UnspecObj()
 
 _default_mapping = {
@@ -413,7 +453,7 @@ class Evaluator(object):
         stack = [0] * 100   # Stack 
         ostack = [0] * 100     # Pending operators 
         pc = prog.tree  # Set to the root
-        cont = Continuation(None, pc, None)
+        cont = Continuation(None, pc, None, None)
         envt = self.envt
         top = -1 # Stack top
         otop = -1
@@ -440,14 +480,14 @@ class Evaluator(object):
                 res = ostack[notop].chd
                 notop -= 1
             else:
-                res = ret_addr.sib
+                res = ret_addr.next
             return (res, notop)
 
 
         def push(pc, top, otop):
             ntop = top
             notop = otop
-            if is_leaf(pc):
+            if is_arg(pc):
                 # print "first"
                 ntop += 1
                 if pc.skip:
@@ -455,7 +495,7 @@ class Evaluator(object):
                 else:
                     new_obj = envt.get_obj(pc.obj)
                 stack[ntop] = new_obj
-                npc = pc.sib
+                npc = pc.next
                 # pc.print_()
                 #print "this val is: " + str(stack[ntop].val)
             else:
@@ -491,7 +531,7 @@ class Evaluator(object):
             # print "- Pc at: " + str(pc)
             while pc and pc.skip: 
                 # print "skipping masked branch: " + str(pc)
-                pc = pc.sib  # Skip the masked branches
+                pc = pc.next  # Skip the masked branches
 
             if pc is None:
 
@@ -506,10 +546,17 @@ class Evaluator(object):
                ret_addr = stack[top].addr
 
                if ret_addr is False: # Fake return
-                    stack[top] = arg_list[0]
-                    envt = cont.envt
-                    (pc, otop) = nxt_addr(cont.pc, otop)
-                    cont = cont.old_cont
+                    body = cont.proc_body
+                    cont.proc_body_cur += 1
+                    ncur = cont.proc_body_cur
+                    if ncur == len(body):   # All exps in the body are evaled
+                        stack[top] = arg_list[0]
+                        envt = cont.envt
+                        (pc, otop) = nxt_addr(cont.pc, otop)
+                        cont = cont.old_cont
+                    else:
+                        pc = body[ncur]     # Load the next exp
+
                     continue
                     # Revert to the original cont.
    
@@ -530,7 +577,7 @@ class Evaluator(object):
                        stack[top] = res # Done
                        (pc, otop) = nxt_addr(ret_addr, otop)
                elif is_user_defined_proc(opt):   # User-defined Procedures
-                   ncont = Continuation(envt, ret_addr, cont)  # Create a new continuation
+                   ncont = Continuation(envt, ret_addr, cont, opt.body)  # Create a new continuation
                    cont = ncont                          # Make chain
                    envt = Environment(opt.envt)         # New ENV and recover the closure
                    #TODO: Compare the arguments to the parameters
@@ -538,7 +585,7 @@ class Evaluator(object):
                        envt.add_binding(opt.para_list[i - 1], 
                                        arg_list[i])      # Create bindings
                    stack[top] = RetAddr(False)            # Mark the exit of the continuation
-                   pc = opt.body                 # Get to the entry point
+                   pc = opt.body[0]                 # Get to the entry point
                 
                 # print_stack()
                 # print "Poping done."
@@ -555,11 +602,22 @@ e = Evaluator()
 
 import sys, pdb
 
-#ins_set = ("(define x 1)", "(set! x 3)")
+# ins_set = ("(define g (lambda (x) (if (= x 5) 0 ((lambda () (display x) (g (+ x 1)))))))",
+#            "(g 0)")
+# ins_set = ("(define g (lambda (x) (define y 10) (+ x y)))",
+#             "g",
+#             "(g 1)",
+#             "y")
+#ins_set = ("((lambda () (display 2)))",)
+#ins_set = ("((lambda (x y) (+ x y)) 1 2)",)
+#ins_set = ("(+ 1 2)",)
+# t.feed(ins_set)
+# a = AbsSynTree(t)
+# print a.tree.chd.print_()
 #for ins in ins_set:
-#    print "TEST"
-#    t.feed(ins)
-#    print "Output: " + e.run_expr(AbsSynTree(t)).ext_repr()
+#     print "TEST"
+#     t.feed(ins)
+#     print e.run_expr(AbsSynTree(t)).ext_repr()
 #
 while True:
     sys.stdout.write("Syasi> ")
