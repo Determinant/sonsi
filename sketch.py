@@ -154,9 +154,8 @@ class _builtin_lambda(SpecialOptObj):
         body = list()
         while pc:
             body.append(pc)
-            t = pc.sib
             pc.next = None # Detach
-            pc = t
+            pc = pc.sib
             # Add exps
         return (ProcObj(body, envt, para_list), False)
     def ext_repr(self):
@@ -165,16 +164,44 @@ class _builtin_lambda(SpecialOptObj):
         return self.ext_repr()
 
 class _builtin_define(SpecialOptObj):
-    def prepare(self, pc):
-        # TODO: check number of arguments 
+    def _clear_marks(self, pc, flag):
         pc = pc.chd
-        pc.skip = True
-        pc.sib.skip = False
+        while pc:
+            pc.skip = flag
+            pc = pc.sib
+
+    def prepare(self, pc):
+        if is_arg(pc.chd): # Normal Def
+            pc.chd.skip = True
+            pc.chd.sib.skip = False
+        else:
+            self._clear_marks(pc, True)
+        return (None, True) # Re-eval
 
     def call(self, arg_list, pc, envt, cont):
         # TODO: check identifier
         id = pc.chd.obj
-        envt.add_binding(id, arg_list[0])
+        if is_arg(pc.chd): 
+            obj = arg_list[0]
+        else: # Function definition
+            par = pc.chd
+            para_list = list()
+            if par.chd:
+                par = par.chd
+                while par:
+                    para_list.append(par.obj)
+                    par = par.sib
+            # Collection para list
+            self._clear_marks(pc, False)
+            pc = pc.chd.sib
+            body = list()
+            while pc:
+                body.append(pc)
+                pc.next = None
+                pc = pc.sib
+            obj = ProcObj(body, envt, para_list)
+        
+        envt.add_binding(id, obj)
         return (UnspecObj(), False)
 
     def ext_repr(self):
@@ -607,24 +634,6 @@ e = Evaluator()
 
 import sys, pdb
 
-# ins_set = ("(define g (lambda (x) (if (= x 5) 0 ((lambda () (display x) (g (+ x 1)))))))",
-#            "(g 0)")
-# ins_set = ("(define g (lambda (x) (define y 10) (+ x y)))",
-#             "g",
-#             "(g 1)",
-#             "y")
-#ins_set = ("((lambda () (display 2)))",)
-#ins_set = ("((lambda (x y) (+ x y)) 1 2)",)
-#ins_set = ("(+ 1 2)",)
-# t.feed(ins_set)
-# a = ASTree(t)
-# print a.tree.chd.print_()
-#for ins in ins_set:
-#     print "TEST"
-#     t.feed(ins)
-#     print e.run_expr(ASTree(t)).ext_repr()
-#
-
 a = ASTree(t)
 while True:
     sys.stdout.write("Syasi> ")
@@ -633,4 +642,7 @@ while True:
         if exp: break
         cmd = sys.stdin.readline()
         t.feed(cmd)
-    print e.run_expr(exp).ext_repr()
+    try:
+        print e.run_expr(exp).ext_repr()
+    except Exception as exc:
+        print exc
