@@ -1,4 +1,4 @@
-Stupid but Obscure Non-recursive Scheme Interpreter
+Stupid and Obvious Non-recursive Scheme Interpreter
 ---------------------------------------------------
 
 * Features:
