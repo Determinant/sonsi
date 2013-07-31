@@ -495,51 +495,50 @@ class Evaluator(object):
 
             if pc is None:
 
-                if top > 0 and is_ret_addr(stack[top - 1]) and \
-                stack[top - 1].addr is False:
-                    stack[top - 1] = stack[top]
-                    top -= 1
+               # print "Poping..."
+               arg_list = list()
+               while not is_ret_addr(stack[top]):
+                   arg_list = [stack[top]] + arg_list
+                   top -= 1
+               # Top is now pointing to the return address
+               # print "Arg List: " + str(arg_list)
+               opt = arg_list[0]
+               ret_addr = stack[top].addr
+
+               if ret_addr is False: # Fake return
+                    stack[top] = arg_list[0]
                     envt = cont.envt
                     (pc, otop) = nxt_addr(cont.pc, otop)
                     cont = cont.old_cont
+                    continue
                     # Revert to the original cont.
-                else:
-                    # print "Poping..."
-                    arg_list = list()
-                    while not is_ret_addr(stack[top]):
-                        arg_list = [stack[top]] + arg_list
-                        top -= 1
-                    # Top is now pointing to the return address
-                    # print "Arg List: " + str(arg_list)
-                    opt = arg_list[0]
-                    ret_addr = stack[top].addr
+   
+               if is_builtin_proc(opt):                # Built-in Procedures
+                   # print "builtin"
+                   stack[top] = opt.call(arg_list[1:])
+                   (pc, otop) = nxt_addr(ret_addr, otop)
     
-                    if is_builtin_proc(opt):                # Built-in Procedures
-                        # print "builtin"
-                        stack[top] = opt.call(arg_list[1:])
-                        (pc, otop) = nxt_addr(ret_addr, otop)
-    
-                    elif is_special_opt(opt):               # Sepecial Operations
-                        # print "specialopt"
-                        (res, flag) = opt.call(arg_list[1:], ret_addr, envt, cont)
-                        if flag: # Need to call again
-                            # print "AGAIN with the mask: " + str(res)
-                            # mask_eval(ret_addr, res)
-                            top += 1
-                            pc = ret_addr.chd # Again
-                        else:
-                            stack[top] = res # Done
-                            (pc, otop) = nxt_addr(ret_addr, otop)
-                    elif is_user_defined_proc(opt):   # User-defined Procedures
-                        ncont = Continuation(envt, ret_addr, cont)  # Create a new continuation
-                        cont = ncont                          # Make chain
-                        envt = Environment(opt.envt)         # New ENV and recover the closure
-                        #TODO: Compare the arguments to the parameters
-                        for i in xrange(1, len(arg_list)):
-                            envt.add_binding(opt.para_list[i - 1], 
-                                            arg_list[i])      # Create bindings
-                        stack[top] = RetAddr(False)            # Mark the exit of the continuation
-                        pc = opt.body                 # Get to the entry point
+               elif is_special_opt(opt):               # Sepecial Operations
+                   # print "specialopt"
+                   (res, flag) = opt.call(arg_list[1:], ret_addr, envt, cont)
+                   if flag: # Need to call again
+                       # print "AGAIN with the mask: " + str(res)
+                       # mask_eval(ret_addr, res)
+                       top += 1
+                       pc = ret_addr.chd # Again
+                   else:
+                       stack[top] = res # Done
+                       (pc, otop) = nxt_addr(ret_addr, otop)
+               elif is_user_defined_proc(opt):   # User-defined Procedures
+                   ncont = Continuation(envt, ret_addr, cont)  # Create a new continuation
+                   cont = ncont                          # Make chain
+                   envt = Environment(opt.envt)         # New ENV and recover the closure
+                   #TODO: Compare the arguments to the parameters
+                   for i in xrange(1, len(arg_list)):
+                       envt.add_binding(opt.para_list[i - 1], 
+                                       arg_list[i])      # Create bindings
+                   stack[top] = RetAddr(False)            # Mark the exit of the continuation
+                   pc = opt.body                 # Get to the entry point
                 
                 # print_stack()
                 # print "Poping done."
