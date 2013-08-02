@@ -164,7 +164,7 @@ class _builtin_lambda(SpecialOptObj):
 
     def call(self, arg_list, envt, cont, stack, top, ret_addr):
         pc = ret_addr.car
-        para_list = list()              # paramter list
+        para_list = list()              # paramter list TODO: use Cons to represent list
         par = pc.cdr.car                # Switch to the first parameter
         while not (par is empty_list): 
             para_list.append(par.car)
@@ -175,7 +175,7 @@ class _builtin_lambda(SpecialOptObj):
 
         pc = pc.cdr.cdr     # Move pc to procedure body
         #TODO: check body
-        body = list()       # store a list of expressions inside <body>
+        body = list()       # store a list of expressions inside <body> TODO: Cons
 
         while not (pc is empty_list):
             body.append(pc)
