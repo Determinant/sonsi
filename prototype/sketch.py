@@ -1,6 +1,8 @@
 #! /bin/env python
 
 class EvalObj(object):
+    def prepare(self, pc):
+        pass
     def __str__(self):
         return "#<Object>"
 
@@ -41,11 +43,11 @@ class BoolObj(EvalObj):
         else:
             return "#f"
 
-class IdObj(EvalObj):
+class SymObj(EvalObj):
     def __init__(self, string):
         self.name = string
     def __str__(self):
-        return "#<Identifier: " + self.name + ">"
+        return "#<Symbol: " + self.name + ">"
     def get_name():
         return self.name
 
@@ -57,18 +59,28 @@ class ProcObj(OptObj):
         self.body = body
         self.envt = envt
         self.para_list = para_list
+    def call(self, arg_list, envt, cont, stack, top, ret_addr):
+        # Create a new continuation
+        ncont = Continuation(envt, ret_addr, cont, self.body)  
+        cont = ncont                         # Add to the cont chain
+        envt = Environment(self.envt)        # Create local env and recall the closure
+        #TODO: Compare the arguments to the parameters
+        for i in xrange(1, len(arg_list)):
+            envt.add_binding(self.para_list[i - 1], arg_list[i])      
+                                             # Create bindings
+        stack[top] = RetAddr(False)          # Continuation mark 
+        pc = self.body[0]                         # Move to the proc entry point
+        return (pc, top, envt, cont)
+
     def ext_repr(self):
         return "#<Procedure>"
     def __str__(self):
         return self.ext_repr()
 
 class SpecialOptObj(OptObj):
-    def prepare(self, pc):
-        pass
-    def call(self, arg_list, pc, envt, cont):
         pass
 
-class BuiltinProcObj():
+class BuiltinProcObj(OptObj):
     def __init__(self, f, name):
         self.handler = f
         self.name = name
@@ -76,8 +88,9 @@ class BuiltinProcObj():
         return "#<Builtin Procedure: " + self.name + ">"
     def __str__(self):
         return self.ext_repr()
-    def call(self, arg_list):
-        return self.handler(arg_list)
+    def call(self, arg_list, envt, cont, stack, top, ret_addr):
+        stack[top] = self.handler(arg_list[1:])
+        return (ret_addr.func.next, top, envt, cont)
 
 # Convert an obj to boolean
 def to_bool(obj):
@@ -108,14 +121,13 @@ class _builtin_if(SpecialOptObj):
         pc = pc.car
         # Condition evaluated and the decision is made
         self.state = 1 
-        if (to_bool(arg_list[0])).val:
+        if (to_bool(arg_list[1])).val:
             pc = pc.cdr
             pc.func.skip = True
             pc.cdr.func.skip = False
             if not (pc.cdr.cdr is empty_list):
                 # Eval the former
                 pc.cdr.cdr.func.skip = True
-            return (None, True) # Re-eval
         else:
             pc = pc.cdr
             pc.func.skip = True
@@ -123,17 +135,20 @@ class _builtin_if(SpecialOptObj):
             if not (pc.cdr.cdr is empty_list):
                 # Eval the latter
                 pc.cdr.cdr.func.skip = False
-            return (None, True) # Re-eval
 
     def post_call(self, arg_list, pc, envt, cont):
         # Value already evaluated, so just return it
-        return (arg_list[0], False)
+        return arg_list[1]
 
-    def call(self, arg_list, pc, envt, cont):
+    def call(self, arg_list, envt, cont, stack, top, ret_addr):
         if self.state == 0:
-            return self.pre_call(arg_list, pc, envt, cont)
+            self.pre_call(arg_list, ret_addr, envt, cont)
+            top += 1
+            pc = ret_addr.car.func.next     # Invoke again
         else:
-            return self.post_call(arg_list, pc, envt, cont)
+            stack[top] = self.post_call(arg_list, ret_addr, envt, cont)
+            pc = ret_addr.func.next
+        return (pc, top, envt, cont)
 
     def ext_repr(self):
         return "#<Builtin Macro: if>"
@@ -147,14 +162,13 @@ class _builtin_lambda(SpecialOptObj):
         # Do not evaulate anything
         _fill_marks(pc, True)
 
-    def call(self, arg_list, pc, envt, cont):
-        pc = pc.car
+    def call(self, arg_list, envt, cont, stack, top, ret_addr):
+        pc = ret_addr.car
         para_list = list()              # paramter list
         par = pc.cdr.car                # Switch to the first parameter
-        if not (par is empty_list):     # If there is at least one parameter
-            while not (par is empty_list): 
-                para_list.append(par.car)
-                par = par.cdr
+        while not (par is empty_list): 
+            para_list.append(par.car)
+            par = par.cdr
 
         # Clear the flag to avoid side-effects (e.g. proc calling)
         _fill_marks(pc, False)
@@ -169,7 +183,8 @@ class _builtin_lambda(SpecialOptObj):
                                 # in order to ease the exit checking
             pc = pc.cdr
 
-        return (ProcObj(body, envt, para_list), False)
+        stack[top] = ProcObj(body, envt, para_list)
+        return (ret_addr.func.next, top, envt, cont)
 
     def ext_repr(self):
         return "#<Builtin Macro: lambda>"
@@ -185,12 +200,12 @@ class _builtin_define(SpecialOptObj):
         else:                       # Procedure definition
             _fill_marks(pc, True)   # Skip all parts
 
-    def call(self, arg_list, pc, envt, cont):
-        pc = pc.car
+    def call(self, arg_list, envt, cont, stack, top, ret_addr):
+        pc = ret_addr.car
         # TODO: check identifier
         if is_arg(pc.cdr):          # Simple value assignment
             id = pc.cdr.car             
-            obj = arg_list[0]
+            obj = arg_list[1]
         else:                       # Procedure definition
             id = pc.cdr.car.car
             para_list = list()      # Parameter list
@@ -216,7 +231,8 @@ class _builtin_define(SpecialOptObj):
             obj = ProcObj(body, envt, para_list)
         
         envt.add_binding(id, obj)
-        return (UnspecObj(), False)
+        stack[top] = UnspecObj()
+        return (ret_addr.func.next, top, envt, cont)
 
     def ext_repr(self):
         return "#<Builtin Macro: define>"
@@ -229,12 +245,13 @@ class _builtin_set(SpecialOptObj):
         pc.cdr.func.skip = True     # Skip the identifier
         pc.cdr.cdr.func.skip = False  
 
-    def call(self, arg_list, pc, envt, cont):
-        pc = pc.car
+    def call(self, arg_list, envt, cont, stack, top, ret_addr):
+        pc = ret_addr.car
         id = pc.cdr.car
         if envt.has_obj(id):
-            envt.add_binding(id, arg_list[0])
-        return (UnspecObj(), False)
+            envt.add_binding(id, arg_list[1])
+        stack[top] = UnspecObj()
+        return (ret_addr.func.next, top, envt, cont)
 
     def ext_repr(self):
         return "#<Builtin Macro: set!>"
@@ -303,7 +320,7 @@ class ASTGenerator(EvalObj):            # Abstract Syntax Tree Generator
         try: return IntObj(obj)
         except Exception:
             try: return FloatObj(obj)
-            except Exception: return IdObj(obj)
+            except Exception: return SymObj(obj)
  
     def __init__(self, stream):
         self.stream = stream
@@ -340,17 +357,11 @@ class ASTGenerator(EvalObj):            # Abstract Syntax Tree Generator
                 stack.append(self.to_obj(token))    # Found an EvalObj
 
 def is_id(string):
-    return isinstance(string, IdObj)
+    return isinstance(string, SymObj)
 def is_arg(pc):
     return isinstance(pc.car, EvalObj)
 def is_ret_addr(val):
     return isinstance(val, RetAddr)
-def is_builtin_proc(val):
-    return isinstance(val, BuiltinProcObj)
-def is_special_opt(val):
-    return isinstance(val, SpecialOptObj)
-def is_user_defined_proc(val):
-    return isinstance(val, ProcObj)
 
 class Environment(object):                      # Store all bindings
     def __init__(self, prev_envt = None):
@@ -431,18 +442,18 @@ def _builtin_display(arg_list):
 # Miscellaneous builtin procedures #
 
 _default_mapping = {
-        IdObj("+") : BuiltinProcObj(_builtin_plus, "+"),
-        IdObj("-") : BuiltinProcObj(_builtin_minus, "-"),
-        IdObj("*") : BuiltinProcObj(_builtin_times, "*"),
-        IdObj("/") : BuiltinProcObj(_builtin_div, "/"),
-        IdObj("<") : BuiltinProcObj(_builtin_lt, "<"),
-        IdObj(">") : BuiltinProcObj(_builtin_gt, ">"),
-        IdObj("=") : BuiltinProcObj(_builtin_eq, "="),
-        IdObj("display") : BuiltinProcObj(_builtin_display, "display"),
-        IdObj("lambda") : _builtin_lambda(),
-        IdObj("if") : _builtin_if(),
-        IdObj("define") : _builtin_define(),
-        IdObj("set!") : _builtin_set()}
+        SymObj("+") : BuiltinProcObj(_builtin_plus, "+"),
+        SymObj("-") : BuiltinProcObj(_builtin_minus, "-"),
+        SymObj("*") : BuiltinProcObj(_builtin_times, "*"),
+        SymObj("/") : BuiltinProcObj(_builtin_div, "/"),
+        SymObj("<") : BuiltinProcObj(_builtin_lt, "<"),
+        SymObj(">") : BuiltinProcObj(_builtin_gt, ">"),
+        SymObj("=") : BuiltinProcObj(_builtin_eq, "="),
+        SymObj("display") : BuiltinProcObj(_builtin_display, "display"),
+        SymObj("lambda") : _builtin_lambda(),
+        SymObj("if") : _builtin_if(),
+        SymObj("define") : _builtin_define(),
+        SymObj("set!") : _builtin_set()}
 
 class Evaluator(object):
 
@@ -466,8 +477,7 @@ class Evaluator(object):
             if is_arg(pc):        # Pure operand 
                 ntop += 1
                 stack[ntop] = envt.get_obj(pc.car)  # Try to find the binding
-                if is_special_opt(stack[ntop]):
-                    stack[ntop].prepare(pc)
+                stack[ntop].prepare(pc)
                 npc = pc.func.next      # Move to the next instruction
             else:                       # Found an Operator
                 ntop += 1
@@ -503,33 +513,10 @@ class Evaluator(object):
                         cont = cont.old_cont
                     else:
                         pc = body[ncur]     # Load the next exp
-                    continue
                     # Revert to the original cont.
-   
-               if is_builtin_proc(opt):                 # Built-in Procedures
-                   stack[top] = opt.call(arg_list[1:])
-                   pc = ret_addr.func.next
-    
-               elif is_special_opt(opt):                # Sepecial Operations
-                   (res, flag) = opt.call(arg_list[1:], ret_addr, envt, cont)
-                   if flag:                             # Need to call again
-                       top += 1
-                       pc = ret_addr.car.func.next           # Invoke again
-                   else:
-                       stack[top] = res                 # Done
-                       pc = ret_addr.func.next
-
-               elif is_user_defined_proc(opt):          # User-defined Procedures
-                   # Create a new continuation
-                   ncont = Continuation(envt, ret_addr, cont, opt.body)  
-                   cont = ncont                         # Add to the cont chain
-                   envt = Environment(opt.envt)         # Create local env and recall the closure
-                   #TODO: Compare the arguments to the parameters
-                   for i in xrange(1, len(arg_list)):
-                       envt.add_binding(opt.para_list[i - 1], arg_list[i])      
-                                                        # Create bindings
-                   stack[top] = RetAddr(False)          # Continuation mark 
-                   pc = opt.body[0]                     # Move to the proc entry point
+               else:
+                    (pc, top, envt, cont) = opt.call(arg_list, envt, cont, 
+                                                    stack, top, ret_addr)
             else: 
                 (pc, top) = push(pc, top)
 
@@ -539,7 +526,6 @@ t = Tokenizor()
 e = Evaluator()
 
 import sys, pdb
-
 a = ASTGenerator(t)
 while True:
     sys.stdout.write("Sonsi> ")
