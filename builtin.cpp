@@ -89,7 +89,7 @@ Cons *SpecialOptIf::call(ArgList *arg_list, Environment * &envt,
 
 string SpecialOptIf::ext_repr() { return string("#<Builtin Macro: if>"); }
 #ifdef DEBUG
-SpecialOptIf::_debug_repr() { return ext_repr(); }
+string SpecialOptIf::_debug_repr() { return ext_repr(); }
 #endif
 
 SpecialOptLambda::SpecialOptLambda() : SpecialOptObj() {}
@@ -163,6 +163,10 @@ Cons *SpecialOptDefine::call(ArgList *arg_list, Environment * &envt,
     *top_ptr = obj;
     return ret_addr->next;
 }
+string SpecialOptDefine::ext_repr() { return string("#<Builtin Macro: define>"); }
+#ifdef DEBUG
+string SpecialOptDefine::_debug_repr() { return ext_repr(); }
+#endif
 
 void SpecialOptSet::prepare(Cons *pc) {
     // TODO: check number of arguments
@@ -180,3 +184,8 @@ Cons *SpecialOptSet::call(ArgList *arg_list, Environment * &envt,
     *top_ptr = new UnspecObj();
     return ret_addr->next;
 }
+
+string SpecialOptSet::ext_repr() { return string("#<Builtin Macro: set!>"); }
+#ifdef DEBUG
+string SpecialOptSet::_debug_repr() { return ext_repr(); }
+#endif

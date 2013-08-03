@@ -46,6 +46,9 @@ class EvalObj : public FrameObj {
         virtual string ext_repr() = 0;  
         /**< Always true for all EvalObjs except BoolObj */
         virtual bool is_true();         
+#ifdef DEBUG
+        virtual void _debug_print();
+#endif
 };
 
 /** @class Cons
@@ -88,6 +91,7 @@ class RetAddr : public FrameObj {
         Cons* addr;                      /**< The return address  */
 
         RetAddr(Cons *);
+        string _debug_repr();
 };
 
 
@@ -110,7 +114,7 @@ class SymObj: public EvalObj {
     public:
         string val;
 
-        SymObj(string);
+        SymObj(const string &);
 #ifdef DEBUG
         string _debug_repr();
 #endif
@@ -181,7 +185,7 @@ class BuiltinProcObj: public OptObj {
         BuiltinProc handler;        
         string name;
     public:
-        BuiltinProcObj(BuiltinProc, string);
+        BuiltinProcObj(BuiltinProc, const string &);
         Cons *call(ArgList *arg_list, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
 };

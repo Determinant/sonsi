@@ -1,3 +1,4 @@
+#include <cstdio>
 #include "model.h"
 
 EmptyList *empty_list = new EmptyList();
@@ -17,18 +18,26 @@ void EvalObj::prepare(Cons *pc) {}
 bool EvalObj::is_simple_obj() {
     return otype == CLS_SIM_OBJ;
 }
+void EvalObj::_debug_print() {
+    printf("mem: 0x%llX\n%s\n\n", (unsigned long long)this,
+            _debug_repr().c_str());
+}
 
 bool EvalObj::is_true() {
     return true;
 }
 
-Cons::Cons(EvalObj *_car, Cons *_cdr) : EvalObj(), car(_car), cdr(_cdr), skip(false), next(NULL) {}
+Cons::Cons(EvalObj *_car, Cons *_cdr) : 
+    EvalObj(), car(_car), cdr(_cdr), skip(false), next(cdr) {}
 
 string Cons::ext_repr() { return string("#<Cons>"); }
 #ifdef DEBUG
 string Cons::_debug_repr() { return ext_repr(); }
-Cons::_debug_print() {
-    printf("%s",
+void Cons::_debug_print() {
+    printf("mem: 0x%llX 0x%llX 0x%llX\n%s\n", 
+            (unsigned long long)this,
+            (unsigned long long)car,
+            (unsigned long long)cdr,
     ("car: " + car -> ext_repr() + "\n" + \
      "cdr: " + cdr -> ext_repr() + "\n").c_str());
 }
@@ -37,6 +46,9 @@ Cons::_debug_print() {
 RetAddr::RetAddr(Cons *_addr) : FrameObj(), addr(_addr) {
     ftype = CLS_RET_ADDR;
 }
+#ifdef DEBUG
+string RetAddr::_debug_repr() { return string("#<Return Address>"); }
+#endif
 
 UnspecObj::UnspecObj() : EvalObj() {}
 string UnspecObj::ext_repr() { return string("#<Unspecified>"); }
@@ -44,7 +56,7 @@ string UnspecObj::ext_repr() { return string("#<Unspecified>"); }
 string UnspecObj::_debug_repr() { return ext_repr(); }
 #endif
 
-SymObj::SymObj(string str) : EvalObj(), val(str) {}
+SymObj::SymObj(const string &str) : EvalObj(), val(str) {}
 string SymObj::ext_repr() { return "#<Symbol: " + val + ">"; }
 #ifdef DEBUG
 string SymObj::_debug_repr() { return ext_repr(); }
@@ -81,7 +93,7 @@ SpecialOptObj::SpecialOptObj() : OptObj() {}
 
 NumberObj::NumberObj() : EvalObj() {}
 
-BuiltinProcObj::BuiltinProcObj(BuiltinProc f, string _name) :
+BuiltinProcObj::BuiltinProcObj(BuiltinProc f, const string &_name) :
     OptObj(), handler(f), name(_name) {}
 
 Cons *BuiltinProcObj::call(ArgList *arg_list, Environment * &envt,
