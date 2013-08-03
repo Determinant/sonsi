@@ -535,6 +535,6 @@ while True:
         cmd = sys.stdin.readline()
         t.feed(cmd)
     try:
-        print e.run_expr(exp).ext_repr()
+        pdb.run("print e.run_expr(exp).ext_repr()")
     except Exception as exc:
         print exc

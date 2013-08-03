@@ -1,6 +1,7 @@
 #include "model.h"
 #include "builtin.h"
 #include "parser.h"
+#include "eval.h"
 #include <cstdio>
 
 #ifdef DEBUG
@@ -16,6 +17,13 @@ void tree_print(Cons *ptr) {
 int main() {
     Tokenizor *tk = new Tokenizor();
     ASTGenerator *ast = new ASTGenerator();
-    Cons *tree = ast->absorb(tk);
-    tree_print(tree);
+    Evaluator *eval = new Evaluator();
+
+    while (1)
+    {
+        Cons *tree = ast->absorb(tk);
+        if (!tree) break;
+        //tree_print(tree);
+        printf("%s\n", eval->run_expr(tree)->ext_repr().c_str());
+    }
 }

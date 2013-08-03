@@ -23,6 +23,7 @@ class FrameObj {
     protected:
         ClassType ftype;   // avoid the use of dynamic_cast to improve efficiency
     public:
+        FrameObj(ClassType);
         virtual ~FrameObj() {}
         bool is_ret_addr();
 #ifdef DEBUG
@@ -36,10 +37,10 @@ class Cons;
  * Objects that represents a value in evaluation
  */
 class EvalObj : public FrameObj {
-    private:
-        ClassType otype;    // avoid the use of dynamic_cast to improve efficiency
     public:
-        EvalObj();
+        ClassType otype;    // avoid the use of dynamic_cast to improve efficiency
+
+        EvalObj(ClassType _otype = CLS_SIM_OBJ);
         bool is_simple_obj();
         /** External representation of this object */
         virtual void prepare(Cons *pc);
@@ -136,13 +137,13 @@ class OptObj: public EvalObj {
         OptObj();
         /**
          * The function is called when an operation is needed.
-         * @param arg_list The argument list (the first one is the opt itself)
+         * @param args The argument list (the first one is the opt itself)
          * @param envt The current environment (may be modified)
          * @param cont The current continuation (may be modified)
          * @param top_ptr Pointing to the top of the stack (may be modified)
          * @return New value for pc register 
          */
-        virtual Cons *call(ArgList *arg_list, Environment * &envt, 
+        virtual Cons *call(ArgList *args, Environment * &envt, 
                             Continuation * &cont, FrameObj ** &top_ptr) = 0;
 };
 
@@ -159,7 +160,7 @@ class ProcObj: public OptObj {
         Environment *envt;
 
         ProcObj(ASTList *, Environment *, SymbolList *);
-        Cons *call(ArgList *arg_list, Environment * &envt,
+        Cons *call(ArgList *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
 #ifdef DEBUG
         string _debug_repr();
@@ -185,9 +186,13 @@ class BuiltinProcObj: public OptObj {
         BuiltinProc handler;        
         string name;
     public:
-        BuiltinProcObj(BuiltinProc, const string &);
-        Cons *call(ArgList *arg_list, Environment * &envt,
+        BuiltinProcObj(BuiltinProc, string);
+        Cons *call(ArgList *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
+#ifdef DEBUG
+        string _debug_repr();
+#endif
+        string ext_repr();
 };
 
 /** @class NumberObj
@@ -211,7 +216,7 @@ class Environment {
     public:
         Environment(Environment * = NULL);
         void add_binding(SymObj *, EvalObj *);  
-        EvalObj *get_obj(SymObj *);
+        EvalObj *get_obj(EvalObj *);
         bool has_obj(SymObj *);
 };
 
@@ -221,10 +226,9 @@ class Continuation {
         Environment *envt;
         Cons *pc;
         ASTList *proc_body;
-        unsigned int body_cnt;
 
         Continuation(Environment *, Cons *, Continuation *, 
-                ASTList *, unsigned int = 0);
+                ASTList *);
 };
 
 #endif

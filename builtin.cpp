@@ -1,4 +1,5 @@
 #include "builtin.h"
+#include <cstdio>
 #include <sstream>
 
 using std::stringstream;
@@ -42,12 +43,12 @@ void SpecialOptIf::prepare(Cons *pc) {
         pc->cdr->cdr->skip = true;
 }
 
-void SpecialOptIf::pre_call(ArgList *arg_list, Cons *pc,
+void SpecialOptIf::pre_call(ArgList *args, Cons *pc,
         Environment *envt) {
     pc = dynamic_cast<Cons*>(pc->car); 
     // Condition evaluated and the decision is made
     state = 1;
-    if (arg_list->cdr->car->is_true())
+    if (args->cdr->car->is_true())
     {
         pc = pc->cdr;
         pc->skip = true;
@@ -65,23 +66,23 @@ void SpecialOptIf::pre_call(ArgList *arg_list, Cons *pc,
     }
 }
 
-EvalObj *SpecialOptIf::post_call(ArgList *arg_list, Cons *pc,
+EvalObj *SpecialOptIf::post_call(ArgList *args, Cons *pc,
                                 Environment *envt) {
     // Value already evaluated, so just return it
-    return arg_list->cdr->car;
+    return args->cdr->car;
 }
-Cons *SpecialOptIf::call(ArgList *arg_list, Environment * &envt, 
+Cons *SpecialOptIf::call(ArgList *args, Environment * &envt, 
                         Continuation * &cont, FrameObj ** &top_ptr) {
-    Cons *ret_addr = dynamic_cast<Cons*>(*top_ptr);
+    Cons *ret_addr = dynamic_cast<RetAddr*>(*top_ptr)->addr;
     if (state) 
     {
-        *top_ptr = post_call(arg_list, ret_addr, envt);
+        *top_ptr++ = post_call(args, ret_addr, envt);
         return ret_addr->next;          // Move to the next instruction
     }
     else
     {
-        pre_call(arg_list, ret_addr, envt);
-        top_ptr++;
+        pre_call(args, ret_addr, envt);
+        top_ptr += 2;
         // Undo pop and invoke again
         return dynamic_cast<Cons*>(ret_addr->car)->next;
     }
@@ -94,8 +95,8 @@ string SpecialOptIf::_debug_repr() { return ext_repr(); }
 
 SpecialOptLambda::SpecialOptLambda() : SpecialOptObj() {}
 #define FILL_MARKS(pc, flag) \
-    for (pc = pc->cdr; pc != empty_list; pc = pc->cdr) \
-        pc->skip = flag
+    for (Cons *ptr = pc->cdr; ptr != empty_list; ptr = ptr->cdr) \
+        ptr->skip = flag
 
 void SpecialOptLambda::prepare(Cons *pc) {
     //TODO check number of arguments
@@ -103,9 +104,9 @@ void SpecialOptLambda::prepare(Cons *pc) {
     FILL_MARKS(pc, true);
 }
 
-Cons *SpecialOptLambda::call(ArgList *arg_list, Environment * &envt, 
+Cons *SpecialOptLambda::call(ArgList *args, Environment * &envt, 
                             Continuation * &cont, FrameObj ** &top_ptr) {
-    Cons *ret_addr = dynamic_cast<Cons*>(*top_ptr);
+    Cons *ret_addr = dynamic_cast<RetAddr*>(*top_ptr)->addr;
     Cons *pc = dynamic_cast<Cons*>(ret_addr->car);
     SymbolList *para_list = dynamic_cast<SymbolList*>(pc->cdr->car);  // parameter list
     // Clear the flag to avoid side-effects (e.g. proc calling)
@@ -114,9 +115,9 @@ Cons *SpecialOptLambda::call(ArgList *arg_list, Environment * &envt,
     // store a list of expressions inside <body>
     ASTList *body = pc->cdr->cdr;       // Truncate the expression list
     for (Cons *ptr = body; ptr != empty_list; ptr = ptr->cdr)
-        ptr->next = NULL;    // Make each expression a orphan
+        ptr->next = NULL;    // Make each expression an orphan
 
-    *top_ptr = new ProcObj(body, envt, para_list);
+    *top_ptr++ = new ProcObj(body, envt, para_list);
     return ret_addr->next;  // Move to the next instruction
 }
 
@@ -134,9 +135,9 @@ void SpecialOptDefine::prepare(Cons *pc) {
     }                                   // Procedure definition
     else FILL_MARKS(pc, true);          // Skip all parts
 }
-Cons *SpecialOptDefine::call(ArgList *arg_list, Environment * &envt, 
+Cons *SpecialOptDefine::call(ArgList *args, Environment * &envt, 
         Continuation * &cont, FrameObj ** &top_ptr) {
-    Cons *ret_addr = dynamic_cast<Cons*>(*top_ptr);
+    Cons *ret_addr = dynamic_cast<RetAddr*>(*top_ptr)->addr;
     Cons *pc = dynamic_cast<Cons*>(ret_addr->car);
     EvalObj *obj;
     SymObj *id;
@@ -144,7 +145,7 @@ Cons *SpecialOptDefine::call(ArgList *arg_list, Environment * &envt,
     if (pc->cdr->car->is_simple_obj())
     {
         id = dynamic_cast<SymObj*>(pc->cdr->car);
-        obj = arg_list->cdr->car;
+        obj = args->cdr->car;
     }
     else
     {
@@ -160,7 +161,7 @@ Cons *SpecialOptDefine::call(ArgList *arg_list, Environment * &envt,
         obj = new ProcObj(body, envt, para_list);
     }
     envt->add_binding(id, obj);
-    *top_ptr = obj;
+    *top_ptr++ = new UnspecObj();
     return ret_addr->next;
 }
 string SpecialOptDefine::ext_repr() { return string("#<Builtin Macro: define>"); }
@@ -174,18 +175,71 @@ void SpecialOptSet::prepare(Cons *pc) {
     pc->cdr->cdr->skip = false; 
 }
 
-Cons *SpecialOptSet::call(ArgList *arg_list, Environment * &envt, 
+Cons *SpecialOptSet::call(ArgList *args, Environment * &envt, 
                             Continuation * &cont, FrameObj ** &top_ptr) {
-    Cons *ret_addr = dynamic_cast<Cons*>(*top_ptr);
+    Cons *ret_addr = dynamic_cast<RetAddr*>(*top_ptr)->addr;
     Cons *pc = dynamic_cast<Cons*>(ret_addr->car);
     SymObj *id = dynamic_cast<SymObj*>(pc->cdr->car);
     if (envt->has_obj(id))
-        envt->add_binding(id, arg_list->cdr->car);
-    *top_ptr = new UnspecObj();
+        envt->add_binding(id, args->cdr->car);
+    *top_ptr++ = new UnspecObj();
     return ret_addr->next;
 }
 
+SpecialOptSet::SpecialOptSet() {}
 string SpecialOptSet::ext_repr() { return string("#<Builtin Macro: set!>"); }
 #ifdef DEBUG
 string SpecialOptSet::_debug_repr() { return ext_repr(); }
 #endif
+
+EvalObj *builtin_plus(ArgList *args) {
+    // TODO: type conversion and proper arithmetic
+    int res = 0;
+    for (Cons *ptr = args; ptr != empty_list; ptr = ptr->cdr)
+        res += dynamic_cast<IntObj*>(ptr->car)->val;
+    return new IntObj(res);
+}
+
+EvalObj *builtin_minus(ArgList *args) {
+    // TODO: type conversion and proper arithmetic
+    int res = dynamic_cast<IntObj*>(args->car)->val;
+    for (Cons *ptr = args->cdr; ptr != empty_list; ptr = ptr->cdr)
+        res -= dynamic_cast<IntObj*>(ptr->car)->val;
+    return new IntObj(res);
+}
+
+EvalObj *builtin_times(ArgList *args) {
+    // TODO: type conversion and proper arithmetic
+    int res = 1;
+    for (Cons *ptr = args; ptr != empty_list; ptr = ptr->cdr)
+        res *= dynamic_cast<IntObj*>(ptr->car)->val;
+    return new IntObj(res);
+}
+
+EvalObj *builtin_div(ArgList *args) {
+    // TODO: type conversion and proper arithmetic
+    int res = dynamic_cast<IntObj*>(args->car)->val;
+    for (Cons *ptr = args->cdr; ptr != empty_list; ptr = ptr->cdr)
+        res /= dynamic_cast<IntObj*>(ptr->car)->val;
+    return new IntObj(res);
+}
+
+EvalObj *builtin_lt(ArgList *args) {
+    return new BoolObj(dynamic_cast<IntObj*>(args->car)->val <
+                    dynamic_cast<IntObj*>(args->cdr->car)->val);
+}
+
+EvalObj *builtin_gt(ArgList *args) {
+    return new BoolObj(dynamic_cast<IntObj*>(args->car)->val >
+                    dynamic_cast<IntObj*>(args->cdr->car)->val);
+}
+
+EvalObj *builtin_arithmetic_eq(ArgList *args) {
+    return new BoolObj(dynamic_cast<IntObj*>(args->car)->val ==
+                    dynamic_cast<IntObj*>(args->cdr->car)->val);
+}
+
+EvalObj *builtin_display(ArgList *args) {
+    printf("%s\n", args->car->ext_repr().c_str());
+    return new UnspecObj();
+}

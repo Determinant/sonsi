@@ -79,7 +79,7 @@ Cons *ASTGenerator::absorb(Tokenizor *tk) {
         if (top_ptr > parse_stack && *parse_stack)
             return new Cons(*(top_ptr - 1), empty_list);
         string token;
-        tk->get_token(token); 
+        if (!tk->get_token(token)) return NULL;
         if (token == "(")
             *top_ptr++ = NULL;  // Make the beginning of a new level
         else if (token == ")")

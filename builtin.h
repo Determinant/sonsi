@@ -10,9 +10,8 @@ using std::string;
  * Booleans
  */
 class BoolObj: public EvalObj {
-    private:
-        bool val;                       /**< true for #t, false for #f */ 
     public:
+        bool val;                       /**< true for #t, false for #f */ 
         BoolObj(bool); 
         bool is_true();                 /**< Override EvalObj `is_true()` */
 #ifdef DEBUG
@@ -26,9 +25,8 @@ class BoolObj: public EvalObj {
  * Will be removed in the future
  */
 class IntObj: public NumberObj {
-    private:
-        int val;
     public:
+        int val;
         IntObj(int);
 #ifdef DEBUG
         string _debug_repr();
@@ -40,9 +38,8 @@ class IntObj: public NumberObj {
  * Floating point numbers
  */
 class FloatObj: public NumberObj {
-    private:
-        double val;
     public:
+        double val;
         FloatObj(double);
 #ifdef DEBUG
         string _debug_repr();
@@ -61,18 +58,18 @@ class SpecialOptIf: public SpecialOptObj {
          * The evaluator will call this after the <condition> exp is evaluated.
          * And this function tells the evaluator which of <consequence> and
          * <alternative> should be evaluted. */
-        void pre_call(ArgList *arg_list, Cons *pc, 
+        void pre_call(ArgList *args, Cons *pc, 
                 Environment *envt);
         /** The system will call this again after the desired result is
          * evaluated, so just return it to let the evaluator know the it's the
          * answer.
          */
-        EvalObj *post_call(ArgList *arg_list, Cons *pc, 
+        EvalObj *post_call(ArgList *args, Cons *pc, 
                 Environment *envt);
     public:
         SpecialOptIf();
         void prepare(Cons *pc);
-        Cons *call(ArgList *arg_list, Environment * &envt, 
+        Cons *call(ArgList *args, Environment * &envt, 
                     Continuation * &cont, FrameObj ** &top_ptr);
 #ifdef DEBUG
         string _debug_repr();
@@ -87,7 +84,7 @@ class SpecialOptLambda: public SpecialOptObj {
     public:
         SpecialOptLambda();
         void prepare(Cons *pc);
-        Cons *call(ArgList *arg_list, Environment * &envt, 
+        Cons *call(ArgList *args, Environment * &envt, 
                     Continuation * &cont, FrameObj ** &top_ptr);
 
 #ifdef DEBUG
@@ -103,7 +100,7 @@ class SpecialOptDefine: public SpecialOptObj {
     public:
         SpecialOptDefine(); 
         void prepare(Cons *pc);
-        Cons *call(ArgList *arg_list, Environment * &envt, 
+        Cons *call(ArgList *args, Environment * &envt, 
                     Continuation * &cont, FrameObj ** &top_ptr);
 #ifdef DEBUG
         string _debug_repr();
@@ -118,12 +115,21 @@ class SpecialOptSet: public SpecialOptObj {
     public:
         SpecialOptSet();
         void prepare(Cons *pc);
-        Cons *call(ArgList *arg_list, Environment * &envt, 
+        Cons *call(ArgList *args, Environment * &envt, 
                     Continuation * &cont, FrameObj ** &top_ptr);
 #ifdef DEBUG
         string _debug_repr();
 #endif
         string ext_repr();
 };
+
+EvalObj *builtin_plus(ArgList *);
+EvalObj *builtin_minus(ArgList *);
+EvalObj *builtin_times(ArgList *);
+EvalObj *builtin_div(ArgList *);
+EvalObj *builtin_lt(ArgList *);
+EvalObj *builtin_gt(ArgList *);
+EvalObj *builtin_arithmetic_eq(ArgList *);
+EvalObj *builtin_display(ArgList *);
 
 #endif
