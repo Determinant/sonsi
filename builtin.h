@@ -11,8 +11,8 @@ using std::string;
  */
 class BoolObj: public EvalObj {
     public:
-        bool val;                       /**< true for #t, false for #f */ 
-        BoolObj(bool); 
+        bool val;                       /**< true for \#t, false for \#f */ 
+        BoolObj(bool);                  /**< Converts a C bool value to a BoolObj*/
         bool is_true();                 /**< Override EvalObj `is_true()` */
 #ifdef DEBUG
         string _debug_repr();
@@ -26,7 +26,8 @@ class BoolObj: public EvalObj {
  */
 class IntObj: public NumberObj {
     public:
-        int val;
+        int val; /**< Numeric value */
+        /** Converts a C integer value to a FloatObj */
         IntObj(int);
 #ifdef DEBUG
         string _debug_repr();
@@ -39,7 +40,8 @@ class IntObj: public NumberObj {
  */
 class FloatObj: public NumberObj {
     public:
-        double val;
+        double val; /**< Numeric value */
+        /** Converts a C double value to a FloatObj */
         FloatObj(double);
 #ifdef DEBUG
         string _debug_repr();

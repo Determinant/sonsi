@@ -26,7 +26,7 @@ void Evaluator::add_builtin_routines() {
 }
 
 Evaluator::Evaluator() {
-    envt = new Environment();       // Top-level Environment
+    envt = new Environment(NULL);       // Top-level Environment
     add_builtin_routines();
 }
 

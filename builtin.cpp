@@ -7,33 +7,41 @@ using std::stringstream;
 extern EmptyList *empty_list;
 
 BoolObj::BoolObj(bool _val) : EvalObj(), val(_val) {}
+
 bool BoolObj::is_true() { return val; }
+
 string BoolObj::ext_repr() { return string(val ? "#t" : "#f"); }
+
 #ifdef DEBUG
 string BoolObj::_debug_repr() { return ext_repr(); }
 #endif
 
 IntObj::IntObj(int _val) : NumberObj(), val(_val) {}
+
 string IntObj::ext_repr() {
     stringstream ss;
     ss << val;
     return ss.str();
 }
+
 #ifdef DEBUG
 string IntObj::_debug_repr() { return ext_repr(); }
 #endif
 
 FloatObj::FloatObj(double _val) : NumberObj(), val(_val) {}
+
 string FloatObj::ext_repr() { 
     stringstream ss;
     ss << val;
     return ss.str();
 }
+
 #ifdef DEBUG
 string FloatObj::_debug_repr() { return ext_repr(); }
 #endif
 
 SpecialOptIf::SpecialOptIf() : SpecialOptObj() {}
+
 void SpecialOptIf::prepare(Cons *pc) {
     state = 0;  // Prepared
     pc = pc->cdr;
@@ -71,6 +79,7 @@ EvalObj *SpecialOptIf::post_call(ArgList *args, Cons *pc,
     // Value already evaluated, so just return it
     return args->cdr->car;
 }
+
 Cons *SpecialOptIf::call(ArgList *args, Environment * &envt, 
                         Continuation * &cont, FrameObj ** &top_ptr) {
     Cons *ret_addr = dynamic_cast<RetAddr*>(*top_ptr)->addr;
@@ -89,6 +98,7 @@ Cons *SpecialOptIf::call(ArgList *args, Environment * &envt,
 }
 
 string SpecialOptIf::ext_repr() { return string("#<Builtin Macro: if>"); }
+
 #ifdef DEBUG
 string SpecialOptIf::_debug_repr() { return ext_repr(); }
 #endif
@@ -122,11 +132,13 @@ Cons *SpecialOptLambda::call(ArgList *args, Environment * &envt,
 }
 
 string SpecialOptLambda::ext_repr() { return string("#<Builtin Macro: lambda>"); }
+
 #ifdef DEBUG
 string SpecialOptLambda::_debug_repr() { return ext_repr(); }
 #endif
 
 SpecialOptDefine::SpecialOptDefine() : SpecialOptObj() {}
+
 void SpecialOptDefine::prepare(Cons *pc) {
     if (pc->cdr->car->is_simple_obj())  // Simple value assignment
     {
@@ -135,6 +147,7 @@ void SpecialOptDefine::prepare(Cons *pc) {
     }                                   // Procedure definition
     else FILL_MARKS(pc, true);          // Skip all parts
 }
+
 Cons *SpecialOptDefine::call(ArgList *args, Environment * &envt, 
         Continuation * &cont, FrameObj ** &top_ptr) {
     Cons *ret_addr = dynamic_cast<RetAddr*>(*top_ptr)->addr;
@@ -164,7 +177,9 @@ Cons *SpecialOptDefine::call(ArgList *args, Environment * &envt,
     *top_ptr++ = new UnspecObj();
     return ret_addr->next;
 }
+
 string SpecialOptDefine::ext_repr() { return string("#<Builtin Macro: define>"); }
+
 #ifdef DEBUG
 string SpecialOptDefine::_debug_repr() { return ext_repr(); }
 #endif
@@ -187,7 +202,9 @@ Cons *SpecialOptSet::call(ArgList *args, Environment * &envt,
 }
 
 SpecialOptSet::SpecialOptSet() {}
+
 string SpecialOptSet::ext_repr() { return string("#<Builtin Macro: set!>"); }
+
 #ifdef DEBUG
 string SpecialOptSet::_debug_repr() { return ext_repr(); }
 #endif

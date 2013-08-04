@@ -21,10 +21,23 @@ static const int CLS_CONS_OBJ = 1;
  */
 class FrameObj {
     protected:
-        ClassType ftype;   // avoid the use of dynamic_cast to improve efficiency
+        /**
+         * Report the type of the FrameObj, which can avoid the use of
+         * dynamic_cast to improve efficiency. See the constructor for detail
+         */
+        ClassType ftype;   
     public:
-        FrameObj(ClassType);
+        /**
+         * Construct an EvalObj
+         * @param ftype the type of the FrameObj (CLS_EVAL_OBJ for an EvalObj,
+         * CLS_RET_ADDR for a return address)
+         */
+        FrameObj(ClassType ftype);
         virtual ~FrameObj() {}
+        /**
+         * Tell whether the object is a return address, according to ftype
+         * @return true for yes
+         */
         bool is_ret_addr();
 #ifdef DEBUG
         virtual string _debug_repr() = 0;  
@@ -37,15 +50,30 @@ class Cons;
  * Objects that represents a value in evaluation
  */
 class EvalObj : public FrameObj {
+    protected:
+        /**
+         * Report the type of the EvalObj, which can avoid the use of
+         * dynamic_cast to improve efficiency. See the constructor for detail
+         */
+        ClassType otype;
     public:
-        ClassType otype;    // avoid the use of dynamic_cast to improve efficiency
-
-        EvalObj(ClassType _otype = CLS_SIM_OBJ);
+        /**
+         * Construct an EvalObj
+         * @param otype the type of the EvalObj (CLS_CONS_OBJ for a
+         * construction, CLS_SIM_OBJ for a simple object), which defaults to
+         * CLS_SIM_OBJ
+         */
+        EvalObj(ClassType otype = CLS_SIM_OBJ);
+        /** Check if the object is a simple object (instead of a call
+         * invocation) 
+         * @return true if the object is not a construction (Cons)
+         * */
         bool is_simple_obj();
         /** External representation of this object */
         virtual void prepare(Cons *pc);
+        /** Any EvalObj has its external representation */
         virtual string ext_repr() = 0;  
-        /**< Always true for all EvalObjs except BoolObj */
+        /** Always true for all EvalObjs except BoolObj */
         virtual bool is_true();         
 #ifdef DEBUG
         virtual void _debug_print();
@@ -62,9 +90,9 @@ class Cons : public EvalObj {
         EvalObj *car;                   /**< car (as in Scheme) */
         Cons *cdr;                      /**< cdr (as in Scheme) */
         bool skip;                      /**< Wether to skip the current branch */
-        Cons* next;                      /**< The next branch in effect         */
+        Cons* next;                     /**< The next branch in effect */
 
-        Cons(EvalObj *, Cons *);
+        Cons(EvalObj *car, Cons *cdr);  /**< Create a Cons (car . cdr) */
 #ifdef DEBUG
         void _debug_print();
         string _debug_repr();
@@ -90,9 +118,12 @@ class EmptyList: public Cons {
 class RetAddr : public FrameObj {
     public:
         Cons* addr;                      /**< The return address  */
-
-        RetAddr(Cons *);
+        /** Constructs a return address object which refers to the node addr in
+         * the AST */
+        RetAddr(Cons *addr);
+#ifdef DEBUG
         string _debug_repr();
+#endif
 };
 
 
@@ -159,7 +190,8 @@ class ProcObj: public OptObj {
         /** Pointer to the environment */
         Environment *envt;
 
-        ProcObj(ASTList *, Environment *, SymbolList *);
+        /** Conctructs a ProcObj */
+        ProcObj(ASTList *body, Environment *envt, SymbolList *para_list);
         Cons *call(ArgList *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
 #ifdef DEBUG
@@ -186,7 +218,12 @@ class BuiltinProcObj: public OptObj {
         BuiltinProc handler;        
         string name;
     public:
-        BuiltinProcObj(BuiltinProc, string);
+        /**
+         * Make a BuiltinProcObj which invokes proc when called
+         * @param proc the actual handler
+         * @param name the name of this built-in procedure
+         */
+        BuiltinProcObj(BuiltinProc proc, string name);
         Cons *call(ArgList *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
 #ifdef DEBUG
@@ -210,25 +247,46 @@ typedef map<string, EvalObj*> Str2EvalObj;
  */
 class Environment {
     private:
-        Environment *prev_envt; /**< Pointer to the upper level environment */
+        Environment *prev_envt; /**< Pointer to the upper-level environment */
         Str2EvalObj binding;    /**< Store all pairs of identifier and its
                                   corresponding obj */
     public:
-        Environment(Environment * = NULL);
-        void add_binding(SymObj *, EvalObj *);  
-        EvalObj *get_obj(EvalObj *);
+        /** Create an runtime environment
+         * @param prev_envt the outer environment
+         * */
+        Environment(Environment *prev_envt);
+        /** Add a binding entry which binds sym_obj to eval_obj */
+        void add_binding(SymObj *sym_obj, EvalObj *eval_obj);  
+        /** Extract the corresponding EvalObj if obj is a SymObj, or just
+         * simply return obj as it is 
+         * @param obj the object as request
+         * */
+        EvalObj *get_obj(EvalObj *obj);
+        /** Check if the desired obj exists
+         * @return true for yes
+         */
         bool has_obj(SymObj *);
 };
 
+/** @class Continuation
+ * Save the registers and necessary information when a user-defined call is
+ * being made (Behave like a stack frame in C). When the call has accomplished,
+ * the system will restore all the registers according to the continuation.
+ */
 class Continuation {
     public:
-        Continuation *prev_cont;
-        Environment *envt;
-        Cons *pc;
+        /** Linking the previous continuation on the chain */
+        Continuation *prev_cont;    
+        Environment *envt;  /**< The saved envt */
+        Cons *pc;           /**< The saved pc */
+        /** Pointing to the current expression that is being evaluated.
+         * When its value goes to empty_list, the call is accomplished.
+         */
         ASTList *proc_body;
 
-        Continuation(Environment *, Cons *, Continuation *, 
-                ASTList *);
+        /** Create a continuation */
+        Continuation(Environment *envt, Cons *pc, Continuation *prev_cont, 
+                ASTList *proc_body);
 };
 
 #endif

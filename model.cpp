@@ -2,10 +2,13 @@
 #include "model.h"
 
 FrameObj::FrameObj(ClassType _ftype) : ftype(_ftype) {}
+
 EmptyList *empty_list = new EmptyList();
 
 EmptyList::EmptyList() : Cons(NULL, NULL) {}
+
 string EmptyList::ext_repr() { return string("()"); }
+
 #ifdef DEBUG
 string EmptyList::_debug_repr() { return ext_repr(); }
 #endif
@@ -15,14 +18,19 @@ bool FrameObj::is_ret_addr() {
 }
 
 EvalObj::EvalObj(ClassType _otype) : FrameObj(CLS_EVAL_OBJ), otype(_otype) {}
+
 void EvalObj::prepare(Cons *pc) {}
+
 bool EvalObj::is_simple_obj() {
     return otype == CLS_SIM_OBJ;
 }
+
+#ifdef DEBUG
 void EvalObj::_debug_print() {
     printf("mem: 0x%llX\n%s\n\n", (unsigned long long)this,
             _debug_repr().c_str());
 }
+#endif
 
 bool EvalObj::is_true() {
     return true;
@@ -33,8 +41,10 @@ Cons::Cons(EvalObj *_car, Cons *_cdr) :
     next(cdr == empty_list ? NULL : cdr) {}
 
 string Cons::ext_repr() { return string("#<Cons>"); }
+
 #ifdef DEBUG
 string Cons::_debug_repr() { return ext_repr(); }
+
 void Cons::_debug_print() {
     printf("mem: 0x%llX (0x%llX . 0x%llX) | 0x%llX\n%s\n", 
             (unsigned long long)this,
@@ -47,18 +57,23 @@ void Cons::_debug_print() {
 #endif
 
 RetAddr::RetAddr(Cons *_addr) : FrameObj(CLS_RET_ADDR), addr(_addr) {}
+
 #ifdef DEBUG
 string RetAddr::_debug_repr() { return string("#<Return Address>"); }
 #endif
 
 UnspecObj::UnspecObj() : EvalObj() {}
+
 string UnspecObj::ext_repr() { return string("#<Unspecified>"); }
+
 #ifdef DEBUG
 string UnspecObj::_debug_repr() { return ext_repr(); }
 #endif
 
 SymObj::SymObj(const string &str) : EvalObj(), val(str) {}
+
 string SymObj::ext_repr() { return "#<Symbol: " + val + ">"; }
+
 #ifdef DEBUG
 string SymObj::_debug_repr() { return ext_repr(); }
 #endif
@@ -86,6 +101,7 @@ Cons *ProcObj::call(ArgList *args, Environment * &_envt,
 }
 
 string ProcObj::ext_repr() { return string("#<Procedure>"); }
+
 #ifdef DEBUG
 string ProcObj::_debug_repr() { return ext_repr(); }
 #endif
@@ -104,18 +120,24 @@ Cons *BuiltinProcObj::call(ArgList *args, Environment * &envt,
     *top_ptr++ = handler(args->cdr);
     return ret_addr->next;          // Move to the next instruction
 }
+
 string BuiltinProcObj::ext_repr() { 
     return "#<Builtin Procedure: " + name + ">";
 }
+
+#ifdef DEBUG
 string BuiltinProcObj::_debug_repr() { return ext_repr(); }
+#endif
 
 Environment::Environment(Environment *_prev_envt) : prev_envt(_prev_envt) {}
+
 void Environment::add_binding(SymObj *sym_obj, EvalObj *eval_obj) {
     binding[sym_obj->val] = eval_obj;
 }
+
 EvalObj *Environment::get_obj(EvalObj *obj) {
     SymObj *sym_obj = dynamic_cast<SymObj*>(obj);
-    if (!sym_obj) return obj;   // Not a SymObj
+    if (!sym_obj) return obj;       // Not a SymObj
 
     string name(sym_obj->val);
     for (Environment *ptr = this; ptr; ptr = ptr->prev_envt)
@@ -125,6 +147,7 @@ EvalObj *Environment::get_obj(EvalObj *obj) {
     }
     //TODO: exc key not found
 }
+
 bool Environment::has_obj(SymObj *sym_obj) {
     string name(sym_obj->val);
     for (Environment *ptr = this; ptr; ptr = ptr->prev_envt)
