@@ -19,6 +19,9 @@ static const int CLS_CONS_OBJ = 1 << 1;
 static const int CLS_SYM_OBJ = 1 << 2;
 static const int CLS_OPT_OBJ = 1 << 3;
 
+#define TO_CONS(ptr) \
+    (static_cast<Cons*>(ptr))
+
 /** @class FrameObj
  * Objects that can be held in the evaluation stack
  */
@@ -76,6 +79,8 @@ class EvalObj : public FrameObj {
         bool is_sym_obj();
         /** Check if the object is an operator */
         bool is_opt_obj();
+        /** Check if the object is a Cons */
+        bool is_cons_obj();
         virtual void prepare(Cons *pc);
         /** Any EvalObj has its external representation */
         virtual string ext_repr() = 0;  
@@ -94,11 +99,11 @@ class EvalObj : public FrameObj {
 class Cons : public EvalObj {
     public:
         EvalObj *car;                   /**< car (as in Scheme) */
-        Cons *cdr;                      /**< cdr (as in Scheme) */
+        EvalObj *cdr;                      /**< cdr (as in Scheme) */
         bool skip;                      /**< Wether to skip the current branch */
         Cons* next;                     /**< The next branch in effect */
 
-        Cons(EvalObj *car, Cons *cdr);  /**< Create a Cons (car . cdr) */
+        Cons(EvalObj *car, EvalObj *cdr);  /**< Create a Cons (car . cdr) */
 #ifdef DEBUG
         void _debug_print();
         string _debug_repr();

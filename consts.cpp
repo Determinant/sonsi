@@ -8,5 +8,6 @@ const char *SYN_ERR_MSG[] = {
     "Empty parameter list in (%s)",
     "Wrong number of arguments to procedure (%s)",
     "Illegal empty combination ()",
-    "Unexpected \")\""
+    "Unexpected \")\"",
+    "Wrong type (expecting %s)"
 };

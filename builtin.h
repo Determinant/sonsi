@@ -133,5 +133,8 @@ EvalObj *builtin_lt(ArgList *);
 EvalObj *builtin_gt(ArgList *);
 EvalObj *builtin_arithmetic_eq(ArgList *);
 EvalObj *builtin_display(ArgList *);
+EvalObj *builtin_cons(ArgList *);
+EvalObj *builtin_car(ArgList *);
+EvalObj *builtin_cdr(ArgList *);
 
 #endif

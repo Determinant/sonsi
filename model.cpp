@@ -35,6 +35,10 @@ bool EvalObj::is_opt_obj() {
     return otype & CLS_OPT_OBJ;
 }
 
+bool EvalObj::is_cons_obj() {
+    return otype & CLS_CONS_OBJ;
+}
+
 #ifdef DEBUG
 void EvalObj::_debug_print() {
     printf("mem: 0x%llX\n%s\n\n", (unsigned long long)this,
@@ -46,11 +50,13 @@ bool EvalObj::is_true() {
     return true;
 }
 
-Cons::Cons(EvalObj *_car, Cons *_cdr) : 
+Cons::Cons(EvalObj *_car, EvalObj *_cdr) : 
     EvalObj(CLS_CONS_OBJ), car(_car), cdr(_cdr), skip(false), 
-    next(cdr == empty_list ? NULL : cdr) {}
+    next(NULL) {}
 
-string Cons::ext_repr() { return string("#<Cons>"); }
+string Cons::ext_repr() { 
+    return "(" + car->ext_repr() + " . " + cdr->ext_repr() + ")"; 
+}
 
 #ifdef DEBUG
 string Cons::_debug_repr() { return ext_repr(); }
@@ -106,9 +112,9 @@ Cons *ProcObj::call(ArgList *args, Environment * &genvt,
     Environment *_envt = new Environment(envt);   
     // static_cast<SymObj*> because the para_list is already checked
     Cons *ptr, *ppar;
-    for (ptr = args->cdr, ppar = para_list; 
+    for (ptr = TO_CONS(args->cdr), ppar = para_list; 
             ptr != empty_list && ppar != empty_list; 
-            ptr = ptr->cdr, ppar = ppar->cdr)
+            ptr = TO_CONS(ptr->cdr), ppar = TO_CONS(ppar->cdr))
         _envt->add_binding(static_cast<SymObj*>(ppar->car), ptr->car);
 
     if (ptr != empty_list || ppar != empty_list)
@@ -137,7 +143,7 @@ Cons *BuiltinProcObj::call(ArgList *args, Environment * &envt,
                                 Continuation * &cont, FrameObj ** &top_ptr) {
 
     Cons *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
-    *top_ptr++ = handler(args->cdr);
+    *top_ptr++ = handler(TO_CONS(args->cdr));
     return ret_addr->next;          // Move to the next instruction
 }
 

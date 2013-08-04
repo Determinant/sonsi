@@ -21,6 +21,9 @@ void Evaluator::add_builtin_routines() {
     ADD_ENTRY("<", new BuiltinProcObj(builtin_lt, "<"));
     ADD_ENTRY("=", new BuiltinProcObj(builtin_arithmetic_eq, "="));
     ADD_ENTRY("display", new BuiltinProcObj(builtin_display, "display"));
+    ADD_ENTRY("cons", new BuiltinProcObj(builtin_cons, "cons"));
+    ADD_ENTRY("car", new BuiltinProcObj(builtin_car, "car"));
+    ADD_ENTRY("cdr", new BuiltinProcObj(builtin_cdr, "cdr"));
     ADD_ENTRY("if", new SpecialOptIf());
     ADD_ENTRY("lambda", new SpecialOptLambda());
     ADD_ENTRY("define", new SpecialOptDefine());
@@ -79,7 +82,7 @@ EvalObj *Evaluator::run_expr(Cons *prog) {
             RetAddr *ret_addr = static_cast<RetAddr*>(*top_ptr);
             if (!ret_addr->addr)
             {
-                Cons *nexp = cont->proc_body->cdr;
+                Cons *nexp = TO_CONS(cont->proc_body->cdr);
                 cont->proc_body = nexp;
                 if (nexp == empty_list)
                 {

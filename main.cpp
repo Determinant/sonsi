@@ -11,7 +11,7 @@ void tree_print(Cons *ptr) {
     if (!ptr || ptr == empty_list) return;
     ptr->_debug_print();
     tree_print(dynamic_cast<Cons*>(ptr->car));
-    tree_print(ptr->cdr);
+    tree_print(TO_CONS(ptr->cdr));
 }
 #endif
 

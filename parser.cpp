@@ -103,7 +103,11 @@ Cons *ASTGenerator::absorb(Tokenizor *tk) {
         {
             Cons *lst = empty_list;
             while (top_ptr >= parse_stack && *(--top_ptr))
-                lst = new Cons(*top_ptr, lst); // Collect the list
+            {
+                Cons *_lst = new Cons(*top_ptr, lst); // Collect the list
+                _lst->next = lst == empty_list ? NULL : lst;
+                lst = _lst;
+            }
             if (top_ptr < parse_stack)
                 throw NormalError(READ_ERR_UNEXPECTED_RIGHT_BRACKET);
             *top_ptr++ = lst;
