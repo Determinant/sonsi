@@ -53,7 +53,8 @@ void SpecialOptIf::prepare(Cons *pc) {
 
 void SpecialOptIf::pre_call(ArgList *args, Cons *pc,
         Environment *envt) {
-    pc = dynamic_cast<Cons*>(pc->car); 
+    // static_cast because it's a call invocation
+    pc = static_cast<Cons*>(pc->car); 
     // Condition evaluated and the decision is made
     state = 1;
     if (args->cdr->car->is_true())
@@ -82,7 +83,7 @@ EvalObj *SpecialOptIf::post_call(ArgList *args, Cons *pc,
 
 Cons *SpecialOptIf::call(ArgList *args, Environment * &envt, 
                         Continuation * &cont, FrameObj ** &top_ptr) {
-    Cons *ret_addr = dynamic_cast<RetAddr*>(*top_ptr)->addr;
+    Cons *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     if (state) 
     {
         *top_ptr++ = post_call(args, ret_addr, envt);
@@ -93,7 +94,8 @@ Cons *SpecialOptIf::call(ArgList *args, Environment * &envt,
         pre_call(args, ret_addr, envt);
         top_ptr += 2;
         // Undo pop and invoke again
-        return dynamic_cast<Cons*>(ret_addr->car)->next;
+        // static_cast because it's a call invocation
+        return static_cast<Cons*>(ret_addr->car)->next;
     }
 }
 
@@ -116,8 +118,8 @@ void SpecialOptLambda::prepare(Cons *pc) {
 
 Cons *SpecialOptLambda::call(ArgList *args, Environment * &envt, 
                             Continuation * &cont, FrameObj ** &top_ptr) {
-    Cons *ret_addr = dynamic_cast<RetAddr*>(*top_ptr)->addr;
-    Cons *pc = dynamic_cast<Cons*>(ret_addr->car);
+    Cons *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
+    Cons *pc = static_cast<Cons*>(ret_addr->car);
     SymbolList *para_list = dynamic_cast<SymbolList*>(pc->cdr->car);  // parameter list
     // Clear the flag to avoid side-effects (e.g. proc calling)
     FILL_MARKS(pc, false);
@@ -150,8 +152,8 @@ void SpecialOptDefine::prepare(Cons *pc) {
 
 Cons *SpecialOptDefine::call(ArgList *args, Environment * &envt, 
         Continuation * &cont, FrameObj ** &top_ptr) {
-    Cons *ret_addr = dynamic_cast<RetAddr*>(*top_ptr)->addr;
-    Cons *pc = dynamic_cast<Cons*>(ret_addr->car);
+    Cons *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
+    Cons *pc = static_cast<Cons*>(ret_addr->car);
     EvalObj *obj;
     SymObj *id;
     // TODO: check identifier
@@ -162,7 +164,8 @@ Cons *SpecialOptDefine::call(ArgList *args, Environment * &envt,
     }
     else
     {
-        Cons *plst = dynamic_cast<Cons*>(pc->cdr->car);
+        // static_cast because of is_simple_obj() is false
+        Cons *plst = static_cast<Cons*>(pc->cdr->car);
         id = dynamic_cast<SymObj*>(plst->car);
         ArgList *para_list = plst->cdr;
         // Clear the flag to avoid side-effects (e.g. proc calling)
@@ -192,8 +195,8 @@ void SpecialOptSet::prepare(Cons *pc) {
 
 Cons *SpecialOptSet::call(ArgList *args, Environment * &envt, 
                             Continuation * &cont, FrameObj ** &top_ptr) {
-    Cons *ret_addr = dynamic_cast<RetAddr*>(*top_ptr)->addr;
-    Cons *pc = dynamic_cast<Cons*>(ret_addr->car);
+    Cons *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
+    Cons *pc = static_cast<Cons*>(ret_addr->car);
     SymObj *id = dynamic_cast<SymObj*>(pc->cdr->car);
     bool flag = envt->add_binding(id, args->cdr->car, false);
     // TODO: throw an exc "unbound variable"

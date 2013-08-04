@@ -88,14 +88,16 @@ ProcObj::ProcObj(ASTList *_body,
 Cons *ProcObj::call(ArgList *args, Environment * &_envt,
                     Continuation * &cont, FrameObj ** &top_ptr) {
     // Create a new continuation
-    Cons *ret_addr = dynamic_cast<RetAddr*>(*top_ptr)->addr;
+    // static_cast see `call` invocation in eval.cpp
+    Cons *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     Continuation *ncont = new Continuation(_envt, ret_addr, cont, body);
     cont = ncont;                   // Add to the cont chain
     _envt = new Environment(envt);   // Create local env and recall the closure
     // TODO: Compare the arguments to the parameters
+    // static_cast<SymObj*> because the para_list is already checked
     for (Cons *ptr = args->cdr, *ppar = para_list; 
             ptr != empty_list; ptr = ptr->cdr, ppar = ppar->cdr)
-        _envt->add_binding(dynamic_cast<SymObj*>(ppar->car), ptr->car);
+        _envt->add_binding(static_cast<SymObj*>(ppar->car), ptr->car);
     *top_ptr++ = new RetAddr(NULL);   // Mark the entrance of a cont
     return body;                    // Move pc to the proc entry point
 }
@@ -116,7 +118,7 @@ BuiltinProcObj::BuiltinProcObj(BuiltinProc f, string _name) :
 Cons *BuiltinProcObj::call(ArgList *args, Environment * &envt,
                                 Continuation * &cont, FrameObj ** &top_ptr) {
 
-    Cons *ret_addr = dynamic_cast<RetAddr*>(*top_ptr)->addr;
+    Cons *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     *top_ptr++ = handler(args->cdr);
     return ret_addr->next;          // Move to the next instruction
 }

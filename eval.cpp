@@ -34,14 +34,16 @@ void push(Cons * &pc, FrameObj ** &top_ptr, Environment *envt) {
     if (pc->car->is_simple_obj())           // Not an opt invocation
     {
         *top_ptr = envt->get_obj(pc->car);  // Objectify the symbol
-        dynamic_cast<EvalObj*>(*top_ptr)->prepare(pc);
+        // static_cast because of is_simple_obj() is true
+        static_cast<EvalObj*>(*top_ptr)->prepare(pc);
         top_ptr++;
         pc = pc->next;                      // Move to the next instruction
     }
     else                                    // Operational Invocation
     {
         *top_ptr++ = new RetAddr(pc);       // Push the return address
-        pc = dynamic_cast<Cons*>(pc->car);  // Go deeper to enter the call
+        // static_cast because of is_simple_obj() is false
+        pc = static_cast<Cons*>(pc->car);  // Go deeper to enter the call
     }
 }
 
@@ -67,8 +69,9 @@ EvalObj *Evaluator::run_expr(Cons *prog) {
         {
             Cons *args = empty_list;
             while (!(*(--top_ptr))->is_ret_addr())
-                args = new Cons(dynamic_cast<EvalObj*>(*top_ptr), args);
-            RetAddr *ret_addr = dynamic_cast<RetAddr*>(*top_ptr);
+                args = new Cons(static_cast<EvalObj*>(*top_ptr), args);
+                //< static_cast because the while condition
+            RetAddr *ret_addr = static_cast<RetAddr*>(*top_ptr);
             if (!ret_addr->addr)
             {
                 Cons *nexp = cont->proc_body->cdr;
@@ -87,5 +90,6 @@ EvalObj *Evaluator::run_expr(Cons *prog) {
                 pc = dynamic_cast<OptObj*>(args->car)->call(args, envt, cont, top_ptr);
         }
     }
-    return dynamic_cast<EvalObj*>(*(eval_stack));
+    // static_cast because the previous while condition
+    return static_cast<EvalObj*>(*(eval_stack));
 }
