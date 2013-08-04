@@ -1,2 +1,5 @@
-- Better inherit relationship between Cons and EvalObj
-- Replace many `dynamic_cast` with `static_cast`
+- More sophisticated type system
+  - Number system && proper arithmetic
+  - Cons support
+- Quotation
+- Add macro support
