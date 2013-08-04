@@ -1,3 +1,2 @@
-- Better judgement of continuation exit
 - Better inherit relationship between Cons and EvalObj
 - Replace many `dynamic_cast` with `static_cast`

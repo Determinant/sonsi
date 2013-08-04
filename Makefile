@@ -10,3 +10,6 @@ clean:
 
 db:
 	gdb main
+
+cdb:
+	cgdb main

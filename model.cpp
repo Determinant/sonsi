@@ -131,8 +131,11 @@ string BuiltinProcObj::_debug_repr() { return ext_repr(); }
 
 Environment::Environment(Environment *_prev_envt) : prev_envt(_prev_envt) {}
 
-void Environment::add_binding(SymObj *sym_obj, EvalObj *eval_obj) {
+bool Environment::add_binding(SymObj *sym_obj, EvalObj *eval_obj, bool def) {
+    bool has_key = binding.count(sym_obj->val);
+    if (!def && !has_key) return false;
     binding[sym_obj->val] = eval_obj;
+    return true;
 }
 
 EvalObj *Environment::get_obj(EvalObj *obj) {
@@ -145,15 +148,7 @@ EvalObj *Environment::get_obj(EvalObj *obj) {
         bool has_key = ptr->binding.count(name);
         if (has_key) return ptr->binding[name];
     }
-    //TODO: exc key not found
-}
-
-bool Environment::has_obj(SymObj *sym_obj) {
-    string name(sym_obj->val);
-    for (Environment *ptr = this; ptr; ptr = ptr->prev_envt)
-        if (ptr->binding.count(name))
-            return true;
-    return false;
+    return NULL;                    // Object not found
 }
 
 Continuation::Continuation(Environment *_envt, Cons *_pc, 

@@ -253,19 +253,19 @@ class Environment {
     public:
         /** Create an runtime environment
          * @param prev_envt the outer environment
-         * */
+         */
         Environment(Environment *prev_envt);
-        /** Add a binding entry which binds sym_obj to eval_obj */
-        void add_binding(SymObj *sym_obj, EvalObj *eval_obj);  
+        /** Add a binding entry which binds sym_obj to eval_obj 
+         * @param def true to force the assignment
+         * @return when def is set to false, this return value is true iff. the
+         * assignment carried out successfully
+         */
+        bool add_binding(SymObj *sym_obj, EvalObj *eval_obj, bool def = true);  
         /** Extract the corresponding EvalObj if obj is a SymObj, or just
          * simply return obj as it is 
          * @param obj the object as request
          * */
         EvalObj *get_obj(EvalObj *obj);
-        /** Check if the desired obj exists
-         * @return true for yes
-         */
-        bool has_obj(SymObj *);
 };
 
 /** @class Continuation

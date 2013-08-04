@@ -195,8 +195,8 @@ Cons *SpecialOptSet::call(ArgList *args, Environment * &envt,
     Cons *ret_addr = dynamic_cast<RetAddr*>(*top_ptr)->addr;
     Cons *pc = dynamic_cast<Cons*>(ret_addr->car);
     SymObj *id = dynamic_cast<SymObj*>(pc->cdr->car);
-    if (envt->has_obj(id))
-        envt->add_binding(id, args->cdr->car);
+    bool flag = envt->add_binding(id, args->cdr->car, false);
+    // TODO: throw an exc "unbound variable"
     *top_ptr++ = new UnspecObj();
     return ret_addr->next;
 }
