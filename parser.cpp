@@ -17,12 +17,17 @@ void Tokenizor::set_stream(FILE *_stream) {
     stream = _stream;
 }
 
+#define IS_NEWLINE(ch) \
+    ((ch) == '\n')
 #define IS_BRACKET(ch) \
     ((ch) == '(' || (ch) == ')') 
 #define IS_SPACE(ch) \
-    ((ch) == ' ' || (ch) == '\t' || (ch) == '\n')
+    ((ch) == ' ' || (ch) == '\t' || IS_NEWLINE(ch))
 #define IS_DELIMITER(ch) \
     (IS_BRACKET(ch) || IS_SPACE(ch))
+#define IS_COMMENT(ch) \
+    ((ch) == ';')
+
 #define POP \
 do { \
     *buff_ptr = 0; \
@@ -36,10 +41,20 @@ bool Tokenizor::get_token(string &ret) {
     while (fread(&ch, 1, 1, stream))
     {
         if (buff_ptr != buff && 
-            (IS_BRACKET(*buff) || IS_DELIMITER(ch)))
+            (IS_BRACKET(*buff) || 
+             IS_DELIMITER(ch) ||
+             IS_COMMENT(ch)))
         {
-            POP;
-            flag = true;
+            if (IS_COMMENT(*buff))
+            {
+                if (IS_NEWLINE(ch)) buff_ptr = buff;
+                else buff_ptr = buff + 1;
+            }
+            else
+            {
+                POP;
+                flag = true;
+            }
         }
         if (!IS_SPACE(ch)) *buff_ptr++ = ch;
         if (flag) return true;
