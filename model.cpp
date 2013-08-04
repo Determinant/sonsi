@@ -1,5 +1,7 @@
 #include <cstdio>
 #include "model.h"
+#include "exc.h"
+#include "consts.h"
 
 FrameObj::FrameObj(ClassType _ftype) : ftype(_ftype) {}
 
@@ -94,19 +96,26 @@ ProcObj::ProcObj(ASTList *_body,
                     SymbolList *_para_list) :
     OptObj(), body(_body), envt(_envt), para_list(_para_list) {}
 
-Cons *ProcObj::call(ArgList *args, Environment * &_envt,
+Cons *ProcObj::call(ArgList *args, Environment * &genvt,
                     Continuation * &cont, FrameObj ** &top_ptr) {
     // Create a new continuation
     // static_cast see `call` invocation in eval.cpp
     Cons *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
-    Continuation *ncont = new Continuation(_envt, ret_addr, cont, body);
-    cont = ncont;                   // Add to the cont chain
-    _envt = new Environment(envt);   // Create local env and recall the closure
-    // TODO: Compare the arguments to the parameters
+    Continuation *_cont = new Continuation(genvt, ret_addr, cont, body);
+    // Create local env and recall the closure
+    Environment *_envt = new Environment(envt);   
     // static_cast<SymObj*> because the para_list is already checked
-    for (Cons *ptr = args->cdr, *ppar = para_list; 
-            ptr != empty_list; ptr = ptr->cdr, ppar = ppar->cdr)
+    Cons *ptr, *ppar;
+    for (ptr = args->cdr, ppar = para_list; 
+            ptr != empty_list && ppar != empty_list; 
+            ptr = ptr->cdr, ppar = ppar->cdr)
         _envt->add_binding(static_cast<SymObj*>(ppar->car), ptr->car);
+
+    if (ptr != empty_list || ppar != empty_list)
+        throw TokenError("", RUN_ERR_WRONG_NUM_OF_ARGS);
+
+    genvt = _envt;
+    cont = _cont;                   
     *top_ptr++ = new RetAddr(NULL);   // Mark the entrance of a cont
     return body;                    // Move pc to the proc entry point
 }
@@ -159,7 +168,8 @@ EvalObj *Environment::get_obj(EvalObj *obj) {
         bool has_key = ptr->binding.count(name);
         if (has_key) return ptr->binding[name];
     }
-    return NULL;                    // Object not found
+    // Object not found
+    throw TokenError(name, RUN_ERR_UNBOUND_VAR);
 }
 
 Continuation::Continuation(Environment *_envt, Cons *_pc, 

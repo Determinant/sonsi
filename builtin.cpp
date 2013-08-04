@@ -46,34 +46,44 @@ SpecialOptIf::SpecialOptIf() : SpecialOptObj() {}
 
 void SpecialOptIf::prepare(Cons *pc) {
     state = 0;  // Prepared
+
     pc = pc->cdr;
+    if (pc == empty_list)
+        throw TokenError("if", SYN_ERR_MISS_OR_EXTRA_EXP);
     pc->skip = false;
-    pc->cdr->skip = true;
-    if (pc->cdr->cdr != empty_list)
-        pc->cdr->cdr->skip = true;
+
+    pc = pc->cdr;
+    if (pc == empty_list)
+        throw TokenError("if", SYN_ERR_MISS_OR_EXTRA_EXP);
+
+    pc->skip = true;
+    if (pc->cdr != empty_list)
+        pc->cdr->skip = true;
 }
 
 void SpecialOptIf::pre_call(ArgList *args, Cons *pc,
         Environment *envt) {
     // static_cast because it's a call invocation
-    pc = static_cast<Cons*>(pc->car); 
+    pc = static_cast<Cons*>(pc->car)->cdr; 
+
     // Condition evaluated and the decision is made
     state = 1;
+
     if (args->cdr->car->is_true())
     {
-        pc = pc->cdr;
         pc->skip = true;
-        pc->cdr->skip = false;
-        if (pc->cdr->cdr != empty_list)
-            pc->cdr->cdr->skip = true; // Eval the former
+        pc = pc->cdr;
+        pc->skip = false;
+        if (pc->cdr != empty_list)
+            pc->cdr->skip = true; // Eval the former
     }
     else
     {
-        pc = pc->cdr;
         pc->skip = true;
+        pc = pc->cdr;
         pc->cdr->skip = true;
-        if (pc->cdr->cdr != empty_list)
-            pc->cdr->cdr->skip = false; //Eval the latter
+        if (pc->cdr != empty_list)
+            pc->cdr->skip = false; //Eval the latter
     }
 }
 
@@ -120,8 +130,15 @@ void SpecialOptLambda::prepare(Cons *pc) {
 
 Cons *SpecialOptLambda::call(ArgList *args, Environment * &envt, 
                             Continuation * &cont, FrameObj ** &top_ptr) {
+
     Cons *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     Cons *pc = static_cast<Cons*>(ret_addr->car);
+
+    if (pc->cdr == empty_list)
+        throw TokenError("lambda", SYN_ERR_EMPTY_PARA_LIST);
+    if (pc->cdr->cdr == empty_list)
+        throw TokenError("lambda", SYN_ERR_MISS_OR_EXTRA_EXP);
+
     SymbolList *para_list = static_cast<SymbolList*>(pc->cdr->car); 
     // Clear the flag to avoid side-effects (e.g. proc calling)
     FILL_MARKS(pc, false);
@@ -144,10 +161,16 @@ string SpecialOptLambda::_debug_repr() { return ext_repr(); }
 SpecialOptDefine::SpecialOptDefine() : SpecialOptObj() {}
 
 void SpecialOptDefine::prepare(Cons *pc) {
+    if (pc->cdr == empty_list)
+        throw TokenError("define", SYN_ERR_MISS_OR_EXTRA_EXP);
+
     if (pc->cdr->car->is_simple_obj())  // Simple value assignment
     {
-        pc->cdr->skip = true;           // Skip the identifier
-        pc->cdr->cdr->skip = false; 
+        pc = pc->cdr;
+        if (pc->cdr == empty_list)
+            throw TokenError("define", SYN_ERR_MISS_OR_EXTRA_EXP);
+        pc->skip = true;           // Skip the identifier
+        pc->cdr->skip = false; 
     }                                   // Procedure definition
     else FILL_MARKS(pc, true);          // Skip all parts
 }
@@ -172,8 +195,9 @@ Cons *SpecialOptDefine::call(ArgList *args, Environment * &envt,
     {
         // static_cast because of is_simple_obj() is false
         Cons *plst = static_cast<Cons*>(pc->cdr->car);
+
         if (plst == empty_list)
-            throw NormalError(SYN_ERR_ID_EXPECTED);
+            throw TokenError("if", SYN_ERR_EMPTY_PARA_LIST);
         if (!plst->car->is_sym_obj())
             throw TokenError(first->ext_repr(), SYN_ERR_NOT_AN_ID);
 
@@ -181,7 +205,12 @@ Cons *SpecialOptDefine::call(ArgList *args, Environment * &envt,
         ArgList *para_list = plst->cdr;
         // Clear the flag to avoid side-effects (e.g. proc calling)
         FILL_MARKS(pc, false);
+
         ASTList *body = pc->cdr->cdr;   // Truncate the expression list
+
+        if (body == empty_list)
+            throw TokenError("define", SYN_ERR_MISS_OR_EXTRA_EXP);
+
         for (Cons *ptr = body; ptr != empty_list; ptr = ptr->cdr)
             ptr->next = NULL;           // Make each expression a orphan
 
@@ -199,9 +228,17 @@ string SpecialOptDefine::_debug_repr() { return ext_repr(); }
 #endif
 
 void SpecialOptSet::prepare(Cons *pc) {
-    // TODO: check number of arguments
-    pc->cdr->skip = true;       // Skip the identifier
-    pc->cdr->cdr->skip = false; 
+    pc = pc->cdr;
+    if (pc == empty_list)
+        throw TokenError("set!", SYN_ERR_MISS_OR_EXTRA_EXP);
+
+    pc->skip = true;       // Skip the identifier
+
+    pc = pc->cdr;
+    if (pc == empty_list)
+        throw TokenError("set!", SYN_ERR_MISS_OR_EXTRA_EXP);
+
+    pc->skip = false; 
 }
 
 Cons *SpecialOptSet::call(ArgList *args, Environment * &envt, 
@@ -216,7 +253,7 @@ Cons *SpecialOptSet::call(ArgList *args, Environment * &envt,
     SymObj *id = static_cast<SymObj*>(first);
 
     bool flag = envt->add_binding(id, args->cdr->car, false);
-    if (!flag) throw TokenError(id->ext_repr(), SYN_ERR_UNBOUND_VAR);
+    if (!flag) throw TokenError(id->ext_repr(), RUN_ERR_UNBOUND_VAR);
     *top_ptr++ = new UnspecObj();
     return ret_addr->next;
 }

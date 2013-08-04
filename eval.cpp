@@ -43,6 +43,9 @@ void push(Cons * &pc, FrameObj ** &top_ptr, Environment *envt) {
     }
     else                                    // Operational Invocation
     {
+        if (pc->car == empty_list)
+            throw NormalError(SYN_ERR_EMPTY_COMB);
+
         *top_ptr++ = new RetAddr(pc);       // Push the return address
         // static_cast because of is_simple_obj() is false
         pc = static_cast<Cons*>(pc->car);  // Go deeper to enter the call

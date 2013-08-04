@@ -2,6 +2,8 @@
 #include <cctype>
 #include <sstream>
 #include "parser.h"
+#include "exc.h"
+#include "consts.h"
 #include "builtin.h"
 
 using std::stringstream;
@@ -85,8 +87,10 @@ Cons *ASTGenerator::absorb(Tokenizor *tk) {
         else if (token == ")")
         {
             Cons *lst = empty_list;
-            while (*(--top_ptr))
+            while (top_ptr >= parse_stack && *(--top_ptr))
                 lst = new Cons(*top_ptr, lst); // Collect the list
+            if (top_ptr < parse_stack)
+                throw NormalError(READ_ERR_UNEXPECTED_RIGHT_BRACKET);
             *top_ptr++ = lst;
         }
         else *top_ptr++ = ASTGenerator::to_obj(token);
