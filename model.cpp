@@ -14,7 +14,7 @@ string EmptyList::_debug_repr() { return ext_repr(); }
 #endif
 
 bool FrameObj::is_ret_addr() { 
-    return ftype == CLS_RET_ADDR;
+    return ftype & CLS_RET_ADDR;
 }
 
 EvalObj::EvalObj(ClassType _otype) : FrameObj(CLS_EVAL_OBJ), otype(_otype) {}
@@ -22,7 +22,15 @@ EvalObj::EvalObj(ClassType _otype) : FrameObj(CLS_EVAL_OBJ), otype(_otype) {}
 void EvalObj::prepare(Cons *pc) {}
 
 bool EvalObj::is_simple_obj() {
-    return otype == CLS_SIM_OBJ;
+    return otype & CLS_SIM_OBJ;
+}
+
+bool EvalObj::is_sym_obj() {
+    return otype & CLS_SYM_OBJ;
+}
+
+bool EvalObj::is_opt_obj() {
+    return otype & CLS_OPT_OBJ;
 }
 
 #ifdef DEBUG
@@ -70,7 +78,8 @@ string UnspecObj::ext_repr() { return string("#<Unspecified>"); }
 string UnspecObj::_debug_repr() { return ext_repr(); }
 #endif
 
-SymObj::SymObj(const string &str) : EvalObj(), val(str) {}
+SymObj::SymObj(const string &str) : 
+    EvalObj(CLS_SIM_OBJ | CLS_SYM_OBJ), val(str) {}
 
 string SymObj::ext_repr() { return "#<Symbol: " + val + ">"; }
 
@@ -78,7 +87,7 @@ string SymObj::ext_repr() { return "#<Symbol: " + val + ">"; }
 string SymObj::_debug_repr() { return ext_repr(); }
 #endif
 
-OptObj::OptObj() : EvalObj() {}
+OptObj::OptObj() : EvalObj(CLS_SIM_OBJ | CLS_OPT_OBJ) {}
 
 ProcObj::ProcObj(ASTList *_body, 
                     Environment *_envt, 
@@ -141,8 +150,8 @@ bool Environment::add_binding(SymObj *sym_obj, EvalObj *eval_obj, bool def) {
 }
 
 EvalObj *Environment::get_obj(EvalObj *obj) {
-    SymObj *sym_obj = dynamic_cast<SymObj*>(obj);
-    if (!sym_obj) return obj;       // Not a SymObj
+    if (!obj->is_sym_obj()) return obj;
+    SymObj *sym_obj = static_cast<SymObj*>(obj);
 
     string name(sym_obj->val);
     for (Environment *ptr = this; ptr; ptr = ptr->prev_envt)

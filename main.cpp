@@ -2,6 +2,7 @@
 #include "builtin.h"
 #include "parser.h"
 #include "eval.h"
+#include "exc.h"
 #include <cstdio>
 
 #ifdef DEBUG
@@ -15,6 +16,7 @@ void tree_print(Cons *ptr) {
 #endif
 
 int main() {
+    //freopen("in", "r", stdin);
     Tokenizor *tk = new Tokenizor();
     ASTGenerator *ast = new ASTGenerator();
     Evaluator *eval = new Evaluator();
@@ -24,6 +26,13 @@ int main() {
         Cons *tree = ast->absorb(tk);
         if (!tree) break;
         //tree_print(tree);
-        printf("%s\n", eval->run_expr(tree)->ext_repr().c_str());
+        try
+        {
+            printf("%s\n", eval->run_expr(tree)->ext_repr().c_str());
+        }
+        catch (GeneralError &e)
+        {
+            printf("An error occured: %s\n", e.get_msg().c_str());
+        }
     }
 }

@@ -11,10 +11,13 @@ using std::map;
 
 typedef unsigned char ClassType;  // that range is enough
 
-static const int CLS_RET_ADDR = 0;
-static const int CLS_EVAL_OBJ = 1;
-static const int CLS_SIM_OBJ = 0;
-static const int CLS_CONS_OBJ = 1;
+static const int CLS_RET_ADDR = 1 << 0;
+static const int CLS_EVAL_OBJ = 1 << 1;
+
+static const int CLS_SIM_OBJ = 1 << 0;
+static const int CLS_CONS_OBJ = 1 << 1;
+static const int CLS_SYM_OBJ = 1 << 2;
+static const int CLS_OPT_OBJ = 1 << 3;
 
 /** @class FrameObj
  * Objects that can be held in the evaluation stack
@@ -69,7 +72,10 @@ class EvalObj : public FrameObj {
          * @return true if the object is not a construction (Cons)
          * */
         bool is_simple_obj();
-        /** External representation of this object */
+        /** Check if the object is a symobl */
+        bool is_sym_obj();
+        /** Check if the object is an operator */
+        bool is_opt_obj();
         virtual void prepare(Cons *pc);
         /** Any EvalObj has its external representation */
         virtual string ext_repr() = 0;  

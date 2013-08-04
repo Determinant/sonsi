@@ -1,5 +1,7 @@
 #include "eval.h"
 #include "builtin.h"
+#include "exc.h"
+#include "consts.h"
 #include <cstdio>
 
 extern Cons *empty_list;
@@ -87,7 +89,14 @@ EvalObj *Evaluator::run_expr(Cons *prog) {
                 top_ptr++;
             }
             else 
-                pc = dynamic_cast<OptObj*>(args->car)->call(args, envt, cont, top_ptr);
+            {
+                EvalObj *opt = args->car;
+                if (opt->is_opt_obj())
+                    pc = static_cast<OptObj*>(opt)->
+                        call(args, envt, cont, top_ptr);
+                else
+                    throw TokenError(opt->ext_repr(), SYN_ERR_CAN_NOT_APPLY);
+            }
         }
     }
     // static_cast because the previous while condition

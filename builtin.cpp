@@ -1,3 +1,5 @@
+#include "exc.h"
+#include "consts.h"
 #include "builtin.h"
 #include <cstdio>
 #include <sstream>
@@ -120,7 +122,7 @@ Cons *SpecialOptLambda::call(ArgList *args, Environment * &envt,
                             Continuation * &cont, FrameObj ** &top_ptr) {
     Cons *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     Cons *pc = static_cast<Cons*>(ret_addr->car);
-    SymbolList *para_list = dynamic_cast<SymbolList*>(pc->cdr->car);  // parameter list
+    SymbolList *para_list = static_cast<SymbolList*>(pc->cdr->car); 
     // Clear the flag to avoid side-effects (e.g. proc calling)
     FILL_MARKS(pc, false);
 
@@ -157,16 +159,25 @@ Cons *SpecialOptDefine::call(ArgList *args, Environment * &envt,
     EvalObj *obj;
     SymObj *id;
     // TODO: check identifier
-    if (pc->cdr->car->is_simple_obj())
+    EvalObj *first = pc->cdr->car;
+    if (first->is_simple_obj())
     {
-        id = dynamic_cast<SymObj*>(pc->cdr->car);
+        if (!first->is_sym_obj())
+            throw TokenError(first->ext_repr(), SYN_ERR_NOT_AN_ID);
+
+        id = static_cast<SymObj*>(first);
         obj = args->cdr->car;
     }
     else
     {
         // static_cast because of is_simple_obj() is false
         Cons *plst = static_cast<Cons*>(pc->cdr->car);
-        id = dynamic_cast<SymObj*>(plst->car);
+        if (plst == empty_list)
+            throw NormalError(SYN_ERR_ID_EXPECTED);
+        if (!plst->car->is_sym_obj())
+            throw TokenError(first->ext_repr(), SYN_ERR_NOT_AN_ID);
+
+        id = static_cast<SymObj*>(plst->car);
         ArgList *para_list = plst->cdr;
         // Clear the flag to avoid side-effects (e.g. proc calling)
         FILL_MARKS(pc, false);
@@ -197,9 +208,15 @@ Cons *SpecialOptSet::call(ArgList *args, Environment * &envt,
                             Continuation * &cont, FrameObj ** &top_ptr) {
     Cons *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     Cons *pc = static_cast<Cons*>(ret_addr->car);
-    SymObj *id = dynamic_cast<SymObj*>(pc->cdr->car);
+    EvalObj *first = pc->cdr->car;
+
+    if (!first->is_sym_obj())
+        throw TokenError(first->ext_repr(), SYN_ERR_NOT_AN_ID);
+
+    SymObj *id = static_cast<SymObj*>(first);
+
     bool flag = envt->add_binding(id, args->cdr->car, false);
-    // TODO: throw an exc "unbound variable"
+    if (!flag) throw TokenError(id->ext_repr(), SYN_ERR_UNBOUND_VAR);
     *top_ptr++ = new UnspecObj();
     return ret_addr->next;
 }
