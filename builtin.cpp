@@ -280,7 +280,7 @@ EvalObj *builtin_car(ArgList *args) {
     if (args == empty_list ||
         args->cdr != empty_list)
         throw TokenError("car", RUN_ERR_WRONG_NUM_OF_ARGS);
-    if (!args->car->is_cons_obj())
+    if (args->car == empty_list || !args->car->is_cons_obj())
         throw TokenError("pair", RUN_ERR_WRONG_TYPE);
 
     return TO_CONS(args->car)->car;
@@ -290,7 +290,7 @@ EvalObj *builtin_cdr(ArgList *args) {
     if (args == empty_list ||
         args->cdr != empty_list)
         throw TokenError("cdr", RUN_ERR_WRONG_NUM_OF_ARGS);
-    if (!args->car->is_cons_obj())
+    if (args->car == empty_list || !args->car->is_cons_obj())
         throw TokenError("pair", RUN_ERR_WRONG_TYPE);
 
     return TO_CONS(args->car)->cdr;
