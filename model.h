@@ -9,7 +9,9 @@ using std::list;
 using std::string;
 using std::map;
 
-typedef unsigned char ClassType;  // that range is enough
+// the range of unsigned char is enough for these types
+typedef unsigned char ClassType;  
+typedef unsigned char NumLvl;      
 
 static const int CLS_RET_ADDR = 1 << 0;
 static const int CLS_EVAL_OBJ = 1 << 1;
@@ -18,6 +20,8 @@ static const int CLS_SIM_OBJ = 1 << 0;
 static const int CLS_CONS_OBJ = 1 << 1;
 static const int CLS_SYM_OBJ = 1 << 2;
 static const int CLS_OPT_OBJ = 1 << 3;
+static const int CLS_NUM_OBJ = 1 << 4;
+
 
 #define TO_CONS(ptr) \
     (static_cast<Cons*>(ptr))
@@ -81,12 +85,15 @@ class EvalObj : public FrameObj {
         bool is_opt_obj();
         /** Check if the object is a Cons */
         bool is_cons_obj();
+        /** Check if the object is a number */
+        bool is_num_obj();
         virtual void prepare(Cons *pc);
         /** Any EvalObj has its external representation */
         virtual string ext_repr() = 0;  
         /** Always true for all EvalObjs except BoolObj */
         virtual bool is_true();         
 #ifdef DEBUG
+        virtual string _debug_repr();
         virtual void _debug_print();
 #endif
 };
@@ -243,13 +250,41 @@ class BuiltinProcObj: public OptObj {
         string ext_repr();
 };
 
-/** @class NumberObj
+/** @class BoolObj
+ * Booleans
+ */
+class BoolObj: public EvalObj {
+    public:
+        bool val;                       /**< true for \#t, false for \#f */ 
+        BoolObj(bool);                  /**< Converts a C bool value to a BoolObj*/
+        bool is_true();                 /**< Override EvalObj `is_true()` */
+        string ext_repr();
+};
+
+/** @class NumObj
  * The top level abstract of numbers
  */
 
-class NumberObj: public EvalObj {
+class NumObj: public EvalObj {
+    protected:
+        /** True if the number is of exact value */
+        bool exactness;
     public:
-        NumberObj();
+        /** The level of the specific number. The smaller the level
+         * is, the more generic that number is.
+         */
+        NumLvl level;
+
+        /** 
+         * Construct a general Numeric object
+         */
+        NumObj(NumLvl level, bool _exactness);
+        bool is_exact();
+        virtual NumObj *plus(NumObj *r) = 0;
+        virtual NumObj *minus(NumObj *r) = 0;
+        virtual NumObj *multi(NumObj *r) = 0;
+        virtual NumObj *div(NumObj *r) = 0;
+        virtual BoolObj *eq(NumObj *r) = 0;
 };
 
 typedef map<string, EvalObj*> Str2EvalObj;

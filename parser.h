@@ -34,8 +34,6 @@ class Tokenizor {
  */
 class ASTGenerator {
     private:
-        static EvalObj* to_float(const string &);
-        static EvalObj* to_int(const string &);
         /** Convert the string to an internal object */
         static EvalObj* to_obj(const string &);
     public:    

@@ -64,28 +64,17 @@ bool Tokenizor::get_token(string &ret) {
 }
 
 ASTGenerator::ASTGenerator() {}
-EvalObj *ASTGenerator::to_float(const string &str) {
-    stringstream ss(str);
-    double val;
-    ss >> val;
-    if (ss.fail() || !ss.eof()) return NULL;
-    return new FloatObj(val);
-}
-
-EvalObj *ASTGenerator::to_int(const string &str) {
-    stringstream ss(str);
-    int val;
-    ss >> val;
-    if (ss.fail() || !ss.eof()) return NULL;
-    return new IntObj(val);
-}
 
 
 EvalObj *ASTGenerator::to_obj(const string &str) {
     EvalObj *res = NULL;
-    if ((res = ASTGenerator::to_int(str)))
+    if ((res = IntNumObj::from_string(str)))
         return res;
-    if ((res = ASTGenerator::to_float(str)))
+    if ((res = RatNumObj::from_string(str)))
+        return res;
+    if ((res = RealNumObj::from_string(str)))
+        return res;
+    if ((res = CompNumObj::from_string(str)))
         return res;
     return new SymObj(str);
 }

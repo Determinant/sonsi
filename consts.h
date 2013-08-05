@@ -10,9 +10,10 @@ enum ErrCode {
     RUN_ERR_WRONG_NUM_OF_ARGS,
     SYN_ERR_EMPTY_COMB,
     READ_ERR_UNEXPECTED_RIGHT_BRACKET,
-    RUN_ERR_WRONG_TYPE
+    RUN_ERR_WRONG_TYPE,
+    INT_ERR
 };
 
-extern const char *SYN_ERR_MSG[];
+extern const char *ERR_MSG[];
 
 #endif

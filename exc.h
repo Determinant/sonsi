@@ -10,26 +10,21 @@ using std::string;
  * The top-level exception
  */
 class GeneralError {
-    public:
-        virtual string get_msg() = 0;   /**< Extract error message */
-};
-
-class SyntaxError : public GeneralError {
     protected:
         string msg;                     /**< Error mesg */
         ErrCode code;                   /**< Error code */
     public:
 
-        SyntaxError(ErrCode code);          /**< Construct an SyntaxError */ 
+        GeneralError(ErrCode code);         /**< Construct a General Error */ 
         string get_msg();                   /**< Get the error message */
 };
 
-class TokenError : public SyntaxError {
+class TokenError : public GeneralError {
     public:
         TokenError(string token, ErrCode code);     /**< Construct an TokenError */
 };
 
-class NormalError : public SyntaxError {
+class NormalError : public GeneralError {
     public:
         NormalError(ErrCode code);
 };

@@ -14,12 +14,13 @@ void Evaluator::add_builtin_routines() {
     envt->add_binding(new SymObj(name), rout)
 
     ADD_ENTRY("+", new BuiltinProcObj(builtin_plus, "+"));
-    ADD_ENTRY("-", new BuiltinProcObj(builtin_minus, "-"));
+/*    ADD_ENTRY("-", new BuiltinProcObj(builtin_minus, "-"));
     ADD_ENTRY("*", new BuiltinProcObj(builtin_times, "*"));
     ADD_ENTRY("/", new BuiltinProcObj(builtin_div, "/"));
     ADD_ENTRY(">", new BuiltinProcObj(builtin_gt, ">"));
     ADD_ENTRY("<", new BuiltinProcObj(builtin_lt, "<"));
     ADD_ENTRY("=", new BuiltinProcObj(builtin_arithmetic_eq, "="));
+    */
     ADD_ENTRY("display", new BuiltinProcObj(builtin_display, "display"));
     ADD_ENTRY("cons", new BuiltinProcObj(builtin_cons, "cons"));
     ADD_ENTRY("car", new BuiltinProcObj(builtin_car, "car"));

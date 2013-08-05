@@ -6,46 +6,122 @@
 
 using std::string;
 
-/** @class BoolObj
- * Booleans
+
+
+/** @class InexactNumObj
+ * Inexact number implementation (using doubles)
  */
-class BoolObj: public EvalObj {
+class InexactNumObj: public NumObj {
     public:
-        bool val;                       /**< true for \#t, false for \#f */ 
-        BoolObj(bool);                  /**< Converts a C bool value to a BoolObj*/
-        bool is_true();                 /**< Override EvalObj `is_true()` */
-#ifdef DEBUG
-        string _debug_repr();
-#endif
+        InexactNumObj(NumLvl level);
+};
+
+/** @class CompNumObj
+ * Complex numbers
+ */
+class CompNumObj: public InexactNumObj {
+    public:
+        double real, imag;
+
+        /** Construct a complex number */
+        CompNumObj(double _real, double _imag);
+        /** Try to construct an RealNumObj object 
+         * @return NULL if failed
+         */
+        static CompNumObj *from_string(string repr);
+        /** Convert to a complex number from other numeric types */
+        static CompNumObj *convert(NumObj* obj);
+
+        NumObj *plus(NumObj *r);
+        NumObj *minus(NumObj *r);
+        NumObj *multi(NumObj *r);
+        NumObj *div(NumObj *r);
+        BoolObj *eq(NumObj *r);
         string ext_repr();
 };
 
-/** @class IntObj
- * A simple implementation of integers
- * Will be removed in the future
+/** @class RealNumObj
+ * Real numbers
  */
-class IntObj: public NumberObj {
+class RealNumObj: public InexactNumObj {
     public:
-        int val; /**< Numeric value */
-        /** Converts a C integer value to a FloatObj */
-        IntObj(int);
-#ifdef DEBUG
-        string _debug_repr();
-#endif
+        double real;
+        /** Construct a real number */
+        RealNumObj(double _real);
+        /** Try to construct an RealNumObj object 
+         * @return NULL if failed
+         */
+        static RealNumObj *from_string(string repr);
+        /** Convert to a real number from other numeric types */
+        static RealNumObj *convert(NumObj* obj);
+
+        NumObj *plus(NumObj *r);
+        NumObj *minus(NumObj *r);
+        NumObj *multi(NumObj *r);
+        NumObj *div(NumObj *r);
+        BoolObj *lt(NumObj *r);
+        BoolObj *gt(NumObj *r);
+        BoolObj *eq(NumObj *r);
+        string ext_repr();
+
+};
+
+
+/** @class ExactNumObj
+ * Exact number implementation (using gmp)
+ */
+class ExactNumObj: public NumObj {
+    public:
+        ExactNumObj(NumLvl level);
+};
+
+/** @class RatNumObj
+ * Rational numbers
+ */
+class RatNumObj: public ExactNumObj {
+    public:
+        int a, b;
+        /** Construct a rational number */
+        RatNumObj(int _a, int _b);
+        /** Try to construct an RealNumObj object 
+         * @return NULL if failed
+         */
+        static RatNumObj *from_string(string repr);
+        /** Convert to a Rational number from other numeric types */
+        static RatNumObj *convert(NumObj* obj);
+
+        NumObj *plus(NumObj *r);
+        NumObj *minus(NumObj *r);
+        NumObj *multi(NumObj *r);
+        NumObj *div(NumObj *r);
+        BoolObj *lt(NumObj *r);
+        BoolObj *gt(NumObj *r);
+        BoolObj *eq(NumObj *r);
         string ext_repr();
 };
 
-/** @class FloatObj
- * Floating point numbers
+/** @class IntNumObj
+ * Integers
  */
-class FloatObj: public NumberObj {
+class IntNumObj: public ExactNumObj {
     public:
-        double val; /**< Numeric value */
-        /** Converts a C double value to a FloatObj */
-        FloatObj(double);
-#ifdef DEBUG
-        string _debug_repr();
-#endif
+        int val;
+        /** Construct a integer */
+        IntNumObj(int _val);
+        /** Try to construct an IntNumObj object 
+         * @return NULL if failed
+         */
+        static IntNumObj *from_string(string repr);
+        /** Convert to a integer from other numeric types */
+        static IntNumObj *convert(NumObj* obj);
+
+        NumObj *plus(NumObj *r);
+        NumObj *minus(NumObj *r);
+        NumObj *multi(NumObj *r);
+        NumObj *div(NumObj *r);
+        BoolObj *lt(NumObj *r);
+        BoolObj *gt(NumObj *r);
+        BoolObj *eq(NumObj *r);
         string ext_repr();
 };
 
@@ -73,9 +149,6 @@ class SpecialOptIf: public SpecialOptObj {
         void prepare(Cons *pc);
         Cons *call(ArgList *args, Environment * &envt, 
                     Continuation * &cont, FrameObj ** &top_ptr);
-#ifdef DEBUG
-        string _debug_repr();
-#endif
         string ext_repr();
 };
 
@@ -89,9 +162,6 @@ class SpecialOptLambda: public SpecialOptObj {
         Cons *call(ArgList *args, Environment * &envt, 
                     Continuation * &cont, FrameObj ** &top_ptr);
 
-#ifdef DEBUG
-        string _debug_repr();
-#endif
         string ext_repr();
 };
 
@@ -104,9 +174,6 @@ class SpecialOptDefine: public SpecialOptObj {
         void prepare(Cons *pc);
         Cons *call(ArgList *args, Environment * &envt, 
                     Continuation * &cont, FrameObj ** &top_ptr);
-#ifdef DEBUG
-        string _debug_repr();
-#endif
         string ext_repr();
 };
 
@@ -119,19 +186,11 @@ class SpecialOptSet: public SpecialOptObj {
         void prepare(Cons *pc);
         Cons *call(ArgList *args, Environment * &envt, 
                     Continuation * &cont, FrameObj ** &top_ptr);
-#ifdef DEBUG
-        string _debug_repr();
-#endif
         string ext_repr();
 };
 
 EvalObj *builtin_plus(ArgList *);
-EvalObj *builtin_minus(ArgList *);
-EvalObj *builtin_times(ArgList *);
-EvalObj *builtin_div(ArgList *);
-EvalObj *builtin_lt(ArgList *);
-EvalObj *builtin_gt(ArgList *);
-EvalObj *builtin_arithmetic_eq(ArgList *);
+
 EvalObj *builtin_display(ArgList *);
 EvalObj *builtin_cons(ArgList *);
 EvalObj *builtin_car(ArgList *);

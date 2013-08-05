@@ -39,7 +39,14 @@ bool EvalObj::is_cons_obj() {
     return otype & CLS_CONS_OBJ;
 }
 
+bool EvalObj::is_num_obj() {
+    return otype & CLS_NUM_OBJ;
+}
+
 #ifdef DEBUG
+string EvalObj::_debug_repr() {
+    return ext_repr();
+}
 void EvalObj::_debug_print() {
     printf("mem: 0x%llX\n%s\n\n", (unsigned long long)this,
             _debug_repr().c_str());
@@ -143,7 +150,14 @@ string ProcObj::_debug_repr() { return ext_repr(); }
 
 SpecialOptObj::SpecialOptObj() : OptObj() {}
 
-NumberObj::NumberObj() : EvalObj() {}
+BoolObj::BoolObj(bool _val) : EvalObj(), val(_val) {}
+
+bool BoolObj::is_true() { return val; }
+
+string BoolObj::ext_repr() { return string(val ? "#t" : "#f"); }
+
+NumObj::NumObj(NumLvl _level, bool _exactness) : 
+    EvalObj(CLS_SIM_OBJ | CLS_NUM_OBJ), level(_level), exactness(_exactness) {}
 
 BuiltinProcObj::BuiltinProcObj(BuiltinProc f, string _name) :
     OptObj(), handler(f), name(_name) {}
