@@ -14,18 +14,19 @@ void Evaluator::add_builtin_routines() {
     envt->add_binding(new SymObj(name), rout)
 
     ADD_ENTRY("+", new BuiltinProcObj(builtin_plus, "+"));
-/*    ADD_ENTRY("-", new BuiltinProcObj(builtin_minus, "-"));
-    ADD_ENTRY("*", new BuiltinProcObj(builtin_times, "*"));
+    ADD_ENTRY("-", new BuiltinProcObj(builtin_minus, "-"));
+    ADD_ENTRY("*", new BuiltinProcObj(builtin_multi, "*"));
     ADD_ENTRY("/", new BuiltinProcObj(builtin_div, "/"));
     ADD_ENTRY(">", new BuiltinProcObj(builtin_gt, ">"));
     ADD_ENTRY("<", new BuiltinProcObj(builtin_lt, "<"));
     ADD_ENTRY("=", new BuiltinProcObj(builtin_arithmetic_eq, "="));
-    */
     ADD_ENTRY("display", new BuiltinProcObj(builtin_display, "display"));
     ADD_ENTRY("cons", new BuiltinProcObj(builtin_cons, "cons"));
     ADD_ENTRY("car", new BuiltinProcObj(builtin_car, "car"));
     ADD_ENTRY("cdr", new BuiltinProcObj(builtin_cdr, "cdr"));
     ADD_ENTRY("list", new BuiltinProcObj(builtin_list, "list"));
+    ADD_ENTRY("exact?", new BuiltinProcObj(builtin_exact, "exact?"));
+    ADD_ENTRY("inexact?", new BuiltinProcObj(builtin_inexact, "inexact?"));
     ADD_ENTRY("if", new SpecialOptIf());
     ADD_ENTRY("lambda", new SpecialOptLambda());
     ADD_ENTRY("define", new SpecialOptDefine());

@@ -159,6 +159,8 @@ string BoolObj::ext_repr() { return string(val ? "#t" : "#f"); }
 NumObj::NumObj(NumLvl _level, bool _exactness) : 
     EvalObj(CLS_SIM_OBJ | CLS_NUM_OBJ), level(_level), exactness(_exactness) {}
 
+bool NumObj::is_exact() { return exactness; }
+
 BuiltinProcObj::BuiltinProcObj(BuiltinProc f, string _name) :
     OptObj(), handler(f), name(_name) {}
 

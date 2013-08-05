@@ -280,11 +280,14 @@ class NumObj: public EvalObj {
          */
         NumObj(NumLvl level, bool _exactness);
         bool is_exact();
+        virtual NumObj *convert(NumObj *r) = 0;
         virtual NumObj *plus(NumObj *r) = 0;
         virtual NumObj *minus(NumObj *r) = 0;
         virtual NumObj *multi(NumObj *r) = 0;
         virtual NumObj *div(NumObj *r) = 0;
-        virtual BoolObj *eq(NumObj *r) = 0;
+        virtual bool lt(NumObj *r) = 0;
+        virtual bool gt(NumObj *r) = 0;
+        virtual bool eq(NumObj *r) = 0;
 };
 
 typedef map<string, EvalObj*> Str2EvalObj;

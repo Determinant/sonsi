@@ -46,7 +46,7 @@ double str_to_double(string repr, bool &flag) {
 int gcd(int a, int b) {
     int t;
     while (b) t = b, b = a % b, a = t;
-    return a;
+    return abs(a);
 }
 
 
@@ -115,32 +115,41 @@ CompNumObj *CompNumObj::convert(NumObj *obj) {
 #define D (r->imag)
 
 NumObj *CompNumObj::plus(NumObj *_r) {
-    CompNumObj *r = CompNumObj::convert(_r);
+    CompNumObj *r = static_cast<CompNumObj*>(_r);
     return new CompNumObj(A + C, B + D);
 }
 
 NumObj *CompNumObj::minus(NumObj *_r) {
-    CompNumObj *r = CompNumObj::convert(_r);
+    CompNumObj *r = static_cast<CompNumObj*>(_r);
     return new CompNumObj(A - C, B - D);
 }
 
 NumObj *CompNumObj::multi(NumObj *_r) {
-    CompNumObj *r = CompNumObj::convert(_r);
+    CompNumObj *r = static_cast<CompNumObj*>(_r);
     return new CompNumObj(A * C - B * D,
                          B * C + A * D);
 }
 
 NumObj *CompNumObj::div(NumObj *_r) {
-    CompNumObj *r = CompNumObj::convert(_r);
+    CompNumObj *r = static_cast<CompNumObj*>(_r);
     double f = 1.0 / (C * C + D * D);
     return new CompNumObj((A * C + B * D) * f,
                             (B * C - A * D) * f);
 }
 
-BoolObj *CompNumObj::eq(NumObj *_r) {
-    CompNumObj *r = CompNumObj::convert(_r);
-    return new BoolObj(A == C && B == D); // TODO: more proper judgement
+bool CompNumObj::lt(NumObj *_r) {
+    throw TokenError("a comparable number", RUN_ERR_WRONG_TYPE);
 }
+
+bool CompNumObj::gt(NumObj *_r) {
+    throw TokenError("a comparable number", RUN_ERR_WRONG_TYPE);
+}
+
+bool CompNumObj::eq(NumObj *_r) {
+    CompNumObj *r = static_cast<CompNumObj*>(_r);
+    return A == C && B == D; // TODO: more proper judgement
+}
+
 
 string CompNumObj::ext_repr() {
     return double_to_str(real) + double_to_str(imag, true) + "i";
@@ -178,38 +187,38 @@ RealNumObj *RealNumObj::convert(NumObj *obj) {
 }
 
 NumObj *RealNumObj::plus(NumObj *_r) {
-    return new RealNumObj(real + RealNumObj::convert(_r)->real);
+    return new RealNumObj(real + static_cast<RealNumObj*>(_r)->real);
 }
 
 NumObj *RealNumObj::minus(NumObj *_r) {
-    return new RealNumObj(real - RealNumObj::convert(_r)->real);
+    return new RealNumObj(real - static_cast<RealNumObj*>(_r)->real);
 }
 
 NumObj *RealNumObj::multi(NumObj *_r) {
-    return new RealNumObj(real * RealNumObj::convert(_r)->real);
+    return new RealNumObj(real * static_cast<RealNumObj*>(_r)->real);
 }
 
 NumObj *RealNumObj::div(NumObj *_r) {
-    return new RealNumObj(real / RealNumObj::convert(_r)->real);
+    return new RealNumObj(real / static_cast<RealNumObj*>(_r)->real);
 }
 
-BoolObj *RealNumObj::eq(NumObj *_r) {
-    return new BoolObj(real == RealNumObj::convert(_r)->real);
+bool RealNumObj::eq(NumObj *_r) {
+    return real == static_cast<RealNumObj*>(_r)->real;
 }
 
-BoolObj *RealNumObj::lt(NumObj *_r) {
-    return new BoolObj(real < RealNumObj::convert(_r)->real);
+bool RealNumObj::lt(NumObj *_r) {
+    return real < static_cast<RealNumObj*>(_r)->real;
 }
 
-BoolObj *RealNumObj::gt(NumObj *_r) {
-    return new BoolObj(real > RealNumObj::convert(_r)->real);
+bool RealNumObj::gt(NumObj *_r) {
+    return real > static_cast<RealNumObj*>(_r)->real;
 }
 
 string RealNumObj::ext_repr() {
     return double_to_str(real);
 }
 
-ExactNumObj::ExactNumObj(NumLvl level) : NumObj(level, false) {}
+ExactNumObj::ExactNumObj(NumLvl level) : NumObj(level, true) {}
 
 RatNumObj::RatNumObj(int _a, int _b) : 
     ExactNumObj(NUM_LVL_RAT), a(_a), b(_b) {
@@ -242,7 +251,7 @@ RatNumObj *RatNumObj::convert(NumObj *obj) {
 #define D (r->b)
 
 NumObj *RatNumObj::plus(NumObj *_r) {
-    RatNumObj *r = RatNumObj::convert(_r);
+    RatNumObj *r = static_cast<RatNumObj*>(_r);
     int na = A * D + B * C, nb = B * D;
     int g = gcd(na, nb);
     na /= g;
@@ -251,7 +260,7 @@ NumObj *RatNumObj::plus(NumObj *_r) {
 }
 
 NumObj *RatNumObj::minus(NumObj *_r) {
-    RatNumObj *r = RatNumObj::convert(_r);
+    RatNumObj *r = static_cast<RatNumObj*>(_r);
     int na = A * D - B * C, nb = B * D;
     int g = gcd(na, nb);
     na /= g;
@@ -260,7 +269,7 @@ NumObj *RatNumObj::minus(NumObj *_r) {
 }
 
 NumObj *RatNumObj::multi(NumObj *_r) {
-    RatNumObj *r = RatNumObj::convert(_r);
+    RatNumObj *r = static_cast<RatNumObj*>(_r);
     int na = A * C, nb = B * D;
     int g = gcd(na, nb);
     na /= g;
@@ -269,7 +278,7 @@ NumObj *RatNumObj::multi(NumObj *_r) {
 }
 
 NumObj *RatNumObj::div(NumObj *_r) {
-    RatNumObj *r = RatNumObj::convert(_r);
+    RatNumObj *r = static_cast<RatNumObj*>(_r);
     int na = A * D, nb = B * C;
     int g = gcd(na, nb);
     na /= g;
@@ -277,19 +286,19 @@ NumObj *RatNumObj::div(NumObj *_r) {
     return new RatNumObj(na, nb);
 }
 
-BoolObj *RatNumObj::lt(NumObj *_r) {
-    RatNumObj *r = RatNumObj::convert(_r);
-    return new BoolObj(A * D < C * B);
+bool RatNumObj::lt(NumObj *_r) {
+    RatNumObj *r = static_cast<RatNumObj*>(_r);
+    return A * D < C * B;
 }
 
-BoolObj *RatNumObj::gt(NumObj *_r) {
-    RatNumObj *r = RatNumObj::convert(_r);
-    return new BoolObj(A * D > C * B);
+bool RatNumObj::gt(NumObj *_r) {
+    RatNumObj *r = static_cast<RatNumObj*>(_r);
+    return A * D > C * B;
 }
 
-BoolObj *RatNumObj::eq(NumObj *_r) {
-    RatNumObj *r = RatNumObj::convert(_r);
-    return new BoolObj(A * D == C * B);
+bool RatNumObj::eq(NumObj *_r) {
+    RatNumObj *r = static_cast<RatNumObj*>(_r);
+    return A * D == C * B;
 }
 
 string RatNumObj::ext_repr() {
@@ -321,31 +330,31 @@ IntNumObj *IntNumObj::convert(NumObj *obj) {
 
 NumObj *IntNumObj::plus(NumObj *_r) {
 
-    return new IntNumObj(val + IntNumObj::convert(_r)->val);
+    return new IntNumObj(val + static_cast<IntNumObj*>(_r)->val);
 }
 
 NumObj *IntNumObj::minus(NumObj *_r) {
-    return new IntNumObj(val - IntNumObj::convert(_r)->val);
+    return new IntNumObj(val - static_cast<IntNumObj*>(_r)->val);
 }
 
 NumObj *IntNumObj::multi(NumObj *_r) {
-    return new IntNumObj(val * IntNumObj::convert(_r)->val);
+    return new IntNumObj(val * static_cast<IntNumObj*>(_r)->val);
 }
 
 NumObj *IntNumObj::div(NumObj *_r) {
-    return new IntNumObj(val / IntNumObj::convert(_r)->val);
+    return new IntNumObj(val / static_cast<IntNumObj*>(_r)->val);
 }
 
-BoolObj *IntNumObj::lt(NumObj *_r) {
-    return new BoolObj(val < IntNumObj::convert(_r)->val);
+bool IntNumObj::lt(NumObj *_r) {
+    return val < static_cast<IntNumObj*>(_r)->val;
 }
 
-BoolObj *IntNumObj::gt(NumObj *_r) {
-    return new BoolObj(val > IntNumObj::convert(_r)->val);
+bool IntNumObj::gt(NumObj *_r) {
+    return val > static_cast<IntNumObj*>(_r)->val;
 }
 
-BoolObj *IntNumObj::eq(NumObj *_r) {
-    return new BoolObj(val == IntNumObj::convert(_r)->val);
+bool IntNumObj::eq(NumObj *_r) {
+    return val == static_cast<IntNumObj*>(_r)->val;
 }
 
 string IntNumObj::ext_repr() {
@@ -599,15 +608,172 @@ EvalObj *builtin_plus(ArgList *args) {
     for (Cons *ptr = args; ptr != empty_list; ptr = TO_CONS(ptr->cdr))
     {
         if (!ptr->car->is_num_obj())        // not a number
-            throw TokenError(ptr->car->ext_repr(), RUN_ERR_WRONG_TYPE);
+            throw TokenError("a number", RUN_ERR_WRONG_TYPE);
         opr = static_cast<NumObj*>(ptr->car);
-        if (res->level < opr->level)
-            // upper type conversion
-            res = res->plus(opr);
+        NumObj *_res = res;
+        if (_res->level < opr->level)
+            opr = _res->convert(opr);
         else
-            res = opr->plus(res);
+            _res =  opr->convert(_res);
+        res = _res->plus(opr);
     }
     return res; 
+}
+
+EvalObj *builtin_minus(ArgList *args) {
+    if (args == empty_list)
+        throw TokenError("-", RUN_ERR_WRONG_NUM_OF_ARGS);
+    if (!args->car->is_num_obj())
+        throw TokenError("a number", RUN_ERR_WRONG_TYPE);
+
+    NumObj *res = static_cast<NumObj*>(args->car), *opr; 
+    for (Cons *ptr = TO_CONS(args->cdr); 
+            ptr != empty_list; ptr = TO_CONS(ptr->cdr))
+    {
+        if (!ptr->car->is_num_obj())        // not a number
+            throw TokenError("a number", RUN_ERR_WRONG_TYPE);
+        opr = static_cast<NumObj*>(ptr->car);
+        // upper type conversion
+        NumObj *_res = res;
+        if (_res->level < opr->level)
+            opr = _res->convert(opr);
+        else
+            _res =  opr->convert(_res);
+        res = _res->minus(opr);
+    }
+    return res; 
+}
+
+EvalObj *builtin_multi(ArgList *args) {
+    NumObj *res = new IntNumObj(1), *opr; // the most accurate type
+    for (Cons *ptr = args; ptr != empty_list; ptr = TO_CONS(ptr->cdr))
+    {
+        if (!ptr->car->is_num_obj())        // not a number
+            throw TokenError("a number", RUN_ERR_WRONG_TYPE);
+        opr = static_cast<NumObj*>(ptr->car);
+        NumObj *_res = res;
+        if (_res->level < opr->level)
+            opr = _res->convert(opr);
+        else
+            _res =  opr->convert(_res);
+        res = _res->multi(opr);
+    }
+    return res; 
+}
+
+EvalObj *builtin_div(ArgList *args) {
+    if (args == empty_list)
+        throw TokenError("/", RUN_ERR_WRONG_NUM_OF_ARGS);
+    if (!args->car->is_num_obj())
+        throw TokenError("a number", RUN_ERR_WRONG_TYPE);
+
+    NumObj *res = static_cast<NumObj*>(args->car), *opr; 
+    for (Cons *ptr = TO_CONS(args->cdr); 
+            ptr != empty_list; ptr = TO_CONS(ptr->cdr))
+    {
+        if (!ptr->car->is_num_obj())        // not a number
+            throw TokenError("a number", RUN_ERR_WRONG_TYPE);
+        opr = static_cast<NumObj*>(ptr->car);
+        // upper type conversion
+        NumObj *_res = res;
+        if (_res->level < opr->level)
+            opr = _res->convert(opr);
+        else
+            _res =  opr->convert(_res);
+        res = _res->div(opr);
+    }
+    return res; 
+}
+
+EvalObj *builtin_lt(ArgList *args) {
+    if (args == empty_list)
+        throw TokenError("<", RUN_ERR_WRONG_NUM_OF_ARGS);
+    if (!args->car->is_num_obj())
+        throw TokenError("a number", RUN_ERR_WRONG_TYPE);
+       
+    NumObj *last = static_cast<NumObj*>(args->car), *opr; 
+
+    for (Cons *ptr = TO_CONS(args->cdr); 
+            ptr != empty_list; ptr = TO_CONS(ptr->cdr), last = opr)
+    {
+        if (!ptr->car->is_num_obj())        // not a number
+            throw TokenError("a number", RUN_ERR_WRONG_TYPE);
+        opr = static_cast<NumObj*>(ptr->car);
+        // upper type conversion
+        if (last->level < opr->level)
+            opr = last->convert(opr);
+        else
+            last = opr->convert(last);
+        if (!last->lt(opr))
+            return new BoolObj(false);
+    }
+    return new BoolObj(true);
+}
+
+EvalObj *builtin_gt(ArgList *args) {
+    if (args == empty_list)
+        throw TokenError(">", RUN_ERR_WRONG_NUM_OF_ARGS);
+    if (!args->car->is_num_obj())
+        throw TokenError("a number", RUN_ERR_WRONG_TYPE);
+       
+    NumObj *last = static_cast<NumObj*>(args->car), *opr; 
+
+    for (Cons *ptr = TO_CONS(args->cdr); 
+            ptr != empty_list; ptr = TO_CONS(ptr->cdr), last = opr)
+    {
+        if (!ptr->car->is_num_obj())        // not a number
+            throw TokenError("a number", RUN_ERR_WRONG_TYPE);
+        opr = static_cast<NumObj*>(ptr->car);
+        // upper type conversion
+        if (last->level < opr->level)
+            opr = last->convert(opr);
+        else
+            last = opr->convert(last);
+        if (!last->gt(opr))
+            return new BoolObj(false);
+    }
+    return new BoolObj(true);
+}
+
+EvalObj *builtin_arithmetic_eq(ArgList *args) {
+    if (args == empty_list)
+        throw TokenError("=", RUN_ERR_WRONG_NUM_OF_ARGS);
+    if (!args->car->is_num_obj())
+        throw TokenError("a number", RUN_ERR_WRONG_TYPE);
+       
+    NumObj *last = static_cast<NumObj*>(args->car), *opr; 
+
+    for (Cons *ptr = TO_CONS(args->cdr); 
+            ptr != empty_list; ptr = TO_CONS(ptr->cdr), last = opr)
+    {
+        if (!ptr->car->is_num_obj())        // not a number
+            throw TokenError("a number", RUN_ERR_WRONG_TYPE);
+        opr = static_cast<NumObj*>(ptr->car);
+        // upper type conversion
+        if (last->level < opr->level)
+            opr = last->convert(opr);
+        else
+            last = opr->convert(last);
+        if (!last->eq(opr))
+            return new BoolObj(false);
+    }
+    return new BoolObj(true);
+}
+
+
+EvalObj *builtin_exact(ArgList *args) {
+    if (args == empty_list ||
+        args->cdr != empty_list)
+        throw TokenError("(in)exact?", RUN_ERR_WRONG_NUM_OF_ARGS);
+    if (!args->car->is_num_obj())
+        throw TokenError("a number", RUN_ERR_WRONG_TYPE);
+    return new BoolObj(static_cast<NumObj*>(args->car)->is_exact()); 
+}
+
+EvalObj *builtin_inexact(ArgList *args) {
+    BoolObj *ret = static_cast<BoolObj*>(builtin_exact(args));
+    ret->val = !ret->val;
+    return ret;
 }
 
 

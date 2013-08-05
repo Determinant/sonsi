@@ -30,13 +30,15 @@ class CompNumObj: public InexactNumObj {
          */
         static CompNumObj *from_string(string repr);
         /** Convert to a complex number from other numeric types */
-        static CompNumObj *convert(NumObj* obj);
+        CompNumObj *convert(NumObj* obj);
 
         NumObj *plus(NumObj *r);
         NumObj *minus(NumObj *r);
         NumObj *multi(NumObj *r);
         NumObj *div(NumObj *r);
-        BoolObj *eq(NumObj *r);
+        bool lt(NumObj *r);
+        bool gt(NumObj *r);
+        bool eq(NumObj *r);
         string ext_repr();
 };
 
@@ -53,15 +55,15 @@ class RealNumObj: public InexactNumObj {
          */
         static RealNumObj *from_string(string repr);
         /** Convert to a real number from other numeric types */
-        static RealNumObj *convert(NumObj* obj);
+        RealNumObj *convert(NumObj* obj);
 
         NumObj *plus(NumObj *r);
         NumObj *minus(NumObj *r);
         NumObj *multi(NumObj *r);
         NumObj *div(NumObj *r);
-        BoolObj *lt(NumObj *r);
-        BoolObj *gt(NumObj *r);
-        BoolObj *eq(NumObj *r);
+        bool lt(NumObj *r);
+        bool gt(NumObj *r);
+        bool eq(NumObj *r);
         string ext_repr();
 
 };
@@ -88,15 +90,15 @@ class RatNumObj: public ExactNumObj {
          */
         static RatNumObj *from_string(string repr);
         /** Convert to a Rational number from other numeric types */
-        static RatNumObj *convert(NumObj* obj);
+        RatNumObj *convert(NumObj* obj);
 
         NumObj *plus(NumObj *r);
         NumObj *minus(NumObj *r);
         NumObj *multi(NumObj *r);
         NumObj *div(NumObj *r);
-        BoolObj *lt(NumObj *r);
-        BoolObj *gt(NumObj *r);
-        BoolObj *eq(NumObj *r);
+        bool lt(NumObj *r);
+        bool gt(NumObj *r);
+        bool eq(NumObj *r);
         string ext_repr();
 };
 
@@ -113,15 +115,15 @@ class IntNumObj: public ExactNumObj {
          */
         static IntNumObj *from_string(string repr);
         /** Convert to a integer from other numeric types */
-        static IntNumObj *convert(NumObj* obj);
+        IntNumObj *convert(NumObj* obj);
 
         NumObj *plus(NumObj *r);
         NumObj *minus(NumObj *r);
         NumObj *multi(NumObj *r);
         NumObj *div(NumObj *r);
-        BoolObj *lt(NumObj *r);
-        BoolObj *gt(NumObj *r);
-        BoolObj *eq(NumObj *r);
+        bool lt(NumObj *r);
+        bool gt(NumObj *r);
+        bool eq(NumObj *r);
         string ext_repr();
 };
 
@@ -190,6 +192,14 @@ class SpecialOptSet: public SpecialOptObj {
 };
 
 EvalObj *builtin_plus(ArgList *);
+EvalObj *builtin_minus(ArgList *);
+EvalObj *builtin_multi(ArgList *);
+EvalObj *builtin_div(ArgList *);
+EvalObj *builtin_exact(ArgList *);
+EvalObj *builtin_inexact(ArgList *);
+EvalObj *builtin_lt(ArgList *);
+EvalObj *builtin_gt(ArgList *);
+EvalObj *builtin_arithmetic_eq(ArgList *);
 
 EvalObj *builtin_display(ArgList *);
 EvalObj *builtin_cons(ArgList *);
