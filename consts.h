@@ -11,7 +11,8 @@ enum ErrCode {
     SYN_ERR_EMPTY_COMB,
     READ_ERR_UNEXPECTED_RIGHT_BRACKET,
     RUN_ERR_WRONG_TYPE,
-    INT_ERR
+    INT_ERR,
+    PAR_ERR_ILLEGAL_CHAR_IN_ESC
 };
 
 extern const char *ERR_MSG[];

@@ -16,6 +16,7 @@ class Tokenizor {
     private:
         FILE *stream;
         char *buff_ptr;
+        bool escaping;
     public:
         Tokenizor();
         /** Set the stream to be read from (without setting this, the default
