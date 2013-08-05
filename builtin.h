@@ -136,5 +136,6 @@ EvalObj *builtin_display(ArgList *);
 EvalObj *builtin_cons(ArgList *);
 EvalObj *builtin_car(ArgList *);
 EvalObj *builtin_cdr(ArgList *);
+EvalObj *builtin_list(ArgList *);
 
 #endif

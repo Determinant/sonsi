@@ -55,7 +55,16 @@ Cons::Cons(EvalObj *_car, EvalObj *_cdr) :
     next(NULL) {}
 
 string Cons::ext_repr() { 
-    return "(" + car->ext_repr() + " . " + cdr->ext_repr() + ")"; 
+    string res = "(";
+    EvalObj *ptr = this;
+    for (;ptr != empty_list && ptr->is_cons_obj();
+            ptr = TO_CONS(ptr)->cdr)
+        res += TO_CONS(ptr)->car->ext_repr() + " ";
+    if (ptr == empty_list)
+        res[res.length() - 1] = ')';
+    else
+        res += ". " + ptr->ext_repr() + ")";
+    return res;
 }
 
 #ifdef DEBUG

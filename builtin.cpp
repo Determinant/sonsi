@@ -296,6 +296,10 @@ EvalObj *builtin_cdr(ArgList *args) {
     return TO_CONS(args->car)->cdr;
 }
 
+EvalObj *builtin_list(ArgList *args) {
+    return args;
+}
+
 EvalObj *builtin_plus(ArgList *args) {
     // TODO: type conversion and proper arithmetic
     int res = 0;

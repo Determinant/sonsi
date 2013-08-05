@@ -24,6 +24,7 @@ void Evaluator::add_builtin_routines() {
     ADD_ENTRY("cons", new BuiltinProcObj(builtin_cons, "cons"));
     ADD_ENTRY("car", new BuiltinProcObj(builtin_car, "car"));
     ADD_ENTRY("cdr", new BuiltinProcObj(builtin_cdr, "cdr"));
+    ADD_ENTRY("list", new BuiltinProcObj(builtin_list, "list"));
     ADD_ENTRY("if", new SpecialOptIf());
     ADD_ENTRY("lambda", new SpecialOptLambda());
     ADD_ENTRY("define", new SpecialOptDefine());
