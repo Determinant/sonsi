@@ -105,14 +105,11 @@ ASTGenerator::ASTGenerator() {}
 
 EvalObj *ASTGenerator::to_obj(const string &str) {
     EvalObj *res = NULL;
-    if ((res = IntNumObj::from_string(str)))
-        return res;
-    if ((res = RatNumObj::from_string(str)))
-        return res;
-    if ((res = RealNumObj::from_string(str)))
-        return res;
-    if ((res = CompNumObj::from_string(str)))
-        return res;
+    if ((res = IntNumObj::from_string(str))) return res;
+    if ((res = RatNumObj::from_string(str))) return res;
+    if ((res = RealNumObj::from_string(str))) return res;
+    if ((res = CompNumObj::from_string(str))) return res;
+    if ((res = StrObj::from_string(str))) return res;
     return new SymObj(str);
 }
 Cons *ASTGenerator::absorb(Tokenizor *tk) {

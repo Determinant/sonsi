@@ -1,5 +1,4 @@
-- More sophisticated type system
-  - Number system && proper arithmetic
-  - Cons support
+- More sophisticated parser
+- GMP
 - Quotation
 - Add macro support

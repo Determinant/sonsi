@@ -25,7 +25,7 @@ class CompNumObj: public InexactNumObj {
 
         /** Construct a complex number */
         CompNumObj(double _real, double _imag);
-        /** Try to construct an RealNumObj object 
+        /** Try to construct an CompNumObj object 
          * @return NULL if failed
          */
         static CompNumObj *from_string(string repr);
@@ -85,7 +85,7 @@ class RatNumObj: public ExactNumObj {
         int a, b;
         /** Construct a rational number */
         RatNumObj(int _a, int _b);
-        /** Try to construct an RealNumObj object 
+        /** Try to construct an RatNumObj object 
          * @return NULL if failed
          */
         static RatNumObj *from_string(string repr);

@@ -94,7 +94,7 @@ RetAddr::RetAddr(Cons *_addr) : FrameObj(CLS_RET_ADDR), addr(_addr) {}
 string RetAddr::_debug_repr() { return string("#<Return Address>"); }
 #endif
 
-UnspecObj::UnspecObj() : EvalObj() {}
+UnspecObj::UnspecObj() : EvalObj(CLS_SIM_OBJ) {}
 
 string UnspecObj::ext_repr() { return string("#<Unspecified>"); }
 
@@ -150,7 +150,7 @@ string ProcObj::_debug_repr() { return ext_repr(); }
 
 SpecialOptObj::SpecialOptObj() : OptObj() {}
 
-BoolObj::BoolObj(bool _val) : EvalObj(), val(_val) {}
+BoolObj::BoolObj(bool _val) : EvalObj(CLS_SIM_OBJ), val(_val) {}
 
 bool BoolObj::is_true() { return val; }
 
@@ -160,6 +160,17 @@ NumObj::NumObj(NumLvl _level, bool _exactness) :
     EvalObj(CLS_SIM_OBJ | CLS_NUM_OBJ), level(_level), exactness(_exactness) {}
 
 bool NumObj::is_exact() { return exactness; }
+
+StrObj::StrObj(string _str) : EvalObj(CLS_SIM_OBJ), str(_str) {}
+
+string StrObj::ext_repr() { return str; }
+
+StrObj *StrObj::from_string(string repr) {
+    int len = repr.length();
+    if (repr[0] == '\"' && repr[len - 1] == '\"')
+        return new StrObj(repr.substr(1, len - 2));
+    return NULL;
+}
 
 BuiltinProcObj::BuiltinProcObj(BuiltinProc f, string _name) :
     OptObj(), handler(f), name(_name) {}

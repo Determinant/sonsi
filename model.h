@@ -259,6 +259,10 @@ class BoolObj: public EvalObj {
         BoolObj(bool);                  /**< Converts a C bool value to a BoolObj*/
         bool is_true();                 /**< Override EvalObj `is_true()` */
         string ext_repr();
+        /** Try to construct an BoolObj object 
+         * @return NULL if failed
+         */
+        static BoolObj *from_string(string repr);
 };
 
 /** @class NumObj
@@ -289,6 +293,23 @@ class NumObj: public EvalObj {
         virtual bool gt(NumObj *r) = 0;
         virtual bool eq(NumObj *r) = 0;
 };
+
+/** @class StrObj
+ * String support
+ */
+class StrObj: public EvalObj {
+    public:
+        string str;
+        
+        /** Construct a string object */
+        StrObj(string str);
+        /** Try to construct an StrObj object 
+         * @return NULL if failed
+         */
+        static StrObj *from_string(string repr);
+        string ext_repr();
+};
+
 
 typedef map<string, EvalObj*> Str2EvalObj;
 /** @class Environment
