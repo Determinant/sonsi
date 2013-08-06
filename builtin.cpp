@@ -69,53 +69,53 @@ InexactNumObj::InexactNumObj(NumLvl level) : NumObj(level, false) {}
 CompNumObj::CompNumObj(double _real, double _imag) :
     InexactNumObj(NUM_LVL_COMP), real(_real), imag(_imag) {}
 
-CompNumObj *CompNumObj::from_string(string repr) {
-    // spos: the position of the last sign
-    // ipos: the position of i
-    int spos = -1, ipos = -1;
-    size_t len = repr.length();
-    bool sign;
-    for (size_t i = 0; i < len; i++)
-        if (repr[i] == '+' || repr[i] == '-')
+    CompNumObj *CompNumObj::from_string(string repr) {
+        // spos: the position of the last sign
+        // ipos: the position of i
+        int spos = -1, ipos = -1;
+        size_t len = repr.length();
+        bool sign;
+        for (size_t i = 0; i < len; i++)
+            if (repr[i] == '+' || repr[i] == '-')
+            {
+                spos = i;
+                sign = repr[i] == '-';
+            }
+            else if (repr[i] == 'i' || repr[i] == 'I') 
+                ipos = i;
+
+        if (spos == -1 || ipos == -1 || !(spos < ipos)) 
+            return NULL;
+
+        double real = 0, imag = 1;
+        IntNumObj *int_ptr;
+        RatNumObj *rat_ptr;
+        RealNumObj *real_ptr;
+        if (spos > 0)
         {
-            spos = i;
-            sign = repr[i] == '-';
+            string real_str = repr.substr(0, spos);
+            if (int_ptr = IntNumObj::from_string(real_str))
+                real = int_ptr->val;
+            else if ((rat_ptr = RatNumObj::from_string(real_str)))
+                real = rat_ptr->a / double(rat_ptr->b);
+            else if ((real_ptr = RealNumObj::from_string(real_str)))
+                real = real_ptr->real;
+            else return NULL;
         }
-        else if (repr[i] == 'i' || repr[i] == 'I') 
-            ipos = i;
-
-    if (spos == -1 || ipos == -1 || !(spos < ipos)) 
-        return NULL;
-
-    double real = 0, imag = 1;
-    IntNumObj *int_ptr;
-    RatNumObj *rat_ptr;
-    RealNumObj *real_ptr;
-    if (spos > 0)
-    {
-        string real_str = repr.substr(0, spos);
-        if (int_ptr = IntNumObj::from_string(real_str))
-            real = int_ptr->val;
-        else if ((rat_ptr = RatNumObj::from_string(real_str)))
-            real = rat_ptr->a / double(rat_ptr->b);
-        else if ((real_ptr = RealNumObj::from_string(real_str)))
-            real = real_ptr->real;
-        else return NULL;
+        if (ipos > spos + 1)
+        {
+            string imag_str = repr.substr(spos + 1, ipos - spos - 1);
+            if (int_ptr = IntNumObj::from_string(imag_str))
+                imag = int_ptr->val;
+            else if ((rat_ptr = RatNumObj::from_string(imag_str)))
+                imag = rat_ptr->a / double(rat_ptr->b);
+            else if ((real_ptr = RealNumObj::from_string(imag_str)))
+                imag = real_ptr->real;
+            else return NULL;
+        }
+        if (sign) imag = -imag;
+        return new CompNumObj(real, imag);
     }
-    if (ipos > spos + 1)
-    {
-        string imag_str = repr.substr(spos + 1, ipos - spos - 1);
-        if (int_ptr = IntNumObj::from_string(imag_str))
-            imag = int_ptr->val;
-        else if ((rat_ptr = RatNumObj::from_string(imag_str)))
-            imag = rat_ptr->a / double(rat_ptr->b);
-        else if ((real_ptr = RealNumObj::from_string(imag_str)))
-            imag = real_ptr->real;
-        else return NULL;
-    }
-    if (sign) imag = -imag;
-    return new CompNumObj(real, imag);
-}
 
 CompNumObj *CompNumObj::convert(NumObj *obj) {
     switch (obj->level) 
@@ -127,9 +127,9 @@ CompNumObj *CompNumObj::convert(NumObj *obj) {
             break;
         case NUM_LVL_RAT :
             {
-            RatNumObj *rat = static_cast<RatNumObj*>(obj);
-            return new CompNumObj(rat->a / double(rat->b), 0);
-            break;
+                RatNumObj *rat = static_cast<RatNumObj*>(obj);
+                return new CompNumObj(rat->a / double(rat->b), 0);
+                break;
             }
         case NUM_LVL_INT :
             return new CompNumObj(static_cast<IntNumObj*>(obj)->val, 0);
@@ -155,14 +155,14 @@ NumObj *CompNumObj::minus(NumObj *_r) {
 NumObj *CompNumObj::multi(NumObj *_r) {
     CompNumObj *r = static_cast<CompNumObj*>(_r);
     return new CompNumObj(A * C - B * D,
-                         B * C + A * D);
+            B * C + A * D);
 }
 
 NumObj *CompNumObj::div(NumObj *_r) {
     CompNumObj *r = static_cast<CompNumObj*>(_r);
     double f = 1.0 / (C * C + D * D);
     return new CompNumObj((A * C + B * D) * f,
-                            (B * C - A * D) * f);
+            (B * C - A * D) * f);
 }
 
 bool CompNumObj::lt(NumObj *_r) {
@@ -204,9 +204,9 @@ RealNumObj *RealNumObj::convert(NumObj *obj) {
             return static_cast<RealNumObj*>(obj); break;
         case NUM_LVL_RAT:
             {
-            RatNumObj *rat = static_cast<RatNumObj*>(obj);
-            return new RealNumObj(rat->a / double(rat->b));
-            break;
+                RatNumObj *rat = static_cast<RatNumObj*>(obj);
+                return new RealNumObj(rat->a / double(rat->b));
+                break;
             }
         case NUM_LVL_INT:
             return new RealNumObj(static_cast<IntNumObj*>(obj)->val);
@@ -250,10 +250,10 @@ ExactNumObj::ExactNumObj(NumLvl level) : NumObj(level, true) {}
 
 RatNumObj::RatNumObj(int _a, int _b) : 
     ExactNumObj(NUM_LVL_RAT), a(_a), b(_b) {
-    int g = gcd(a, b);
-    a /= g;
-    b /= g;
-}
+        int g = gcd(a, b);
+        a /= g;
+        b /= g;
+    }
 
 RatNumObj *RatNumObj::from_string(string repr) {
     int a, b;
@@ -443,13 +443,13 @@ void SpecialOptIf::pre_call(ArgList *args, Cons *pc,
 }
 
 EvalObj *SpecialOptIf::post_call(ArgList *args, Cons *pc,
-                                Environment *envt) {
+        Environment *envt) {
     // Value already evaluated, so just return it
     return TO_CONS(args->cdr)->car;
 }
 
 Cons *SpecialOptIf::call(ArgList *args, Environment * &envt, 
-                        Continuation * &cont, FrameObj ** &top_ptr) {
+        Continuation * &cont, FrameObj ** &top_ptr) {
     Cons *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     if (state) 
     {
@@ -472,7 +472,7 @@ SpecialOptLambda::SpecialOptLambda() : SpecialOptObj() {}
 #define FILL_MARKS(pc, flag) \
     for (Cons *ptr = TO_CONS(pc->cdr); \
             ptr != empty_list; ptr = TO_CONS(ptr->cdr)) \
-        ptr->skip = flag
+ptr->skip = flag
 
 void SpecialOptLambda::prepare(Cons *pc) {
     // Do not evaluate anything
@@ -480,7 +480,7 @@ void SpecialOptLambda::prepare(Cons *pc) {
 }
 
 Cons *SpecialOptLambda::call(ArgList *args, Environment * &envt, 
-                            Continuation * &cont, FrameObj ** &top_ptr) {
+        Continuation * &cont, FrameObj ** &top_ptr) {
 
     Cons *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     Cons *pc = static_cast<Cons*>(ret_addr->car);
@@ -584,7 +584,7 @@ void SpecialOptSet::prepare(Cons *pc) {
 }
 
 Cons *SpecialOptSet::call(ArgList *args, Environment * &envt, 
-                            Continuation * &cont, FrameObj ** &top_ptr) {
+        Continuation * &cont, FrameObj ** &top_ptr) {
     Cons *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     Cons *pc = static_cast<Cons*>(ret_addr->car);
     EvalObj *first = TO_CONS(pc->cdr)->car;
@@ -612,7 +612,7 @@ void SpecialOptQuote::prepare(Cons *pc) {
 }
 
 Cons *SpecialOptQuote::call(ArgList *args, Environment * &envt, 
-                                Continuation * &cont, FrameObj ** &top_ptr) {
+        Continuation * &cont, FrameObj ** &top_ptr) {
     Cons *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     Cons *pc = static_cast<Cons*>(ret_addr->car);
     // revert
@@ -625,18 +625,18 @@ string SpecialOptQuote::ext_repr() { return string("#<Builtin Macro: quote>"); }
 
 #define ARGS_EXACTLY_TWO \
     if (args == empty_list || \
-        args->cdr == empty_list || \
-        TO_CONS(args->cdr)->cdr != empty_list) \
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
+            args->cdr == empty_list || \
+            TO_CONS(args->cdr)->cdr != empty_list) \
+throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
 
 #define ARGS_EXACTLY_ONE \
     if (args == empty_list || \
-        args->cdr != empty_list) \
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
+            args->cdr != empty_list) \
+throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
 
 #define ARGS_AT_LEAST_ONE \
     if (args == empty_list) \
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
+throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
 
 BUILTIN_PROC_DEF(make_pair) {
     ARGS_EXACTLY_TWO;
@@ -645,7 +645,7 @@ BUILTIN_PROC_DEF(make_pair) {
 
 BUILTIN_PROC_DEF(pair_car) {
     ARGS_EXACTLY_ONE;
-    if (args->car == empty_list || !args->car->is_cons_obj())
+    if (!args->car->is_cons_obj())
         throw TokenError(name, RUN_ERR_WRONG_TYPE);
 
     return TO_CONS(args->car)->car;
@@ -653,7 +653,7 @@ BUILTIN_PROC_DEF(pair_car) {
 
 BUILTIN_PROC_DEF(pair_cdr) {
     ARGS_EXACTLY_ONE;
-    if (args->car == empty_list || !args->car->is_cons_obj())
+    if (!args->car->is_cons_obj())
         throw TokenError(name, RUN_ERR_WRONG_TYPE);
 
     return TO_CONS(args->car)->cdr;
@@ -749,7 +749,7 @@ BUILTIN_PROC_DEF(num_lt) {
     ARGS_AT_LEAST_ONE;
     if (!args->car->is_num_obj())
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
-       
+
     NumObj *last = static_cast<NumObj*>(args->car), *opr; 
 
     for (Cons *ptr = TO_CONS(args->cdr); 
@@ -773,7 +773,7 @@ BUILTIN_PROC_DEF(num_gt) {
     ARGS_AT_LEAST_ONE;
     if (!args->car->is_num_obj())
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
-       
+
     NumObj *last = static_cast<NumObj*>(args->car), *opr; 
 
     for (Cons *ptr = TO_CONS(args->cdr); 
@@ -797,7 +797,7 @@ BUILTIN_PROC_DEF(num_eq) {
     ARGS_AT_LEAST_ONE;
     if (!args->car->is_num_obj())
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
-       
+
     NumObj *last = static_cast<NumObj*>(args->car), *opr; 
 
     for (Cons *ptr = TO_CONS(args->cdr); 
@@ -834,7 +834,7 @@ BUILTIN_PROC_DEF(is_pair) {
 
 BUILTIN_PROC_DEF(pair_set_car) {
     ARGS_EXACTLY_TWO;
-    if (args->car == empty_list || !args->car->is_cons_obj())
+    if (!args->car->is_cons_obj())
         throw TokenError(name, RUN_ERR_WRONG_TYPE);
     TO_CONS(args->car)->car = TO_CONS(args->cdr)->car;
     return new UnspecObj();
@@ -842,7 +842,7 @@ BUILTIN_PROC_DEF(pair_set_car) {
 
 BUILTIN_PROC_DEF(pair_set_cdr) {
     ARGS_EXACTLY_TWO;
-    if (args->car == empty_list || !args->car->is_cons_obj())
+    if (!args->car->is_cons_obj())
         throw TokenError(name, RUN_ERR_WRONG_TYPE);
     TO_CONS(args->car)->cdr = TO_CONS(args->cdr)->car;
     return new UnspecObj();

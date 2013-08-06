@@ -38,7 +38,7 @@ void Evaluator::add_builtin_routines() {
     ADD_BUILTIN_PROC("boolean?", is_boolean);
 
     ADD_BUILTIN_PROC("pair?", is_pair);
-    ADD_BUILTIN_PROC("pair", make_pair);
+    ADD_BUILTIN_PROC("cons", make_pair);
     ADD_BUILTIN_PROC("car", pair_car);
     ADD_BUILTIN_PROC("cdr", pair_cdr);
     ADD_BUILTIN_PROC("set-car!", pair_set_car);

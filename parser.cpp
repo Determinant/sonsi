@@ -168,20 +168,34 @@ Cons *ASTGenerator::absorb(Tokenizor *tk) {
         {
             if (top_ptr == parse_stack)
                 throw NormalError(READ_ERR_UNEXPECTED_RIGHT_BRACKET);
-            Cons *lst = empty_list;
+            EvalObj *lst = empty_list;
+            bool improper = false;
             while (top_ptr >= parse_stack && !IS_BRAKET(*(--top_ptr)))
             {
-                Cons *_lst = new Cons(TO_EVAL(*top_ptr), lst); // Collect the list
-                _lst->next = lst == empty_list ? NULL : lst;
-                lst = _lst;
+                EvalObj *obj = TO_EVAL(*top_ptr);
+                if (obj->is_sym_obj() && static_cast<SymObj*>(obj)->val == ".")
+                {
+                    improper = true;
+                    if (lst == empty_list || TO_CONS(lst)->cdr != empty_list)
+                        throw NormalError(PAR_ERR_IMPROPER_PAIR);
+                    lst = TO_CONS(lst)->car;
+                }
+                else
+                {
+                    Cons *_lst = new Cons(obj, lst);    // Collect the list
+                    _lst->next = lst->is_cons_obj() ? TO_CONS(lst) : NULL;
+                    lst = _lst;
+                }
             }
+            
             ParseBracket *bptr = TO_BRACKET(*top_ptr);
             if (bptr->btype == 0)
                 *top_ptr++ = lst;
             else if (bptr->btype == 1)
             {
+                if (improper) throw NormalError(PAR_ERR_IMPROPER_VECT);
                 VecObj *vec = new VecObj();
-                for (Cons *ptr = lst; ptr != empty_list; ptr = TO_CONS(ptr->cdr))
+                for (Cons *ptr = TO_CONS(lst); ptr != empty_list; ptr = TO_CONS(ptr->cdr))
                     vec->push_back(ptr->car);
                 *top_ptr++ = vec;
             }

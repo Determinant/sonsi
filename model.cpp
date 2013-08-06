@@ -40,8 +40,9 @@ bool EvalObj::is_opt_obj() {
 }
 
 bool EvalObj::is_cons_obj() {
-    return otype & CLS_CONS_OBJ;
+    return this != empty_list && (otype & CLS_CONS_OBJ);
 }
+
 
 bool EvalObj::is_num_obj() {
     return otype & CLS_NUM_OBJ;
@@ -227,7 +228,10 @@ string VecObj::ext_repr() {
     string res = "#(";
     for (EvalObjVec::iterator it = vec.begin(); it != vec.end(); it++)
         res += (*it)->ext_repr() + " ";
-    res[res.length() - 1] = ')';
+    if (vec.begin() == vec.end())
+        res += ')';
+    else
+        res[res.length() - 1] = ')';
     return res;
 }
 
