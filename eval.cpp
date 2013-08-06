@@ -31,6 +31,7 @@ void Evaluator::add_builtin_routines() {
     ADD_ENTRY("lambda", new SpecialOptLambda());
     ADD_ENTRY("define", new SpecialOptDefine());
     ADD_ENTRY("set!", new SpecialOptSet());
+    ADD_ENTRY("quote", new SpecialOptQuote());
 }
 
 Evaluator::Evaluator() {

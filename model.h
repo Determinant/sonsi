@@ -4,23 +4,26 @@
 #include <string>
 #include <list>
 #include <map>
+#include <vector>
 
 using std::list;
 using std::string;
 using std::map;
+using std::vector;
 
 // the range of unsigned char is enough for these types
 typedef unsigned char ClassType;  
 typedef unsigned char NumLvl;      
 
-static const int CLS_RET_ADDR = 1 << 0;
-static const int CLS_EVAL_OBJ = 1 << 1;
+const int CLS_RET_ADDR = 1 << 0;
+const int CLS_EVAL_OBJ = 1 << 1;
+const int CLS_PAR_BRA = 1 << 2;
 
-static const int CLS_SIM_OBJ = 1 << 0;
-static const int CLS_CONS_OBJ = 1 << 1;
-static const int CLS_SYM_OBJ = 1 << 2;
-static const int CLS_OPT_OBJ = 1 << 3;
-static const int CLS_NUM_OBJ = 1 << 4;
+const int CLS_SIM_OBJ = 1 << 0;
+const int CLS_CONS_OBJ = 1 << 1;
+const int CLS_SYM_OBJ = 1 << 2;
+const int CLS_OPT_OBJ = 1 << 3;
+const int CLS_NUM_OBJ = 1 << 4;
 
 
 #define TO_CONS(ptr) \
@@ -49,6 +52,12 @@ class FrameObj {
          * @return true for yes
          */
         bool is_ret_addr();
+        /**
+         * Tell whether the object is a bracket, according to ftype
+         * @return true for yes
+         */
+        bool is_parse_bracket();
+
 #ifdef DEBUG
         virtual string _debug_repr() = 0;  
 #endif
@@ -144,6 +153,18 @@ class RetAddr : public FrameObj {
 #endif
 };
 
+/** @class ParseBracket
+ * To indiate a left bracket when parsing, used in the parse_stack
+ */
+class ParseBracket : public FrameObj {
+    public:
+        unsigned char btype;            /**< The type of the bracket */
+        /** Construct a ParseBracket object */
+        ParseBracket(unsigned char btype);
+#ifdef DEBUG
+        string _debug_repr();
+#endif
+};
 
 /** @class UnspecObj
  * The "unspecified" value returned by some builtin procedures
@@ -310,6 +331,23 @@ class StrObj: public EvalObj {
         string ext_repr();
 };
 
+typedef vector<EvalObj*> EvalObjVec;
+/**
+ * @class VecObj
+ * Vector support (currently a wrapper of STL vector)
+ */
+class VecObj: public EvalObj {
+    private:
+        EvalObjVec vec;
+    public:
+        /** Construct a vector object */
+        VecObj();
+        /** Resize the vector */
+        void resize(int new_size);
+        /** Add a new element to the rear */
+        void push_back(EvalObj *new_elem);
+        string ext_repr();
+};
 
 typedef map<string, EvalObj*> Str2EvalObj;
 /** @class Environment

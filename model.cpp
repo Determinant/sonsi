@@ -19,6 +19,10 @@ bool FrameObj::is_ret_addr() {
     return ftype & CLS_RET_ADDR;
 }
 
+bool FrameObj::is_parse_bracket() { 
+    return ftype & CLS_PAR_BRA;
+}
+
 EvalObj::EvalObj(ClassType _otype) : FrameObj(CLS_EVAL_OBJ), otype(_otype) {}
 
 void EvalObj::prepare(Cons *pc) {}
@@ -94,6 +98,15 @@ RetAddr::RetAddr(Cons *_addr) : FrameObj(CLS_RET_ADDR), addr(_addr) {}
 string RetAddr::_debug_repr() { return string("#<Return Address>"); }
 #endif
 
+ParseBracket::ParseBracket(unsigned char _btype) : 
+    FrameObj(CLS_SIM_OBJ | CLS_PAR_BRA), btype(_btype) {}
+
+#ifdef DEBUG
+string ParseBracket::_debug_repr() { 
+    return string("#<Bracket>");
+}
+#endif
+
 UnspecObj::UnspecObj() : EvalObj(CLS_SIM_OBJ) {}
 
 string UnspecObj::ext_repr() { return string("#<Unspecified>"); }
@@ -165,8 +178,27 @@ StrObj::StrObj(string _str) : EvalObj(CLS_SIM_OBJ), str(_str) {}
 
 string StrObj::ext_repr() { return str; }
 
+VecObj::VecObj() : EvalObj(CLS_SIM_OBJ) {}
+
+void VecObj::resize(int new_size) {
+    vec.resize(new_size);
+}
+
+void VecObj::push_back(EvalObj *new_elem) {
+    vec.push_back(new_elem);
+}
+
+string VecObj::ext_repr() {
+    string res = "#(";
+    for (EvalObjVec::iterator it = vec.begin(); it != vec.end(); it++)
+        res += (*it)->ext_repr() + " ";
+    res[res.length() - 1] = ')';
+    return res;
+}
+
+
 StrObj *StrObj::from_string(string repr) {
-    int len = repr.length();
+    size_t len = repr.length();
     if (repr[0] == '\"' && repr[len - 1] == '\"')
         return new StrObj(repr.substr(1, len - 2));
     return NULL;

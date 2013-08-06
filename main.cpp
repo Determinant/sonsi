@@ -21,6 +21,7 @@ int main() {
     ASTGenerator *ast = new ASTGenerator();
     Evaluator *eval = new Evaluator();
 
+    int rcnt = 0;
     while (1)
     {
         printf("Sonsi> ");
@@ -29,11 +30,12 @@ int main() {
             Cons *tree = ast->absorb(tk);
             if (!tree) break;
             //tree_print(tree);
-            printf("%s\n", eval->run_expr(tree)->ext_repr().c_str());
+            fprintf(stderr, "Ret> $%d = %s\n", rcnt++, 
+                    eval->run_expr(tree)->ext_repr().c_str());
         }
         catch (GeneralError &e)
         {
-            printf("An error occured: %s\n", e.get_msg().c_str());
+            fprintf(stderr, "An error occured: %s\n", e.get_msg().c_str());
         }
     }
 }

@@ -9,7 +9,7 @@
 using std::stringstream;
 
 static char buff[TOKEN_BUFF_SIZE];
-static EvalObj *parse_stack[PARSE_STACK_SIZE];
+static FrameObj *parse_stack[PARSE_STACK_SIZE];
 extern Cons *empty_list;
 
 Tokenizor::Tokenizor() : stream(stdin), buff_ptr(buff), escaping(false) {}
@@ -29,8 +29,11 @@ void Tokenizor::set_stream(FILE *_stream) {
     ((ch) == ' ' || (ch) == '\t' || IS_NEWLINE(ch))
 #define IS_COMMENT(ch) \
     ((ch) == ';')
+#define IS_LITERAL(ch) \
+    ((ch) == '\'')
 #define IS_DELIMITER(ch) \
-    (IS_BRACKET(ch) || IS_SPACE(ch) || IS_COMMENT(ch) || IS_QUOTE(ch))
+    (IS_BRACKET(ch) || IS_SPACE(ch) ||  \
+     IS_COMMENT(ch) || IS_QUOTE(ch))
 
 #define POP \
     do { \
@@ -38,6 +41,7 @@ void Tokenizor::set_stream(FILE *_stream) {
         ret = string(buff); \
         buff_ptr = buff; \
     } while (0)
+#define TOP (*(buff_ptr - 1))
 
 bool Tokenizor::get_token(string &ret) {
     char ch;
@@ -63,26 +67,35 @@ bool Tokenizor::get_token(string &ret) {
         else
         {
             bool in_quote = buff_ptr != buff && IS_QUOTE(*buff);
-            if (buff_ptr != buff && 
-                    (IS_BRACKET(*buff) || 
-                     IS_DELIMITER(ch)))
-                     
+            if (buff_ptr != buff)
             {
-                if (IS_COMMENT(*buff))
-                {
-                    if (IS_NEWLINE(ch)) buff_ptr = buff;
-                    else buff_ptr = buff + 1;
-                }
-                else if (!in_quote)
+                if (buff_ptr - buff == 1 && IS_LITERAL(TOP))
                 {
                     POP;
                     flag = true;
                 }
-                else if (IS_QUOTE(ch))
+                else if ((IS_BRACKET(TOP) || IS_DELIMITER(ch)))
                 {
-                    *buff_ptr++ = '\"';
-                    POP;
-                    return true;    // discard current slash
+                    if (IS_COMMENT(*buff))
+                    {
+                        if (IS_NEWLINE(ch)) buff_ptr = buff;
+                        else buff_ptr = buff + 1;
+                    }
+                    else if (!in_quote) // not in a double-quote
+                    {
+                        if (!(buff_ptr - buff == 1 && ch == '(' && TOP == '#'))
+                        {
+                            POP;
+                            flag = true;
+                        }
+                    }
+                    else if (IS_QUOTE(ch))  
+                    {
+                        // in a double-quote which is being enclosed
+                        *buff_ptr++ = '\"';
+                        POP;
+                        return true;    // prevent duplicate quote sign 
+                    }
                 }
             }
             if (in_quote || !IS_SPACE(ch)) 
@@ -109,31 +122,69 @@ EvalObj *ASTGenerator::to_obj(const string &str) {
     if ((res = RealNumObj::from_string(str))) return res;
     if ((res = CompNumObj::from_string(str))) return res;
     if ((res = StrObj::from_string(str))) return res;
-    return new SymObj(str);
+    return new SymObj(str); // otherwise we assume it a symbol
 }
+
+#define TO_EVAL(ptr) \
+    (static_cast<EvalObj*>(ptr))
+#define TO_BRACKET(ptr) \
+    (static_cast<ParseBracket*>(ptr))
+#define IS_BRAKET(ptr) \
+    ((ptr)->is_parse_bracket())
+
 Cons *ASTGenerator::absorb(Tokenizor *tk) {
-    EvalObj **top_ptr = parse_stack;
+    FrameObj **top_ptr = parse_stack;
     for (;;)
     {
-        if (top_ptr > parse_stack && *parse_stack)
-            return new Cons(*(top_ptr - 1), empty_list);
+        if (top_ptr - parse_stack > 1 && 
+                !IS_BRAKET(*(top_ptr - 1)) &&
+                IS_BRAKET(*(top_ptr - 2)))
+        {
+            ParseBracket *bptr = TO_BRACKET(*(top_ptr - 2));
+            if (bptr->btype == 2)
+            {
+                top_ptr -= 2;
+                Cons *lst_cdr = new Cons(TO_EVAL(*(top_ptr + 1)), empty_list);
+                Cons *lst = new Cons(new SymObj("quote"), lst_cdr);
+                lst->next = lst_cdr;
+                lst_cdr->next = NULL;
+                *top_ptr++ = lst;
+            }
+        }
+
+        if (top_ptr > parse_stack && !IS_BRAKET(*parse_stack))
+            return new Cons(TO_EVAL(*(top_ptr - 1)), empty_list);
         string token;
         if (!tk->get_token(token)) return NULL;
-        if (token == "(")
-            *top_ptr++ = NULL;  // Make the beginning of a new level
+        if (token == "(")       // a list
+            *top_ptr++ = new ParseBracket(0);  
+        else if (token == "#(") // a vector
+            *top_ptr++ = new ParseBracket(1);
+        else if (token == "\'") // syntatic sugar for quote
+            *top_ptr++ = new ParseBracket(2);
         else if (token == ")")
         {
+            if (top_ptr == parse_stack)
+                throw NormalError(READ_ERR_UNEXPECTED_RIGHT_BRACKET);
             Cons *lst = empty_list;
-            while (top_ptr >= parse_stack && *(--top_ptr))
+            while (top_ptr >= parse_stack && !IS_BRAKET(*(--top_ptr)))
             {
-                Cons *_lst = new Cons(*top_ptr, lst); // Collect the list
+                Cons *_lst = new Cons(TO_EVAL(*top_ptr), lst); // Collect the list
                 _lst->next = lst == empty_list ? NULL : lst;
                 lst = _lst;
             }
-            if (top_ptr < parse_stack)
-                throw NormalError(READ_ERR_UNEXPECTED_RIGHT_BRACKET);
-            *top_ptr++ = lst;
+            ParseBracket *bptr = TO_BRACKET(*top_ptr);
+            if (bptr->btype == 0)
+                *top_ptr++ = lst;
+            else if (bptr->btype == 1)
+            {
+                VecObj *vec = new VecObj();
+                for (Cons *ptr = lst; ptr != empty_list; ptr = TO_CONS(ptr->cdr))
+                    vec->push_back(ptr->car);
+                *top_ptr++ = vec;
+            }
         }
-        else *top_ptr++ = ASTGenerator::to_obj(token);
+        else
+            *top_ptr++ = ASTGenerator::to_obj(token);
     }
 }

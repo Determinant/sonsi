@@ -34,7 +34,7 @@ double str_to_double(string repr, bool &flag) {
     const char *nptr = repr.c_str();
     char *endptr; 
     double val = strtod(nptr, &endptr);
-    if (endptr != nptr + repr.length())
+    if (endptr == nptr || endptr != nptr + repr.length())
     {
         flag = false;
         return 0;
@@ -47,7 +47,7 @@ int str_to_int(string repr, bool &flag) {
     const char *nptr = repr.c_str();
     char *endptr; 
     int val = strtol(nptr, &endptr, 10);
-    if (endptr != nptr + repr.length())
+    if (endptr == nptr || endptr != nptr + repr.length())
     {
         flag = false;
         return 0;
@@ -72,10 +72,10 @@ CompNumObj::CompNumObj(double _real, double _imag) :
 CompNumObj *CompNumObj::from_string(string repr) {
     // spos: the position of the last sign
     // ipos: the position of i
-    int spos = -1, ipos = -1, 
-        len = repr.length();
+    int spos = -1, ipos = -1;
+    size_t len = repr.length();
     bool sign;
-    for (int i = 0; i < len; i++)
+    for (size_t i = 0; i < len; i++)
         if (repr[i] == '+' || repr[i] == '-')
         {
             spos = i;
@@ -257,8 +257,9 @@ RatNumObj::RatNumObj(int _a, int _b) :
 
 RatNumObj *RatNumObj::from_string(string repr) {
     int a, b;
-    int len = repr.length(), pos = -1;
-    for (int i = 0; i < len; i++)
+    size_t len = repr.length();
+    int pos = -1;
+    for (size_t i = 0; i < len; i++)
         if (repr[i] == '/') { pos = i; break; }
     bool flag;
     a = str_to_int(repr.substr(0, pos), flag);
@@ -344,7 +345,7 @@ IntNumObj::IntNumObj(int _val) : ExactNumObj(NUM_LVL_INT), val(_val) {}
 
 IntNumObj *IntNumObj::from_string(string repr) {
     int val = 0;
-    for (int i = 0; i < repr.length(); i++)
+    for (size_t i = 0; i < repr.length(); i++)
     {
         if (!('0' <= repr[i] && repr[i] <= '9'))
             return NULL;
@@ -474,7 +475,6 @@ SpecialOptLambda::SpecialOptLambda() : SpecialOptObj() {}
         ptr->skip = flag
 
 void SpecialOptLambda::prepare(Cons *pc) {
-    //TODO check number of arguments
     // Do not evaluate anything
     FILL_MARKS(pc, true);
 }
@@ -528,7 +528,6 @@ Cons *SpecialOptDefine::call(ArgList *args, Environment * &envt,
     Cons *pc = static_cast<Cons*>(ret_addr->car);
     EvalObj *obj;
     SymObj *id;
-    // TODO: check identifier
     EvalObj *first = TO_CONS(pc->cdr)->car;
     if (first->is_simple_obj())
     {
@@ -604,6 +603,26 @@ Cons *SpecialOptSet::call(ArgList *args, Environment * &envt,
 SpecialOptSet::SpecialOptSet() {}
 
 string SpecialOptSet::ext_repr() { return string("#<Builtin Macro: set!>"); }
+
+SpecialOptQuote::SpecialOptQuote() {}
+
+void SpecialOptQuote::prepare(Cons *pc) {
+    // Do not evaluate anything
+    FILL_MARKS(pc, true);
+}
+
+Cons *SpecialOptQuote::call(ArgList *args, Environment * &envt, 
+                                Continuation * &cont, FrameObj ** &top_ptr) {
+    Cons *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
+    Cons *pc = static_cast<Cons*>(ret_addr->car);
+    // revert
+    FILL_MARKS(pc, false);
+    *top_ptr++ = TO_CONS(pc->cdr)->car;
+    return ret_addr->next;
+}
+
+string SpecialOptQuote::ext_repr() { return string("#<Builtin Macro: quote>"); }
+
 
 EvalObj *builtin_cons(ArgList *args) {
     if (args == empty_list ||

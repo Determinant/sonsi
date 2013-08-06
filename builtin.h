@@ -191,6 +191,19 @@ class SpecialOptSet: public SpecialOptObj {
         string ext_repr();
 };
 
+/** @class SpecialOptLambda
+ * The implementation of `lambda` operator
+ */
+class SpecialOptQuote: public SpecialOptObj {
+    public:
+        SpecialOptQuote();
+        void prepare(Cons *pc);
+        Cons *call(ArgList *args, Environment * &envt, 
+                    Continuation * &cont, FrameObj ** &top_ptr);
+
+        string ext_repr();
+};
+
 EvalObj *builtin_plus(ArgList *);
 EvalObj *builtin_minus(ArgList *);
 EvalObj *builtin_multi(ArgList *);
