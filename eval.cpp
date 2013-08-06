@@ -71,6 +71,8 @@ void push(Cons * &pc, FrameObj ** &top_ptr, Environment *envt) {
             throw NormalError(SYN_ERR_EMPTY_COMB);
 
         *top_ptr++ = new RetAddr(pc);       // Push the return address
+        if (!is_list(TO_CONS(pc->car)))
+            throw TokenError(pc->car->ext_repr(), RUN_ERR_WRONG_NUM_OF_ARGS); 
         // static_cast because of is_simple_obj() is false
         pc = static_cast<Cons*>(pc->car);  // Go deeper to enter the call
     }

@@ -6,7 +6,7 @@
 
 using std::string;
 
-
+bool is_list(Cons *ptr);
 
 /** @class InexactNumObj
  * Inexact number implementation (using doubles)

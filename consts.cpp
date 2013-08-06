@@ -14,5 +14,6 @@ const char *ERR_MSG[] = {
     "Illegal character in escape sequence: #\\%s",
     "Unknown character name: %s",
     "Improper pair structure",
-    "Improper vector structure"
+    "Improper vector structure",
+    "Bad formal %s in expression"
 };

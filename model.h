@@ -246,8 +246,10 @@ class ProcObj: public OptObj {
  * Special builtin syntax (`if`, `define`, `lambda`, etc.)
  */
 class SpecialOptObj: public OptObj {
+    protected:
+        string name;
     public:
-        SpecialOptObj();
+        SpecialOptObj(string name);
 };
 
 typedef EvalObj* (*BuiltinProc)(ArgList *, const string &);

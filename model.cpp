@@ -146,12 +146,18 @@ Cons *ProcObj::call(ArgList *args, Environment * &genvt,
     Environment *_envt = new Environment(envt);   
     // static_cast<SymObj*> because the para_list is already checked
     Cons *ptr, *ppar;
-    for (ptr = TO_CONS(args->cdr), ppar = para_list; 
-            ptr != empty_list && ppar != empty_list; 
-            ptr = TO_CONS(ptr->cdr), ppar = TO_CONS(ppar->cdr))
+    EvalObj *nptr;
+    for (ptr = TO_CONS(args->cdr), ppar = para_list;
+            ppar != empty_list; 
+            ppar = TO_CONS(ppar->cdr))
+    {
         _envt->add_binding(static_cast<SymObj*>(ppar->car), ptr->car);
+        if ((nptr = ptr->cdr)->is_cons_obj())
+            ptr = TO_CONS(nptr);
+        else break;
+    }
 
-    if (ptr != empty_list || ppar != empty_list)
+    if (ptr->cdr != empty_list || ppar->cdr != empty_list)
         throw TokenError("", RUN_ERR_WRONG_NUM_OF_ARGS);
 
     genvt = _envt;
@@ -166,7 +172,7 @@ string ProcObj::ext_repr() { return string("#<Procedure>"); }
 string ProcObj::_debug_repr() { return ext_repr(); }
 #endif
 
-SpecialOptObj::SpecialOptObj() : OptObj() {}
+SpecialOptObj::SpecialOptObj(string _name) : OptObj(), name(_name) {}
 
 BoolObj::BoolObj(bool _val) : EvalObj(CLS_SIM_OBJ | CLS_BOOL_OBJ), val(_val) {}
 

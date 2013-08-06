@@ -16,6 +16,27 @@ static const int NUM_LVL_REAL = 1;
 static const int NUM_LVL_RAT = 2;
 static const int NUM_LVL_INT = 3;
 
+#define ARGS_EXACTLY_TWO \
+    if (args == empty_list || !args->cdr->is_cons_obj() || \
+            TO_CONS(args->cdr)->cdr != empty_list) \
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS) \
+
+#define ARGS_EXACTLY_ONE \
+    if (args == empty_list || !args->cdr->is_cons_obj() ) \
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
+
+#define ARGS_AT_LEAST_ONE \
+    if (args == empty_list) \
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
+
+bool is_list(Cons *ptr) {
+    EvalObj *nptr; 
+    for (;;) 
+        if ((nptr = ptr->cdr)->is_cons_obj()) 
+            ptr = TO_CONS(nptr); 
+        else break; 
+    return ptr->cdr == empty_list;
+}
 
 string double_to_str(double val, bool force_sign = false) {
     stringstream ss;
@@ -397,23 +418,37 @@ string IntNumObj::ext_repr() {
     return int_to_str(val);
 }
 
-SpecialOptIf::SpecialOptIf() : SpecialOptObj() {}
+SpecialOptIf::SpecialOptIf() : SpecialOptObj("if") {}
 
 void SpecialOptIf::prepare(Cons *pc) {
+#define IF_EXP_ERR \
+        throw TokenError("if", RUN_ERR_WRONG_NUM_OF_ARGS)
     state = 0;  // Prepared
 
-    pc = TO_CONS(pc->cdr);
+    if (pc->cdr->is_cons_obj())
+        pc = TO_CONS(pc->cdr);
+    else 
+        IF_EXP_ERR;
     if (pc == empty_list)
-        throw TokenError("if", SYN_ERR_MISS_OR_EXTRA_EXP);
+        IF_EXP_ERR;
+
     pc->skip = false;
 
-    pc = TO_CONS(pc->cdr);
+    if (pc->cdr->is_cons_obj())
+        pc = TO_CONS(pc->cdr);
+    else
+        IF_EXP_ERR;
     if (pc == empty_list)
-        throw TokenError("if", SYN_ERR_MISS_OR_EXTRA_EXP);
+        IF_EXP_ERR;
 
     pc->skip = true;
     if (pc->cdr != empty_list)
-        TO_CONS(pc->cdr)->skip = true;
+    {
+        if (pc->cdr->is_cons_obj())
+            TO_CONS(pc->cdr)->skip = true;
+        else
+            IF_EXP_ERR;
+    }
 }
 
 void SpecialOptIf::pre_call(ArgList *args, Cons *pc,
@@ -468,11 +503,43 @@ Cons *SpecialOptIf::call(ArgList *args, Environment * &envt,
 
 string SpecialOptIf::ext_repr() { return string("#<Builtin Macro: if>"); }
 
-SpecialOptLambda::SpecialOptLambda() : SpecialOptObj() {}
-#define FILL_MARKS(pc, flag) \
-    for (Cons *ptr = TO_CONS(pc->cdr); \
-            ptr != empty_list; ptr = TO_CONS(ptr->cdr)) \
-ptr->skip = flag
+SpecialOptLambda::SpecialOptLambda() : SpecialOptObj("lambda") {}
+#define FILL_MARKS(pc, flag)  \
+do  \
+{ \
+    EvalObj *nptr; \
+    Cons *ptr; \
+    for (ptr = TO_CONS(pc->cdr);;)  \
+    { \
+        ptr->skip = flag; \
+        if ((nptr = ptr->cdr)->is_cons_obj()) \
+            ptr = TO_CONS(nptr); \
+        else break; \
+    } \
+    if (ptr->cdr != empty_list) \
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS); \
+} \
+while (0)
+
+#define CHECK_PARA_LIST(p) \
+do  \
+{ \
+    if (p == empty_list) break; \
+    EvalObj *nptr; \
+    Cons *ptr; \
+    for (ptr = TO_CONS(p);;)  \
+    { \
+        if (!ptr->car->is_sym_obj()) \
+            throw TokenError(ptr->car->ext_repr(), RUN_ERR_WRONG_NUM_OF_ARGS); \
+        if ((nptr = ptr->cdr)->is_cons_obj()) \
+            ptr = TO_CONS(nptr); \
+        else break; \
+    } \
+    if (ptr->cdr != empty_list) \
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS); \
+} \
+while (0)
+
 
 void SpecialOptLambda::prepare(Cons *pc) {
     // Do not evaluate anything
@@ -486,16 +553,20 @@ Cons *SpecialOptLambda::call(ArgList *args, Environment * &envt,
     Cons *pc = static_cast<Cons*>(ret_addr->car);
 
     if (pc->cdr == empty_list)
-        throw TokenError("lambda", SYN_ERR_EMPTY_PARA_LIST);
+        throw TokenError(name, SYN_ERR_EMPTY_PARA_LIST);
     if (TO_CONS(pc->cdr)->cdr == empty_list)
-        throw TokenError("lambda", SYN_ERR_MISS_OR_EXTRA_EXP);
+        throw TokenError(name, SYN_ERR_MISS_OR_EXTRA_EXP);
 
-    SymbolList *para_list = static_cast<SymbolList*>(TO_CONS(pc->cdr)->car); 
-    // Clear the flag to avoid side-effects (e.g. proc calling)
+     // Clear the flag to avoid side-effects (e.g. proc calling)
     FILL_MARKS(pc, false);
+   
+    pc = TO_CONS(pc->cdr);
+    CHECK_PARA_LIST(pc->car);
+    SymbolList *para_list = static_cast<SymbolList*>(pc->car); 
 
     // store a list of expressions inside <body>
-    ASTList *body = TO_CONS(TO_CONS(pc->cdr)->cdr);       // Truncate the expression list
+
+    ASTList *body = TO_CONS(pc->cdr);       // Truncate the expression list
     for (Cons *ptr = body; ptr != empty_list; ptr = TO_CONS(ptr->cdr))
         ptr->next = NULL;    // Make each expression an orphan
 
@@ -505,17 +576,17 @@ Cons *SpecialOptLambda::call(ArgList *args, Environment * &envt,
 
 string SpecialOptLambda::ext_repr() { return string("#<Builtin Macro: lambda>"); }
 
-SpecialOptDefine::SpecialOptDefine() : SpecialOptObj() {}
+SpecialOptDefine::SpecialOptDefine() : SpecialOptObj("define") {}
 
 void SpecialOptDefine::prepare(Cons *pc) {
-    if (pc->cdr == empty_list)
-        throw TokenError("define", SYN_ERR_MISS_OR_EXTRA_EXP);
+    if (!pc->cdr->is_cons_obj())
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
 
-    if (TO_CONS(pc->cdr)->car->is_simple_obj())  // Simple value assignment
+    pc = TO_CONS(pc->cdr);
+    if (pc->car->is_simple_obj())  // Simple value assignment
     {
-        pc = TO_CONS(pc->cdr);
-        if (pc->cdr == empty_list)
-            throw TokenError("define", SYN_ERR_MISS_OR_EXTRA_EXP);
+        if (!pc->cdr->is_cons_obj())
+            throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
         pc->skip = true;           // Skip the identifier
         TO_CONS(pc->cdr)->skip = false; 
     }                                   // Procedure definition
@@ -533,19 +604,20 @@ Cons *SpecialOptDefine::call(ArgList *args, Environment * &envt,
     {
         if (!first->is_sym_obj())
             throw TokenError(first->ext_repr(), SYN_ERR_NOT_AN_ID);
-
+        ARGS_EXACTLY_TWO;
         id = static_cast<SymObj*>(first);
         obj = TO_CONS(args->cdr)->car;
     }
     else
     {
         // static_cast because of is_simple_obj() is false
-        Cons *plst = static_cast<Cons*>(TO_CONS(pc->cdr)->car);
+        Cons *plst = static_cast<Cons*>(first);
 
         if (plst == empty_list)
-            throw TokenError("if", SYN_ERR_EMPTY_PARA_LIST);
+            throw TokenError(name, SYN_ERR_EMPTY_PARA_LIST);
         if (!plst->car->is_sym_obj())
             throw TokenError(first->ext_repr(), SYN_ERR_NOT_AN_ID);
+        CHECK_PARA_LIST(plst->cdr);
 
         id = static_cast<SymObj*>(plst->car);
         ArgList *para_list = TO_CONS(plst->cdr);
@@ -555,7 +627,7 @@ Cons *SpecialOptDefine::call(ArgList *args, Environment * &envt,
         ASTList *body = TO_CONS(TO_CONS(pc->cdr)->cdr);   // Truncate the expression list
 
         if (body == empty_list)
-            throw TokenError("define", SYN_ERR_MISS_OR_EXTRA_EXP);
+            throw TokenError(name, SYN_ERR_MISS_OR_EXTRA_EXP);
 
         for (Cons *ptr = body; ptr != empty_list; ptr = TO_CONS(ptr->cdr))
             ptr->next = NULL;           // Make each expression a orphan
@@ -570,15 +642,17 @@ Cons *SpecialOptDefine::call(ArgList *args, Environment * &envt,
 string SpecialOptDefine::ext_repr() { return string("#<Builtin Macro: define>"); }
 
 void SpecialOptSet::prepare(Cons *pc) {
+    if (!pc->cdr->is_cons_obj())
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+
     pc = TO_CONS(pc->cdr);
-    if (pc == empty_list)
-        throw TokenError("set!", SYN_ERR_MISS_OR_EXTRA_EXP);
 
     pc->skip = true;       // Skip the identifier
 
+    if (!pc->cdr->is_cons_obj())
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+
     pc = TO_CONS(pc->cdr);
-    if (pc == empty_list)
-        throw TokenError("set!", SYN_ERR_MISS_OR_EXTRA_EXP);
 
     pc->skip = false; 
 }
@@ -591,6 +665,7 @@ Cons *SpecialOptSet::call(ArgList *args, Environment * &envt,
 
     if (!first->is_sym_obj())
         throw TokenError(first->ext_repr(), SYN_ERR_NOT_AN_ID);
+    ARGS_EXACTLY_TWO;
 
     SymObj *id = static_cast<SymObj*>(first);
 
@@ -600,11 +675,11 @@ Cons *SpecialOptSet::call(ArgList *args, Environment * &envt,
     return ret_addr->next;
 }
 
-SpecialOptSet::SpecialOptSet() {}
+SpecialOptSet::SpecialOptSet() : SpecialOptObj("set!") {}
 
 string SpecialOptSet::ext_repr() { return string("#<Builtin Macro: set!>"); }
 
-SpecialOptQuote::SpecialOptQuote() {}
+SpecialOptQuote::SpecialOptQuote() : SpecialOptObj("quote") {}
 
 void SpecialOptQuote::prepare(Cons *pc) {
     // Do not evaluate anything
@@ -623,20 +698,6 @@ Cons *SpecialOptQuote::call(ArgList *args, Environment * &envt,
 
 string SpecialOptQuote::ext_repr() { return string("#<Builtin Macro: quote>"); }
 
-#define ARGS_EXACTLY_TWO \
-    if (args == empty_list || \
-            args->cdr == empty_list || \
-            TO_CONS(args->cdr)->cdr != empty_list) \
-throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
-
-#define ARGS_EXACTLY_ONE \
-    if (args == empty_list || \
-            args->cdr != empty_list) \
-throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
-
-#define ARGS_AT_LEAST_ONE \
-    if (args == empty_list) \
-throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
 
 BUILTIN_PROC_DEF(make_pair) {
     ARGS_EXACTLY_TWO;
@@ -660,6 +721,8 @@ BUILTIN_PROC_DEF(pair_cdr) {
 }
 
 BUILTIN_PROC_DEF(make_list) {
+    if (!is_list(args))
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS); 
     return args;
 }
 

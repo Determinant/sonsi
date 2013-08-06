@@ -175,9 +175,11 @@ Cons *ASTGenerator::absorb(Tokenizor *tk) {
                 EvalObj *obj = TO_EVAL(*top_ptr);
                 if (obj->is_sym_obj() && static_cast<SymObj*>(obj)->val == ".")
                 {
-                    improper = true;
-                    if (lst == empty_list || TO_CONS(lst)->cdr != empty_list)
+                    if (improper || 
+                        lst == empty_list || 
+                        TO_CONS(lst)->cdr != empty_list)
                         throw NormalError(PAR_ERR_IMPROPER_PAIR);
+                    improper = true;
                     lst = TO_CONS(lst)->car;
                 }
                 else

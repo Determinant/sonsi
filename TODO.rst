@@ -1,3 +1,2 @@
 - GMP
-- Pair literal parsing
 - Add macro support
