@@ -9,29 +9,46 @@ const int EVAL_STACK_SIZE = 65536;
 FrameObj *eval_stack[EVAL_STACK_SIZE];
 
 void Evaluator::add_builtin_routines() {
-    
+
 #define ADD_ENTRY(name, rout) \
     envt->add_binding(new SymObj(name), rout)
 
-    ADD_ENTRY("+", new BuiltinProcObj(builtin_plus, "+"));
-    ADD_ENTRY("-", new BuiltinProcObj(builtin_minus, "-"));
-    ADD_ENTRY("*", new BuiltinProcObj(builtin_multi, "*"));
-    ADD_ENTRY("/", new BuiltinProcObj(builtin_div, "/"));
-    ADD_ENTRY(">", new BuiltinProcObj(builtin_gt, ">"));
-    ADD_ENTRY("<", new BuiltinProcObj(builtin_lt, "<"));
-    ADD_ENTRY("=", new BuiltinProcObj(builtin_arithmetic_eq, "="));
-    ADD_ENTRY("display", new BuiltinProcObj(builtin_display, "display"));
-    ADD_ENTRY("cons", new BuiltinProcObj(builtin_cons, "cons"));
-    ADD_ENTRY("car", new BuiltinProcObj(builtin_car, "car"));
-    ADD_ENTRY("cdr", new BuiltinProcObj(builtin_cdr, "cdr"));
-    ADD_ENTRY("list", new BuiltinProcObj(builtin_list, "list"));
-    ADD_ENTRY("exact?", new BuiltinProcObj(builtin_exact, "exact?"));
-    ADD_ENTRY("inexact?", new BuiltinProcObj(builtin_inexact, "inexact?"));
+#define ADD_BUILTIN_PROC(name, rout) \
+    ADD_ENTRY(name, new BuiltinProcObj(rout, name))
+
     ADD_ENTRY("if", new SpecialOptIf());
     ADD_ENTRY("lambda", new SpecialOptLambda());
     ADD_ENTRY("define", new SpecialOptDefine());
     ADD_ENTRY("set!", new SpecialOptSet());
     ADD_ENTRY("quote", new SpecialOptQuote());
+
+    ADD_BUILTIN_PROC("+", num_add);
+    ADD_BUILTIN_PROC("-", num_sub);
+    ADD_BUILTIN_PROC("*", num_multi);
+    ADD_BUILTIN_PROC("/", num_div);
+
+    ADD_BUILTIN_PROC("<", num_lt);
+    ADD_BUILTIN_PROC(">", num_gt);
+    ADD_BUILTIN_PROC("=", num_eq);
+
+    ADD_BUILTIN_PROC("exact?", num_exact);
+    ADD_BUILTIN_PROC("inexact?", num_inexact);
+
+    ADD_BUILTIN_PROC("not", bool_not);
+    ADD_BUILTIN_PROC("boolean?", is_boolean);
+
+    ADD_BUILTIN_PROC("pair?", is_pair);
+    ADD_BUILTIN_PROC("pair", make_pair);
+    ADD_BUILTIN_PROC("car", pair_car);
+    ADD_BUILTIN_PROC("cdr", pair_cdr);
+    ADD_BUILTIN_PROC("set-car!", pair_set_car);
+    ADD_BUILTIN_PROC("set-cdr!", pair_set_cdr);
+    ADD_BUILTIN_PROC("null?", is_null);
+    ADD_BUILTIN_PROC("list?", is_list);
+
+    ADD_BUILTIN_PROC("display", display);
+    ADD_BUILTIN_PROC("list", make_list);
+
 }
 
 Evaluator::Evaluator() {
@@ -71,7 +88,7 @@ EvalObj *Evaluator::run_expr(Cons *prog) {
     Continuation *cont = NULL;
     // envt is this->envt
     push(pc, top_ptr, envt);   
-    
+
     while((*eval_stack)->is_ret_addr())
     {
         for (; pc && pc->skip; pc = pc->next);
@@ -82,7 +99,7 @@ EvalObj *Evaluator::run_expr(Cons *prog) {
             Cons *args = empty_list;
             while (!(*(--top_ptr))->is_ret_addr())
                 args = new Cons(static_cast<EvalObj*>(*top_ptr), args);
-                //< static_cast because the while condition
+            //< static_cast because the while condition
             RetAddr *ret_addr = static_cast<RetAddr*>(*top_ptr);
             if (!ret_addr->addr)
             {

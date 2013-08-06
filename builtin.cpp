@@ -623,41 +623,47 @@ Cons *SpecialOptQuote::call(ArgList *args, Environment * &envt,
 
 string SpecialOptQuote::ext_repr() { return string("#<Builtin Macro: quote>"); }
 
+#define ARGS_EXACTLY_TWO \
+    if (args == empty_list || \
+        args->cdr == empty_list || \
+        TO_CONS(args->cdr)->cdr != empty_list) \
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
 
-EvalObj *builtin_cons(ArgList *args) {
-    if (args == empty_list ||
-        args->cdr == empty_list ||
-        TO_CONS(args->cdr)->cdr != empty_list)
-        throw TokenError("cons", RUN_ERR_WRONG_NUM_OF_ARGS);
+#define ARGS_EXACTLY_ONE \
+    if (args == empty_list || \
+        args->cdr != empty_list) \
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
 
+#define ARGS_AT_LEAST_ONE \
+    if (args == empty_list) \
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
+
+BUILTIN_PROC_DEF(make_pair) {
+    ARGS_EXACTLY_TWO;
     return new Cons(args->car, TO_CONS(args->cdr)->car);
 }
 
-EvalObj *builtin_car(ArgList *args) {
-    if (args == empty_list ||
-        args->cdr != empty_list)
-        throw TokenError("car", RUN_ERR_WRONG_NUM_OF_ARGS);
+BUILTIN_PROC_DEF(pair_car) {
+    ARGS_EXACTLY_ONE;
     if (args->car == empty_list || !args->car->is_cons_obj())
-        throw TokenError("pair", RUN_ERR_WRONG_TYPE);
+        throw TokenError(name, RUN_ERR_WRONG_TYPE);
 
     return TO_CONS(args->car)->car;
 }
 
-EvalObj *builtin_cdr(ArgList *args) {
-    if (args == empty_list ||
-        args->cdr != empty_list)
-        throw TokenError("cdr", RUN_ERR_WRONG_NUM_OF_ARGS);
+BUILTIN_PROC_DEF(pair_cdr) {
+    ARGS_EXACTLY_ONE;
     if (args->car == empty_list || !args->car->is_cons_obj())
-        throw TokenError("pair", RUN_ERR_WRONG_TYPE);
+        throw TokenError(name, RUN_ERR_WRONG_TYPE);
 
     return TO_CONS(args->car)->cdr;
 }
 
-EvalObj *builtin_list(ArgList *args) {
+BUILTIN_PROC_DEF(make_list) {
     return args;
 }
 
-EvalObj *builtin_plus(ArgList *args) {
+BUILTIN_PROC_DEF(num_add) {
     NumObj *res = new IntNumObj(0), *opr; // the most accurate type
     for (Cons *ptr = args; ptr != empty_list; ptr = TO_CONS(ptr->cdr))
     {
@@ -674,9 +680,9 @@ EvalObj *builtin_plus(ArgList *args) {
     return res; 
 }
 
-EvalObj *builtin_minus(ArgList *args) {
+BUILTIN_PROC_DEF(num_sub) {
     if (args == empty_list)
-        throw TokenError("-", RUN_ERR_WRONG_NUM_OF_ARGS);
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
     if (!args->car->is_num_obj())
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
 
@@ -698,7 +704,7 @@ EvalObj *builtin_minus(ArgList *args) {
     return res; 
 }
 
-EvalObj *builtin_multi(ArgList *args) {
+BUILTIN_PROC_DEF(num_multi) {
     NumObj *res = new IntNumObj(1), *opr; // the most accurate type
     for (Cons *ptr = args; ptr != empty_list; ptr = TO_CONS(ptr->cdr))
     {
@@ -715,9 +721,9 @@ EvalObj *builtin_multi(ArgList *args) {
     return res; 
 }
 
-EvalObj *builtin_div(ArgList *args) {
+BUILTIN_PROC_DEF(num_div) {
     if (args == empty_list)
-        throw TokenError("/", RUN_ERR_WRONG_NUM_OF_ARGS);
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
     if (!args->car->is_num_obj())
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
 
@@ -739,9 +745,8 @@ EvalObj *builtin_div(ArgList *args) {
     return res; 
 }
 
-EvalObj *builtin_lt(ArgList *args) {
-    if (args == empty_list)
-        throw TokenError("<", RUN_ERR_WRONG_NUM_OF_ARGS);
+BUILTIN_PROC_DEF(num_lt) {
+    ARGS_AT_LEAST_ONE;
     if (!args->car->is_num_obj())
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
        
@@ -764,9 +769,8 @@ EvalObj *builtin_lt(ArgList *args) {
     return new BoolObj(true);
 }
 
-EvalObj *builtin_gt(ArgList *args) {
-    if (args == empty_list)
-        throw TokenError(">", RUN_ERR_WRONG_NUM_OF_ARGS);
+BUILTIN_PROC_DEF(num_gt) {
+    ARGS_AT_LEAST_ONE;
     if (!args->car->is_num_obj())
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
        
@@ -789,9 +793,8 @@ EvalObj *builtin_gt(ArgList *args) {
     return new BoolObj(true);
 }
 
-EvalObj *builtin_arithmetic_eq(ArgList *args) {
-    if (args == empty_list)
-        throw TokenError("=", RUN_ERR_WRONG_NUM_OF_ARGS);
+BUILTIN_PROC_DEF(num_eq) {
+    ARGS_AT_LEAST_ONE;
     if (!args->car->is_num_obj())
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
        
@@ -814,24 +817,73 @@ EvalObj *builtin_arithmetic_eq(ArgList *args) {
     return new BoolObj(true);
 }
 
+BUILTIN_PROC_DEF(bool_not) {
+    ARGS_EXACTLY_ONE;
+    return new BoolObj(!args->car->is_true());
+}
 
-EvalObj *builtin_exact(ArgList *args) {
-    if (args == empty_list ||
-        args->cdr != empty_list)
-        throw TokenError("(in)exact?", RUN_ERR_WRONG_NUM_OF_ARGS);
+BUILTIN_PROC_DEF(is_boolean) {
+    ARGS_EXACTLY_ONE;
+    return new BoolObj(args->car->is_bool_obj());
+}
+
+BUILTIN_PROC_DEF(is_pair) {
+    ARGS_EXACTLY_ONE;
+    return new BoolObj(args->car->is_cons_obj());
+}
+
+BUILTIN_PROC_DEF(pair_set_car) {
+    ARGS_EXACTLY_TWO;
+    if (args->car == empty_list || !args->car->is_cons_obj())
+        throw TokenError(name, RUN_ERR_WRONG_TYPE);
+    TO_CONS(args->car)->car = TO_CONS(args->cdr)->car;
+    return new UnspecObj();
+}
+
+BUILTIN_PROC_DEF(pair_set_cdr) {
+    ARGS_EXACTLY_TWO;
+    if (args->car == empty_list || !args->car->is_cons_obj())
+        throw TokenError(name, RUN_ERR_WRONG_TYPE);
+    TO_CONS(args->car)->cdr = TO_CONS(args->cdr)->car;
+    return new UnspecObj();
+}
+
+BUILTIN_PROC_DEF(is_null) {
+    ARGS_EXACTLY_ONE;
+    return new BoolObj(args->car == empty_list);
+}
+
+BUILTIN_PROC_DEF(is_list) {
+    ARGS_EXACTLY_ONE;
+    if (!args->car->is_cons_obj())
+        return new BoolObj(false);
+    for (Cons *ptr = TO_CONS(args->car); ptr != empty_list;)
+    {
+        EvalObj *cdr = ptr->cdr;
+        if (!cdr->is_cons_obj())
+            return new BoolObj(false);
+        else
+            ptr = TO_CONS(cdr);
+    }
+    return new BoolObj(true);
+}
+
+BUILTIN_PROC_DEF(num_exact) {
+    ARGS_EXACTLY_ONE;
     if (!args->car->is_num_obj())
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
     return new BoolObj(static_cast<NumObj*>(args->car)->is_exact()); 
 }
 
-EvalObj *builtin_inexact(ArgList *args) {
-    BoolObj *ret = static_cast<BoolObj*>(builtin_exact(args));
-    ret->val = !ret->val;
-    return ret;
+BUILTIN_PROC_DEF(num_inexact) {
+    ARGS_EXACTLY_ONE;
+    if (!args->car->is_num_obj())
+        throw TokenError("a number", RUN_ERR_WRONG_TYPE);
+    return new BoolObj(!static_cast<NumObj*>(args->car)->is_exact()); 
 }
 
 
-EvalObj *builtin_display(ArgList *args) {
+BUILTIN_PROC_DEF(display) {
     printf("%s\n", args->car->ext_repr().c_str());
     return new UnspecObj();
 }

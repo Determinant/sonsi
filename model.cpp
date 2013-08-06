@@ -47,6 +47,10 @@ bool EvalObj::is_num_obj() {
     return otype & CLS_NUM_OBJ;
 }
 
+bool EvalObj::is_bool_obj() {
+    return otype & CLS_BOOL_OBJ;
+}
+
 #ifdef DEBUG
 string EvalObj::_debug_repr() {
     return ext_repr();
@@ -163,7 +167,7 @@ string ProcObj::_debug_repr() { return ext_repr(); }
 
 SpecialOptObj::SpecialOptObj() : OptObj() {}
 
-BoolObj::BoolObj(bool _val) : EvalObj(CLS_SIM_OBJ), val(_val) {}
+BoolObj::BoolObj(bool _val) : EvalObj(CLS_SIM_OBJ | CLS_BOOL_OBJ), val(_val) {}
 
 bool BoolObj::is_true() { return val; }
 
@@ -242,7 +246,7 @@ Cons *BuiltinProcObj::call(ArgList *args, Environment * &envt,
                                 Continuation * &cont, FrameObj ** &top_ptr) {
 
     Cons *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
-    *top_ptr++ = handler(TO_CONS(args->cdr));
+    *top_ptr++ = handler(TO_CONS(args->cdr), name);
     return ret_addr->next;          // Move to the next instruction
 }
 

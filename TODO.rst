@@ -1,4 +1,3 @@
-- More sophisticated parser
 - GMP
-- Quotation
+- Pair literal parsing
 - Add macro support

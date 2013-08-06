@@ -24,6 +24,7 @@ const int CLS_CONS_OBJ = 1 << 1;
 const int CLS_SYM_OBJ = 1 << 2;
 const int CLS_OPT_OBJ = 1 << 3;
 const int CLS_NUM_OBJ = 1 << 4;
+const int CLS_BOOL_OBJ = 1 << 5;
 
 
 #define TO_CONS(ptr) \
@@ -96,6 +97,8 @@ class EvalObj : public FrameObj {
         bool is_cons_obj();
         /** Check if the object is a number */
         bool is_num_obj();
+        /** Check if the object is a boolean */
+        bool is_bool_obj();
         virtual void prepare(Cons *pc);
         /** Any EvalObj has its external representation */
         virtual string ext_repr() = 0;  
@@ -247,7 +250,7 @@ class SpecialOptObj: public OptObj {
         SpecialOptObj();
 };
 
-typedef EvalObj* (*BuiltinProc)(ArgList *);
+typedef EvalObj* (*BuiltinProc)(ArgList *, const string &);
 /** @class BuiltinProcObj
  * Wrapping class for builtin procedures (arithmetic operators, etc.)
  */

@@ -204,20 +204,35 @@ class SpecialOptQuote: public SpecialOptObj {
         string ext_repr();
 };
 
-EvalObj *builtin_plus(ArgList *);
-EvalObj *builtin_minus(ArgList *);
-EvalObj *builtin_multi(ArgList *);
-EvalObj *builtin_div(ArgList *);
-EvalObj *builtin_exact(ArgList *);
-EvalObj *builtin_inexact(ArgList *);
-EvalObj *builtin_lt(ArgList *);
-EvalObj *builtin_gt(ArgList *);
-EvalObj *builtin_arithmetic_eq(ArgList *);
+#define BUILTIN_PROC_DEF(func)\
+    EvalObj *(func)(ArgList *args, const string &name)
 
-EvalObj *builtin_display(ArgList *);
-EvalObj *builtin_cons(ArgList *);
-EvalObj *builtin_car(ArgList *);
-EvalObj *builtin_cdr(ArgList *);
-EvalObj *builtin_list(ArgList *);
+BUILTIN_PROC_DEF(num_add);
+BUILTIN_PROC_DEF(num_sub);
+BUILTIN_PROC_DEF(num_multi);
+BUILTIN_PROC_DEF(num_div);
+
+BUILTIN_PROC_DEF(num_lt);
+BUILTIN_PROC_DEF(num_gt);
+BUILTIN_PROC_DEF(num_eq);
+
+BUILTIN_PROC_DEF(num_exact);
+BUILTIN_PROC_DEF(num_inexact);
+
+BUILTIN_PROC_DEF(bool_not);
+BUILTIN_PROC_DEF(is_boolean);
+
+BUILTIN_PROC_DEF(is_pair);
+BUILTIN_PROC_DEF(make_pair);
+BUILTIN_PROC_DEF(pair_car);
+BUILTIN_PROC_DEF(pair_cdr);
+BUILTIN_PROC_DEF(pair_set_car);
+BUILTIN_PROC_DEF(pair_set_cdr);
+BUILTIN_PROC_DEF(is_null);
+BUILTIN_PROC_DEF(is_list);
+
+BUILTIN_PROC_DEF(display);
+BUILTIN_PROC_DEF(make_list);
+
 
 #endif
