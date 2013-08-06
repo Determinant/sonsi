@@ -169,6 +169,16 @@ bool BoolObj::is_true() { return val; }
 
 string BoolObj::ext_repr() { return string(val ? "#t" : "#f"); }
 
+BoolObj *BoolObj::from_string(string repr) {
+    if (repr.length() != 2 || repr[0] != '#') 
+        return NULL;
+    if (repr[1] == 't')
+        return new BoolObj(true);
+    else if (repr[1] == 'f')
+        return new BoolObj(false);
+    return NULL;
+}
+
 NumObj::NumObj(NumLvl _level, bool _exactness) : 
     EvalObj(CLS_SIM_OBJ | CLS_NUM_OBJ), level(_level), exactness(_exactness) {}
 
@@ -177,6 +187,27 @@ bool NumObj::is_exact() { return exactness; }
 StrObj::StrObj(string _str) : EvalObj(CLS_SIM_OBJ), str(_str) {}
 
 string StrObj::ext_repr() { return str; }
+
+CharObj::CharObj(char _ch) : EvalObj(CLS_SIM_OBJ), ch(_ch) {}
+
+CharObj *CharObj::from_string(string repr) {
+    int len = repr.length();
+    if (len < 2) return NULL;
+    if (repr[0] != '#' || repr[1] != '\\') return NULL;
+    if (len == 3) return new CharObj(repr[2]);
+    string char_name = repr.substr(2, len - 2);
+    if (char_name == "newline") return new CharObj('\n');
+    if (char_name == "space") return new CharObj(' ');
+    throw TokenError(char_name, RUN_ERR_UNKNOWN_CHAR_NAME);
+}
+
+string CharObj::ext_repr() {
+    string val = "";
+    if (ch == ' ') val = "space";
+    else if (ch == '\n') val = "newline";
+    else val += ch;
+    return "#\\" + val;
+}
 
 VecObj::VecObj() : EvalObj(CLS_SIM_OBJ) {}
 

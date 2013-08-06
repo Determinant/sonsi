@@ -331,6 +331,23 @@ class StrObj: public EvalObj {
         string ext_repr();
 };
 
+/** @class CharObj
+ * Character type support
+ */
+class CharObj: public EvalObj {
+    public:
+        char ch;
+        
+        /** Construct a string object */
+        CharObj(char ch);
+        /** Try to construct an CharObj object 
+         * @return NULL if failed
+         */
+        static CharObj *from_string(string repr);
+        string ext_repr();
+};
+
+
 typedef vector<EvalObj*> EvalObjVec;
 /**
  * @class VecObj

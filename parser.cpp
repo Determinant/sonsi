@@ -117,6 +117,8 @@ ASTGenerator::ASTGenerator() {}
 
 EvalObj *ASTGenerator::to_obj(const string &str) {
     EvalObj *res = NULL;
+    if ((res = BoolObj::from_string(str))) return res;
+    if ((res = CharObj::from_string(str))) return res;
     if ((res = IntNumObj::from_string(str))) return res;
     if ((res = RatNumObj::from_string(str))) return res;
     if ((res = RealNumObj::from_string(str))) return res;

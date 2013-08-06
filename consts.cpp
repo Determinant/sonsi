@@ -11,5 +11,6 @@ const char *ERR_MSG[] = {
     "Unexpected \")\"",
     "Wrong type (expecting %s)",
     "Internal Error !!! File a bug please!",
-    "Illegal character in escape sequence: #\\%s"
+    "Illegal character in escape sequence: #\\%s",
+    "Unknown character name: %s"
 };
