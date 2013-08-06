@@ -19,18 +19,18 @@ void Tokenizor::set_stream(FILE *_stream) {
 
 #define IS_NEWLINE(ch) \
     ((ch) == '\n')
-#define IS_BRACKET(ch) \
-    ((ch) == '(' || (ch) == ')') 
-#define IS_SPACE(ch) \
-    ((ch) == ' ' || (ch) == '\t' || IS_NEWLINE(ch))
-#define IS_DELIMITER(ch) \
-    (IS_BRACKET(ch) || IS_SPACE(ch))
-#define IS_COMMENT(ch) \
-    ((ch) == ';')
 #define IS_QUOTE(ch) \
     ((ch) == '\"')
 #define IS_SLASH(ch) \
     ((ch) == '\\')
+#define IS_BRACKET(ch) \
+    ((ch) == '(' || (ch) == ')') 
+#define IS_SPACE(ch) \
+    ((ch) == ' ' || (ch) == '\t' || IS_NEWLINE(ch))
+#define IS_COMMENT(ch) \
+    ((ch) == ';')
+#define IS_DELIMITER(ch) \
+    (IS_BRACKET(ch) || IS_SPACE(ch) || IS_COMMENT(ch) || IS_QUOTE(ch))
 
 #define POP \
     do { \
@@ -65,9 +65,8 @@ bool Tokenizor::get_token(string &ret) {
             bool in_quote = buff_ptr != buff && IS_QUOTE(*buff);
             if (buff_ptr != buff && 
                     (IS_BRACKET(*buff) || 
-                     IS_DELIMITER(ch) ||
-                     IS_COMMENT(ch) ||
-                     IS_QUOTE(ch)))
+                     IS_DELIMITER(ch)))
+                     
             {
                 if (IS_COMMENT(*buff))
                 {

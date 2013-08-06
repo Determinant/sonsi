@@ -43,6 +43,20 @@ double str_to_double(string repr, bool &flag) {
     return val;
 }
 
+int str_to_int(string repr, bool &flag) {
+    const char *nptr = repr.c_str();
+    char *endptr; 
+    int val = strtol(nptr, &endptr, 10);
+    if (endptr != nptr + repr.length())
+    {
+        flag = false;
+        return 0;
+    }
+    flag = true;
+    return val;
+}
+
+
 int gcd(int a, int b) {
     int t;
     while (b) t = b, b = a % b, a = t;
@@ -73,17 +87,31 @@ CompNumObj *CompNumObj::from_string(string repr) {
     if (spos == -1 || ipos == -1 || !(spos < ipos)) 
         return NULL;
 
-    bool flag;
     double real = 0, imag = 1;
+    IntNumObj *int_ptr;
+    RatNumObj *rat_ptr;
+    RealNumObj *real_ptr;
     if (spos > 0)
     {
-        real = str_to_double(repr.substr(0, spos), flag);
-        if (!flag) return NULL;
+        string real_str = repr.substr(0, spos);
+        if (int_ptr = IntNumObj::from_string(real_str))
+            real = int_ptr->val;
+        else if ((rat_ptr = RatNumObj::from_string(real_str)))
+            real = rat_ptr->a / double(rat_ptr->b);
+        else if ((real_ptr = RealNumObj::from_string(real_str)))
+            real = real_ptr->real;
+        else return NULL;
     }
     if (ipos > spos + 1)
     {
-        imag = str_to_double(repr.substr(spos + 1, ipos - spos - 1), flag);
-        if (!flag) return NULL;
+        string imag_str = repr.substr(spos + 1, ipos - spos - 1);
+        if (int_ptr = IntNumObj::from_string(imag_str))
+            imag = int_ptr->val;
+        else if ((rat_ptr = RatNumObj::from_string(imag_str)))
+            imag = rat_ptr->a / double(rat_ptr->b);
+        else if ((real_ptr = RealNumObj::from_string(imag_str)))
+            imag = real_ptr->real;
+        else return NULL;
     }
     if (sign) imag = -imag;
     return new CompNumObj(real, imag);
@@ -229,8 +257,15 @@ RatNumObj::RatNumObj(int _a, int _b) :
 
 RatNumObj *RatNumObj::from_string(string repr) {
     int a, b;
-    if (sscanf(repr.c_str(), "%d/%d", &a, &b) != 2)
-        return NULL;
+    int len = repr.length(), pos = -1;
+    for (int i = 0; i < len; i++)
+        if (repr[i] == '/') { pos = i; break; }
+    bool flag;
+    a = str_to_int(repr.substr(0, pos), flag);
+    if (!flag) return NULL;
+    b = str_to_int(repr.substr(pos + 1, len - pos - 1), flag);
+    if (!flag) return NULL;
+
     return new RatNumObj(a, b);
 }
 
