@@ -243,8 +243,8 @@ BUILTIN_PROC_DEF(num_lt);
 BUILTIN_PROC_DEF(num_gt);
 BUILTIN_PROC_DEF(num_eq);
 
-BUILTIN_PROC_DEF(num_exact);
-BUILTIN_PROC_DEF(num_inexact);
+BUILTIN_PROC_DEF(num_is_exact);
+BUILTIN_PROC_DEF(num_is_inexact);
 
 BUILTIN_PROC_DEF(bool_not);
 BUILTIN_PROC_DEF(is_boolean);
@@ -257,9 +257,11 @@ BUILTIN_PROC_DEF(pair_set_car);
 BUILTIN_PROC_DEF(pair_set_cdr);
 BUILTIN_PROC_DEF(is_null);
 BUILTIN_PROC_DEF(is_list);
+BUILTIN_PROC_DEF(make_list);
+BUILTIN_PROC_DEF(length);
+BUILTIN_PROC_DEF(append);
 
 BUILTIN_PROC_DEF(display);
-BUILTIN_PROC_DEF(make_list);
 
 
 #endif

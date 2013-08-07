@@ -129,6 +129,19 @@ t
 (list . 0)
 (list 0 . 0)
 
+(length)
+(length 1 2)
+(length '( 1 . 2))
+(length '())
+(length '( 1 2 3 ))
+
+(append)
+(append '())
+(append '(1 2) 3)
+(append '(1 2) '(3 4) 5)
+(append '(1 2) 3 '(1))
+(append '() '() '() '(1 2) 3)
+
 (display)
 (display 1 2)
 (display . 0)

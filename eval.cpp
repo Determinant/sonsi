@@ -32,8 +32,8 @@ void Evaluator::add_builtin_routines() {
     ADD_BUILTIN_PROC(">", num_gt);
     ADD_BUILTIN_PROC("=", num_eq);
 
-    ADD_BUILTIN_PROC("exact?", num_exact);
-    ADD_BUILTIN_PROC("inexact?", num_inexact);
+    ADD_BUILTIN_PROC("exact?", num_is_exact);
+    ADD_BUILTIN_PROC("inexact?", num_is_inexact);
 
     ADD_BUILTIN_PROC("not", bool_not);
     ADD_BUILTIN_PROC("boolean?", is_boolean);
@@ -46,10 +46,11 @@ void Evaluator::add_builtin_routines() {
     ADD_BUILTIN_PROC("set-cdr!", pair_set_cdr);
     ADD_BUILTIN_PROC("null?", is_null);
     ADD_BUILTIN_PROC("list?", is_list);
+    ADD_BUILTIN_PROC("list", make_list);
+    ADD_BUILTIN_PROC("length", length);
+    ADD_BUILTIN_PROC("append", append);
 
     ADD_BUILTIN_PROC("display", display);
-    ADD_BUILTIN_PROC("list", make_list);
-
 }
 
 Evaluator::Evaluator() {

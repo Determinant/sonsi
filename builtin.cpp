@@ -1082,18 +1082,86 @@ BUILTIN_PROC_DEF(is_list) {
     return new BoolObj(args->cdr == empty_list);
 }
 
-BUILTIN_PROC_DEF(num_exact) {
+BUILTIN_PROC_DEF(num_is_exact) {
     ARGS_EXACTLY_ONE;
     if (!args->car->is_num_obj())
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
     return new BoolObj(static_cast<NumObj*>(args->car)->is_exact()); 
 }
 
-BUILTIN_PROC_DEF(num_inexact) {
+BUILTIN_PROC_DEF(num_is_inexact) {
     ARGS_EXACTLY_ONE;
     if (!args->car->is_num_obj())
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
     return new BoolObj(!static_cast<NumObj*>(args->car)->is_exact()); 
+}
+
+BUILTIN_PROC_DEF(length) {
+    ARGS_EXACTLY_ONE;
+    if (args->car == empty_list)
+        return new IntNumObj(mpz_class(0));
+    if (!args->car->is_cons_obj())
+        throw TokenError("a list", RUN_ERR_WRONG_TYPE);
+    int num = 0;
+    EvalObj *nptr;
+    for (args = TO_CONS(args->car);;)
+    {
+        num++;
+        if ((nptr = args->cdr)->is_cons_obj())
+            args = TO_CONS(nptr);
+        else 
+            break;
+    }
+    if (args->cdr != empty_list)
+        throw TokenError("a list", RUN_ERR_WRONG_TYPE);
+    return new IntNumObj(mpz_class(num));
+}
+
+Cons *copy_list(Cons *src, EvalObj * &tail) {
+    if (src == empty_list)
+        throw NormalError(INT_ERR);
+    EvalObj* nptr;
+    Cons head(NULL, NULL);
+    tail = &head;
+    for (; src != empty_list;)
+    {
+        TO_CONS(tail)->cdr = new Cons(*src);
+        tail = TO_CONS(TO_CONS(tail)->cdr);
+        if ((nptr = src->cdr)->is_cons_obj())
+            src = TO_CONS(nptr);
+        else break;
+    }
+    return TO_CONS(head.cdr);
+}
+
+BUILTIN_PROC_DEF(append) {
+    EvalObj *tail = empty_list, *head = tail;
+    for (; args != empty_list; args = TO_CONS(args->cdr))
+    {
+        if (tail == empty_list)
+        {
+            head = args->car;
+            if (head->is_cons_obj())
+                head = copy_list(TO_CONS(head), tail);
+            else tail = head;
+        }
+        else 
+        {
+            if (tail->is_cons_obj())
+            {
+                Cons *prev = TO_CONS(tail);
+                if (prev->cdr != empty_list)
+                    throw TokenError("empty list", RUN_ERR_WRONG_TYPE);
+                if (args->car->is_cons_obj())
+                    prev->cdr = copy_list(TO_CONS(args->car), tail);
+                else
+                    prev->cdr = args->car;
+            }
+            else
+                throw TokenError("a pair", RUN_ERR_WRONG_TYPE);
+        }
+    }
+    return head;
 }
 
 
