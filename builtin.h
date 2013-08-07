@@ -216,6 +216,21 @@ class SpecialOptQuote: public SpecialOptObj {
         string ext_repr();
 };
 
+/** @class SpecialOptEval
+ * The implementation of `eval` operator
+ */
+class SpecialOptEval: public SpecialOptObj {
+    private:
+        unsigned char state; /**< 0 for prepared, 1 for pre_called */
+    public:
+        SpecialOptEval();
+        void prepare(Cons *pc);
+        Cons *call(ArgList *args, Environment * &envt, 
+                    Continuation * &cont, FrameObj ** &top_ptr);
+
+        string ext_repr();
+};
+
 #define BUILTIN_PROC_DEF(func)\
     EvalObj *(func)(ArgList *args, const string &name)
 

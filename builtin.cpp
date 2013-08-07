@@ -616,7 +616,7 @@ Cons *SpecialOptIf::call(ArgList *args, Environment * &envt,
         top_ptr += 2;
         // Undo pop and invoke again
         // static_cast because it's a call invocation
-        return static_cast<Cons*>(ret_addr->car)->next;
+        return TO_CONS(ret_addr->car)->next;
     }
 }
 
@@ -817,6 +817,33 @@ Cons *SpecialOptQuote::call(ArgList *args, Environment * &envt,
 
 string SpecialOptQuote::ext_repr() { return string("#<Builtin Macro: quote>"); }
 
+SpecialOptEval::SpecialOptEval() : SpecialOptObj("eval") {}
+
+void SpecialOptEval::prepare(Cons *pc) {
+    state = 0;
+}
+
+Cons *SpecialOptEval::call(ArgList *args, Environment * &envt, 
+        Continuation * &cont, FrameObj ** &top_ptr) {
+    if (args->cdr == empty_list ||
+        TO_CONS(args->cdr)->cdr != empty_list)
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    Cons *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
+    Cons *pc = static_cast<Cons*>(ret_addr->car);
+    if (state)
+    {
+        *top_ptr++ = TO_CONS(args->cdr)->car;
+        return ret_addr->next;          // Move to the next instruction
+    }
+    else
+    {
+        state = 1;
+        top_ptr += 2;
+        return TO_CONS(args->cdr);
+    }
+}
+
+string SpecialOptEval::ext_repr() { return string("#<Builtin Macro: eval>"); }
 
 BUILTIN_PROC_DEF(make_pair) {
     ARGS_EXACTLY_TWO;
