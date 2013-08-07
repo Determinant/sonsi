@@ -471,7 +471,7 @@ void SpecialOptIf::pre_call(ArgList *args, Cons *pc,
     {
         pc->skip = true;
         pc = TO_CONS(pc->cdr);
-        TO_CONS(pc->cdr)->skip = true;
+        pc->skip = true;
         if (pc->cdr != empty_list)
             TO_CONS(pc->cdr)->skip = false; //Eval the latter
     }
