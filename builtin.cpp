@@ -429,8 +429,8 @@ void SpecialOptIf::prepare(Cons *pc) {
         pc = TO_CONS(pc->cdr);
     else 
         IF_EXP_ERR;
-    if (pc == empty_list)
-        IF_EXP_ERR;
+//    if (pc == empty_list)
+//        IF_EXP_ERR;
 
     pc->skip = false;
 
@@ -438,8 +438,8 @@ void SpecialOptIf::prepare(Cons *pc) {
         pc = TO_CONS(pc->cdr);
     else
         IF_EXP_ERR;
-    if (pc == empty_list)
-        IF_EXP_ERR;
+ //   if (pc == empty_list)
+ //       IF_EXP_ERR;
 
     pc->skip = true;
     if (pc->cdr != empty_list)
@@ -551,7 +551,7 @@ Cons *SpecialOptLambda::call(ArgList *args, Environment * &envt,
 
     Cons *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     Cons *pc = static_cast<Cons*>(ret_addr->car);
-
+    // TODO: remove the following two lines?
     if (pc->cdr == empty_list)
         throw TokenError(name, SYN_ERR_EMPTY_PARA_LIST);
     if (TO_CONS(pc->cdr)->cdr == empty_list)
@@ -728,7 +728,8 @@ BUILTIN_PROC_DEF(make_list) {
 
 BUILTIN_PROC_DEF(num_add) {
     NumObj *res = new IntNumObj(0), *opr; // the most accurate type
-    for (Cons *ptr = args; ptr != empty_list; ptr = TO_CONS(ptr->cdr))
+    EvalObj *nptr;
+    for (Cons *ptr = args;;)
     {
         if (!ptr->car->is_num_obj())        // not a number
             throw TokenError("a number", RUN_ERR_WRONG_TYPE);
@@ -739,19 +740,24 @@ BUILTIN_PROC_DEF(num_add) {
         else
             _res =  opr->convert(_res);
         res = _res->plus(opr);
+        
+        if ((nptr = ptr->cdr)->is_cons_obj())
+            ptr = TO_CONS(nptr);
+        else break;
     }
+    if (ptr->cdr != empty_list)
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
     return res; 
 }
 
 BUILTIN_PROC_DEF(num_sub) {
-    if (args == empty_list)
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    ARGS_AT_LEAST_ONE;
     if (!args->car->is_num_obj())
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
 
-    NumObj *res = static_cast<NumObj*>(args->car), *opr; 
-    for (Cons *ptr = TO_CONS(args->cdr); 
-            ptr != empty_list; ptr = TO_CONS(ptr->cdr))
+    NumObj *res = static_cast<NumObj*>(args->car), *opr;
+    EvalObj *nptr;
+    for (Cons *ptr = TO_CONS(args->cdr);;)
     {
         if (!ptr->car->is_num_obj())        // not a number
             throw TokenError("a number", RUN_ERR_WRONG_TYPE);
@@ -763,13 +769,20 @@ BUILTIN_PROC_DEF(num_sub) {
         else
             _res =  opr->convert(_res);
         res = _res->minus(opr);
+        
+        if ((nptr = ptr->cdr)->is_cons_obj())
+            ptr = TO_CONS(nptr);
+        else break;        
     }
+    if (ptr->cdr != empty_list)
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
     return res; 
 }
 
 BUILTIN_PROC_DEF(num_multi) {
     NumObj *res = new IntNumObj(1), *opr; // the most accurate type
-    for (Cons *ptr = args; ptr != empty_list; ptr = TO_CONS(ptr->cdr))
+    EvalObj *nptr;
+    for (Cons *ptr = args;;)
     {
         if (!ptr->car->is_num_obj())        // not a number
             throw TokenError("a number", RUN_ERR_WRONG_TYPE);
@@ -780,19 +793,24 @@ BUILTIN_PROC_DEF(num_multi) {
         else
             _res =  opr->convert(_res);
         res = _res->multi(opr);
+        
+        if ((nptr = ptr->cdr)->is_cons_obj())
+            ptr = TO_CONS(nptr);
+        else break;
     }
+    if (ptr->cdr != empty_list)
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
     return res; 
 }
 
 BUILTIN_PROC_DEF(num_div) {
-    if (args == empty_list)
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    ARGS_AT_LEAST_ONE;
     if (!args->car->is_num_obj())
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
 
-    NumObj *res = static_cast<NumObj*>(args->car), *opr; 
-    for (Cons *ptr = TO_CONS(args->cdr); 
-            ptr != empty_list; ptr = TO_CONS(ptr->cdr))
+    NumObj *res = static_cast<NumObj*>(args->car), *opr;
+    EvalObj *nptr;
+    for (Cons *ptr = TO_CONS(args->cdr);;)
     {
         if (!ptr->car->is_num_obj())        // not a number
             throw TokenError("a number", RUN_ERR_WRONG_TYPE);
@@ -804,7 +822,13 @@ BUILTIN_PROC_DEF(num_div) {
         else
             _res =  opr->convert(_res);
         res = _res->div(opr);
+        
+        if ((nptr = ptr->cdr)->is_cons_obj())
+            ptr = TO_CONS(nptr);
+        else break;        
     }
+    if (ptr->cdr != empty_list)
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
     return res; 
 }
 
@@ -814,9 +838,9 @@ BUILTIN_PROC_DEF(num_lt) {
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
 
     NumObj *last = static_cast<NumObj*>(args->car), *opr; 
-
-    for (Cons *ptr = TO_CONS(args->cdr); 
-            ptr != empty_list; ptr = TO_CONS(ptr->cdr), last = opr)
+    EvalObj *nptr;
+    
+    for (Cons *ptr = TO_CONS(args->cdr);; last = opr)
     {
         if (!ptr->car->is_num_obj())        // not a number
             throw TokenError("a number", RUN_ERR_WRONG_TYPE);
@@ -828,7 +852,13 @@ BUILTIN_PROC_DEF(num_lt) {
             last = opr->convert(last);
         if (!last->lt(opr))
             return new BoolObj(false);
+            
+        if ((nptr = ptr->cdr)->is_cons_obj())
+            ptr = TO_CONS(nptr);
+        else break;              
     }
+    if (ptr->cdr != empty_list)
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
     return new BoolObj(true);
 }
 
@@ -838,9 +868,9 @@ BUILTIN_PROC_DEF(num_gt) {
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
 
     NumObj *last = static_cast<NumObj*>(args->car), *opr; 
-
-    for (Cons *ptr = TO_CONS(args->cdr); 
-            ptr != empty_list; ptr = TO_CONS(ptr->cdr), last = opr)
+    EvalObj *nptr;
+    
+    for (Cons *ptr = TO_CONS(args->cdr);; last = opr)
     {
         if (!ptr->car->is_num_obj())        // not a number
             throw TokenError("a number", RUN_ERR_WRONG_TYPE);
@@ -852,7 +882,13 @@ BUILTIN_PROC_DEF(num_gt) {
             last = opr->convert(last);
         if (!last->gt(opr))
             return new BoolObj(false);
+            
+        if ((nptr = ptr->cdr)->is_cons_obj())
+            ptr = TO_CONS(nptr);
+        else break;              
     }
+    if (ptr->cdr != empty_list)
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
     return new BoolObj(true);
 }
 
@@ -862,9 +898,9 @@ BUILTIN_PROC_DEF(num_eq) {
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
 
     NumObj *last = static_cast<NumObj*>(args->car), *opr; 
-
-    for (Cons *ptr = TO_CONS(args->cdr); 
-            ptr != empty_list; ptr = TO_CONS(ptr->cdr), last = opr)
+    EvalObj *nptr;
+    
+    for (Cons *ptr = TO_CONS(args->cdr);; last = opr)
     {
         if (!ptr->car->is_num_obj())        // not a number
             throw TokenError("a number", RUN_ERR_WRONG_TYPE);
@@ -876,7 +912,13 @@ BUILTIN_PROC_DEF(num_eq) {
             last = opr->convert(last);
         if (!last->eq(opr))
             return new BoolObj(false);
+            
+        if ((nptr = ptr->cdr)->is_cons_obj())
+            ptr = TO_CONS(nptr);
+        else break;              
     }
+    if (ptr->cdr != empty_list)
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
     return new BoolObj(true);
 }
 
