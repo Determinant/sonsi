@@ -17,7 +17,7 @@ void tree_print(Cons *ptr) {
 #endif
 
 int main() {
-    //freopen("in", "r", stdin);
+//    freopen("in.scm", "r", stdin);
     Tokenizor *tk = new Tokenizor();
     ASTGenerator *ast = new ASTGenerator();
     Evaluator *eval = new Evaluator();
