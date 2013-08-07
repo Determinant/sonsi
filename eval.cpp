@@ -24,7 +24,7 @@ void Evaluator::add_builtin_routines() {
 
     ADD_BUILTIN_PROC("+", num_add);
     ADD_BUILTIN_PROC("-", num_sub);
-    ADD_BUILTIN_PROC("*", num_multi);
+    ADD_BUILTIN_PROC("*", num_mul);
     ADD_BUILTIN_PROC("/", num_div);
 
     ADD_BUILTIN_PROC("<", num_lt);

@@ -1,8 +1,8 @@
 main: main.o parser.o builtin.o model.o eval.o exc.o consts.o
-	g++ -o main $^ -pg
+	g++ -o main $^ -pg -lgmp
 
 .cpp.o:
-	g++ $< -c -g -pg -DDEBUG
+	g++ $< -c -g -pg -DDEBUG -DGMP_SUPPORT
 
 clean:
 	rm -f *.o

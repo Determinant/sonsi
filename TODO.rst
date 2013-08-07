@@ -1,2 +1,1 @@
-- GMP
 - Add macro support

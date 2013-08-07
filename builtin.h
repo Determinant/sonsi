@@ -3,6 +3,7 @@
 
 #include "model.h"
 #include <string>
+#include <gmpxx.h>
 
 using std::string;
 
@@ -32,9 +33,9 @@ class CompNumObj: public InexactNumObj {
         /** Convert to a complex number from other numeric types */
         CompNumObj *convert(NumObj* obj);
 
-        NumObj *plus(NumObj *r);
-        NumObj *minus(NumObj *r);
-        NumObj *multi(NumObj *r);
+        NumObj *add(NumObj *r);
+        NumObj *sub(NumObj *r);
+        NumObj *mul(NumObj *r);
         NumObj *div(NumObj *r);
         bool lt(NumObj *r);
         bool gt(NumObj *r);
@@ -57,9 +58,9 @@ class RealNumObj: public InexactNumObj {
         /** Convert to a real number from other numeric types */
         RealNumObj *convert(NumObj* obj);
 
-        NumObj *plus(NumObj *r);
-        NumObj *minus(NumObj *r);
-        NumObj *multi(NumObj *r);
+        NumObj *add(NumObj *r);
+        NumObj *sub(NumObj *r);
+        NumObj *mul(NumObj *r);
         NumObj *div(NumObj *r);
         bool lt(NumObj *r);
         bool gt(NumObj *r);
@@ -82,9 +83,14 @@ class ExactNumObj: public NumObj {
  */
 class RatNumObj: public ExactNumObj {
     public:
+#ifndef GMP_SUPPORT
         int a, b;
         /** Construct a rational number */
         RatNumObj(int _a, int _b);
+#else
+        mpq_class val;
+        RatNumObj(mpq_class val);
+#endif
         /** Try to construct an RatNumObj object 
          * @return NULL if failed
          */
@@ -92,9 +98,9 @@ class RatNumObj: public ExactNumObj {
         /** Convert to a Rational number from other numeric types */
         RatNumObj *convert(NumObj* obj);
 
-        NumObj *plus(NumObj *r);
-        NumObj *minus(NumObj *r);
-        NumObj *multi(NumObj *r);
+        NumObj *add(NumObj *r);
+        NumObj *sub(NumObj *r);
+        NumObj *mul(NumObj *r);
         NumObj *div(NumObj *r);
         bool lt(NumObj *r);
         bool gt(NumObj *r);
@@ -107,9 +113,15 @@ class RatNumObj: public ExactNumObj {
  */
 class IntNumObj: public ExactNumObj {
     public:
+#ifndef GMP_SUPPORT
         int val;
         /** Construct a integer */
-        IntNumObj(int _val);
+        IntNumObj(int val);
+#else
+        mpz_class val;
+        /** Construct a integer */
+        IntNumObj(mpz_class val);
+#endif
         /** Try to construct an IntNumObj object 
          * @return NULL if failed
          */
@@ -117,9 +129,9 @@ class IntNumObj: public ExactNumObj {
         /** Convert to a integer from other numeric types */
         IntNumObj *convert(NumObj* obj);
 
-        NumObj *plus(NumObj *r);
-        NumObj *minus(NumObj *r);
-        NumObj *multi(NumObj *r);
+        NumObj *add(NumObj *r);
+        NumObj *sub(NumObj *r);
+        NumObj *mul(NumObj *r);
         NumObj *div(NumObj *r);
         bool lt(NumObj *r);
         bool gt(NumObj *r);
@@ -209,7 +221,7 @@ class SpecialOptQuote: public SpecialOptObj {
 
 BUILTIN_PROC_DEF(num_add);
 BUILTIN_PROC_DEF(num_sub);
-BUILTIN_PROC_DEF(num_multi);
+BUILTIN_PROC_DEF(num_mul);
 BUILTIN_PROC_DEF(num_div);
 
 BUILTIN_PROC_DEF(num_lt);
