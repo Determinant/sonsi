@@ -537,7 +537,7 @@ SpecialOptIf::SpecialOptIf() : SpecialOptObj("if") {}
 
 void SpecialOptIf::prepare(Cons *pc) {
 #define IF_EXP_ERR \
-        throw TokenError("if", RUN_ERR_WRONG_NUM_OF_ARGS)
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
     state = 0;  // Prepared
 
     if (pc->cdr->is_cons_obj())
@@ -560,7 +560,11 @@ void SpecialOptIf::prepare(Cons *pc) {
     if (pc->cdr != empty_list)
     {
         if (pc->cdr->is_cons_obj())
+        {
             TO_CONS(pc->cdr)->skip = true;
+            if (TO_CONS(pc->cdr)->cdr != empty_list)
+                IF_EXP_ERR;
+        }
         else
             IF_EXP_ERR;
     }
