@@ -701,9 +701,9 @@ void SpecialOptDefine::prepare(Cons *pc) {
     if (!pc->cdr->is_cons_obj())
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
 
-    pc = TO_CONS(pc->cdr);
-    if (pc->car->is_simple_obj())  // Simple value assignment
+    if (TO_CONS(pc->cdr)->car->is_simple_obj())  // Simple value assignment
     {
+        pc = TO_CONS(pc->cdr);
         if (!pc->cdr->is_cons_obj())
             throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
         pc->skip = true;           // Skip the identifier

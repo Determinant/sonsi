@@ -17,7 +17,7 @@ void tree_print(Cons *ptr) {
 #endif
 
 int main() {
-//    freopen("in.scm", "r", stdin);
+    //freopen("in.scm", "r", stdin);
     Tokenizor *tk = new Tokenizor();
     ASTGenerator *ast = new ASTGenerator();
     Evaluator *eval = new Evaluator();
@@ -25,7 +25,7 @@ int main() {
     int rcnt = 0;
     while (1)
     {
-        printf("Sonsi> ");
+        fprintf(stderr, "Sonsi> ");
         try
         {
             Cons *tree = ast->absorb(tk);

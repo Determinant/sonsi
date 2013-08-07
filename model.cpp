@@ -145,19 +145,19 @@ Cons *ProcObj::call(ArgList *args, Environment * &genvt,
     // Create local env and recall the closure
     Environment *_envt = new Environment(envt);   
     // static_cast<SymObj*> because the para_list is already checked
-    Cons *ptr, *ppar;
+    Cons *ppar;
     EvalObj *nptr;
-    for (ptr = TO_CONS(args->cdr), ppar = para_list;
+    for (ppar = para_list;
             ppar != empty_list; 
             ppar = TO_CONS(ppar->cdr))
     {
-        _envt->add_binding(static_cast<SymObj*>(ppar->car), ptr->car);
-        if ((nptr = ptr->cdr)->is_cons_obj())
-            ptr = TO_CONS(nptr);
+        if ((nptr = args->cdr)->is_cons_obj())
+            args = TO_CONS(nptr);
         else break;
+        _envt->add_binding(static_cast<SymObj*>(ppar->car), args->car);
     }
 
-    if (ptr->cdr != empty_list || ppar->cdr != empty_list)
+    if (args->cdr != empty_list || ppar != empty_list)
         throw TokenError("", RUN_ERR_WRONG_NUM_OF_ARGS);
 
     genvt = _envt;
