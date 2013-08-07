@@ -729,7 +729,8 @@ BUILTIN_PROC_DEF(make_list) {
 BUILTIN_PROC_DEF(num_add) {
     NumObj *res = new IntNumObj(0), *opr; // the most accurate type
     EvalObj *nptr;
-    for (Cons *ptr = args;;)
+    Cons *ptr;
+    for (ptr = args;;)
     {
         if (!ptr->car->is_num_obj())        // not a number
             throw TokenError("a number", RUN_ERR_WRONG_TYPE);
@@ -757,7 +758,8 @@ BUILTIN_PROC_DEF(num_sub) {
 
     NumObj *res = static_cast<NumObj*>(args->car), *opr;
     EvalObj *nptr;
-    for (Cons *ptr = TO_CONS(args->cdr);;)
+    Cons *ptr;
+    for (ptr = TO_CONS(args->cdr);;)
     {
         if (!ptr->car->is_num_obj())        // not a number
             throw TokenError("a number", RUN_ERR_WRONG_TYPE);
@@ -782,7 +784,8 @@ BUILTIN_PROC_DEF(num_sub) {
 BUILTIN_PROC_DEF(num_multi) {
     NumObj *res = new IntNumObj(1), *opr; // the most accurate type
     EvalObj *nptr;
-    for (Cons *ptr = args;;)
+    Cons *ptr;
+    for (ptr = args;;)
     {
         if (!ptr->car->is_num_obj())        // not a number
             throw TokenError("a number", RUN_ERR_WRONG_TYPE);
@@ -810,7 +813,8 @@ BUILTIN_PROC_DEF(num_div) {
 
     NumObj *res = static_cast<NumObj*>(args->car), *opr;
     EvalObj *nptr;
-    for (Cons *ptr = TO_CONS(args->cdr);;)
+    Cons *ptr;
+    for (ptr = TO_CONS(args->cdr);;)
     {
         if (!ptr->car->is_num_obj())        // not a number
             throw TokenError("a number", RUN_ERR_WRONG_TYPE);
@@ -839,8 +843,9 @@ BUILTIN_PROC_DEF(num_lt) {
 
     NumObj *last = static_cast<NumObj*>(args->car), *opr; 
     EvalObj *nptr;
+    Cons *ptr;
     
-    for (Cons *ptr = TO_CONS(args->cdr);; last = opr)
+    for (ptr = TO_CONS(args->cdr);; last = opr)
     {
         if (!ptr->car->is_num_obj())        // not a number
             throw TokenError("a number", RUN_ERR_WRONG_TYPE);
@@ -869,8 +874,9 @@ BUILTIN_PROC_DEF(num_gt) {
 
     NumObj *last = static_cast<NumObj*>(args->car), *opr; 
     EvalObj *nptr;
+    Cons *ptr;
     
-    for (Cons *ptr = TO_CONS(args->cdr);; last = opr)
+    for (ptr = TO_CONS(args->cdr);; last = opr)
     {
         if (!ptr->car->is_num_obj())        // not a number
             throw TokenError("a number", RUN_ERR_WRONG_TYPE);
@@ -899,8 +905,9 @@ BUILTIN_PROC_DEF(num_eq) {
 
     NumObj *last = static_cast<NumObj*>(args->car), *opr; 
     EvalObj *nptr;
+    Cons *ptr;
     
-    for (Cons *ptr = TO_CONS(args->cdr);; last = opr)
+    for (ptr = TO_CONS(args->cdr);; last = opr)
     {
         if (!ptr->car->is_num_obj())        // not a number
             throw TokenError("a number", RUN_ERR_WRONG_TYPE);
