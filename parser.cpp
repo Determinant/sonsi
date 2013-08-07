@@ -43,6 +43,13 @@ void Tokenizor::set_stream(FILE *_stream) {
     } while (0)
 #define TOP (*(buff_ptr - 1))
 
+void str_to_lower(string &str) {
+    size_t len = str.length();
+    for (int i = 0; i < len; i++)
+        if ('A' <= str[i] && str[i] <= 'Z')
+            str[i] -= 'A' - 'a';
+}
+
 bool Tokenizor::get_token(string &ret) {
     char ch;
     bool flag = false;
@@ -105,7 +112,11 @@ bool Tokenizor::get_token(string &ret) {
                 else 
                     *buff_ptr++ = ch;
             }
-            if (flag) return true;
+            if (flag) 
+            {
+                str_to_lower(ret);
+                return true;
+            }
         }
     }
     if (buff_ptr != buff) POP;
