@@ -727,6 +727,7 @@ BUILTIN_PROC_DEF(make_list) {
 }
 
 BUILTIN_PROC_DEF(num_add) {
+    ARGS_AT_LEAST_ONE;
     NumObj *res = new IntNumObj(0), *opr; // the most accurate type
     EvalObj *nptr;
     Cons *ptr;
@@ -782,6 +783,7 @@ BUILTIN_PROC_DEF(num_sub) {
 }
 
 BUILTIN_PROC_DEF(num_multi) {
+    ARGS_AT_LEAST_ONE;
     NumObj *res = new IntNumObj(1), *opr; // the most accurate type
     EvalObj *nptr;
     Cons *ptr;
