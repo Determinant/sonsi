@@ -5,12 +5,8 @@
 #include "exc.h"
 #include <cstdio>
 
-#ifdef DEBUG
-extern Pair *empty_list;
-#endif
-
 int main() {
-    //freopen("in.scm", "r", stdin);
+    freopen("in.scm", "r", stdin);
     Tokenizor *tk = new Tokenizor();
     ASTGenerator *ast = new ASTGenerator();
     Evaluator *eval = new Evaluator();

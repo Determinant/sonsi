@@ -18,6 +18,8 @@ typedef unsigned char NumLvl;
 const int CLS_RET_ADDR = 1 << 0;
 const int CLS_EVAL_OBJ = 1 << 1;
 const int CLS_PAR_BRA = 1 << 2;
+const int CLS_REPR_CONS = 1 << 3;
+const int CLS_REPR_STR = 1 << 4;
 
 const int CLS_SIM_OBJ = 1 << 0;
 const int CLS_CONS_OBJ = 1 << 1;
@@ -29,6 +31,7 @@ const int CLS_CHAR_OBJ = 1 << 6;
 const int CLS_STR_OBJ = 1 << 7;
 const int CLS_VECT_OBJ = 1 << 8;
 
+const int REPR_STACK_SIZE = 65536;
 
 #define TO_PAIR(ptr) \
     (static_cast<Pair*>(ptr))
@@ -65,6 +68,7 @@ class FrameObj {
 
 
 class Pair;
+class ReprCons;
 /** @class EvalObj
  * Objects that represents a value in evaluation
  */
@@ -93,7 +97,7 @@ class EvalObj : public FrameObj {
         /** Check if the object is an operator */
         bool is_opt_obj();
         /** Check if the object is a Pair */
-        bool is_cons_obj();
+        bool is_pair_obj();
         /** Check if the object is a number */
         bool is_num_obj();
         /** Check if the object is a boolean */
@@ -101,11 +105,13 @@ class EvalObj : public FrameObj {
         ClassType get_otype();
         virtual void prepare(Pair *pc);
         /** Any EvalObj has its external representation */
-        virtual string ext_repr();
+        string ext_repr();
         /** Always true for all EvalObjs except BoolObj */
         virtual bool is_true();         
+        virtual ReprCons *get_repr_cons() = 0;
 };
 
+class ListReprCons;
 /** @class Pair
  * Pair construct, which can be used to represent a list, or further
  * more, a syntax tree
@@ -119,6 +125,7 @@ class Pair : public EvalObj {
         Pair* next;                     /**< The next branch in effect */
 
         Pair(EvalObj *car, EvalObj *cdr);  /**< Create a Pair (car . cdr) */
+        ReprCons *get_repr_cons();
 };
 
 /** @class EmptyList
@@ -127,7 +134,7 @@ class Pair : public EvalObj {
 class EmptyList: public Pair {
     public:
         EmptyList();
-        string ext_repr();
+        ReprCons *get_repr_cons();
 };
 
 /** @class RetAddr
@@ -141,13 +148,36 @@ class RetAddr : public FrameObj {
         RetAddr(Pair *addr);
 };
 
-class ReprConstructor : public FrameObj {
-    virtual EvalObj *next();
+class ReprCons {
+    public:
+        bool done;
+        string repr;
+        ReprCons(bool done); 
+        virtual EvalObj *next(const string &prev) = 0;
 };
 
-class ExtRepr : public FrameObj {
+class ReprStr : public ReprCons {
     public:
-    string repr;
+        ReprStr(string repr);
+        EvalObj *next(const string &prev);
+};
+
+class ListReprCons : public ReprCons {
+    private:
+        EvalObj *ptr;
+    public:
+        ListReprCons(Pair *ptr);
+        EvalObj *next(const string &prev);
+};
+
+class VecObj;
+class VectReprCons : public ReprCons {
+    private:
+        VecObj *ptr;
+        int idx;
+    public:
+        VectReprCons(VecObj *ptr);
+        EvalObj *next(const string &prev);
 };
 
 /** @class ParseBracket
@@ -166,7 +196,7 @@ class ParseBracket : public FrameObj {
 class UnspecObj: public EvalObj {
     public:
         UnspecObj();
-        string ext_repr();
+        ReprCons *get_repr_cons();
 };
 
 /** @class SymObj
@@ -177,10 +207,7 @@ class SymObj: public EvalObj {
         string val;
 
         SymObj(const string &);
-#ifdef DEBUG
-        string _debug_repr();
-#endif
-        string ext_repr();
+        ReprCons *get_repr_cons();
 };
 
 // Everything is cons
@@ -222,7 +249,7 @@ class ProcObj: public OptObj {
         ProcObj(Pair *body, Environment *envt, EvalObj *params);
         Pair *call(ArgList *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
-        string ext_repr();
+        ReprCons *get_repr_cons();
 };
 
 /** @class SpecialOptObj
@@ -253,7 +280,7 @@ class BuiltinProcObj: public OptObj {
         BuiltinProcObj(BuiltinProc proc, string name);
         Pair *call(ArgList *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
-        string ext_repr();
+        ReprCons *get_repr_cons();
 };
 
 /** @class BoolObj
@@ -264,7 +291,7 @@ class BoolObj: public EvalObj {
         bool val;                       /**< true for \#t, false for \#f */ 
         BoolObj(bool);                  /**< Converts a C bool value to a BoolObj*/
         bool is_true();                 /**< Override EvalObj `is_true()` */
-        string ext_repr();
+        ReprCons *get_repr_cons();
         /** Try to construct an BoolObj object 
          * @return NULL if failed
          */
@@ -313,7 +340,7 @@ class StrObj: public EvalObj {
          * @return NULL if failed
          */
         static StrObj *from_string(string repr);
-        string ext_repr();
+        ReprCons *get_repr_cons();
 };
 
 /** @class CharObj
@@ -329,7 +356,7 @@ class CharObj: public EvalObj {
          * @return NULL if failed
          */
         static CharObj *from_string(string repr);
-        string ext_repr();
+        ReprCons *get_repr_cons();
 };
 
 
@@ -344,10 +371,13 @@ class VecObj: public EvalObj {
     public:
         /** Construct a vector object */
         VecObj();
+        int get_size();
+        EvalObj *get_obj(int idx);
         /** Resize the vector */
         void resize(int new_size);
         /** Add a new element to the rear */
         void push_back(EvalObj *new_elem);
+        ReprCons *get_repr_cons();
 };
 
 typedef map<string, EvalObj*> Str2EvalObj;

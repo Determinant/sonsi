@@ -2,7 +2,7 @@ main: main.o parser.o builtin.o model.o eval.o exc.o consts.o
 	g++ -o main $^ -pg -lgmp
 
 .cpp.o:
-	g++ $< -c -g -pg -DDEBUG -DGMP_SUPPORT
+	g++ $< -c -g -pg -DGMP_SUPPORT
 
 clean:
 	rm -f *.o

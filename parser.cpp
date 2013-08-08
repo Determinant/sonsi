@@ -196,7 +196,7 @@ Pair *ASTGenerator::absorb(Tokenizor *tk) {
                 else
                 {
                     Pair *_lst = new Pair(obj, lst);    // Collect the list
-                    _lst->next = lst->is_cons_obj() ? TO_PAIR(lst) : NULL;
+                    _lst->next = lst->is_pair_obj() ? TO_PAIR(lst) : NULL;
                     lst = _lst;
                 }
             }

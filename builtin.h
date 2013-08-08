@@ -40,7 +40,7 @@ class CompNumObj: public InexactNumObj {
         bool lt(NumObj *r);
         bool gt(NumObj *r);
         bool eq(NumObj *r);
-        string ext_repr();
+        ReprCons *get_repr_cons();
 };
 
 /** @class RealNumObj
@@ -65,7 +65,7 @@ class RealNumObj: public InexactNumObj {
         bool lt(NumObj *r);
         bool gt(NumObj *r);
         bool eq(NumObj *r);
-        string ext_repr();
+        ReprCons *get_repr_cons();
 
 };
 
@@ -105,7 +105,7 @@ class RatNumObj: public ExactNumObj {
         bool lt(NumObj *r);
         bool gt(NumObj *r);
         bool eq(NumObj *r);
-        string ext_repr();
+        ReprCons *get_repr_cons();
 };
 
 /** @class IntNumObj
@@ -138,7 +138,7 @@ class IntNumObj: public ExactNumObj {
         bool lt(NumObj *r);
         bool gt(NumObj *r);
         bool eq(NumObj *r);
-        string ext_repr();
+        ReprCons *get_repr_cons();
 };
 
 
@@ -165,7 +165,7 @@ class SpecialOptIf: public SpecialOptObj {
         void prepare(Pair *pc);
         Pair *call(ArgList *args, Environment * &envt, 
                     Continuation * &cont, FrameObj ** &top_ptr);
-        string ext_repr();
+        ReprCons *get_repr_cons();
 };
 
 /** @class SpecialOptLambda
@@ -178,7 +178,7 @@ class SpecialOptLambda: public SpecialOptObj {
         Pair *call(ArgList *args, Environment * &envt, 
                     Continuation * &cont, FrameObj ** &top_ptr);
 
-        string ext_repr();
+        ReprCons *get_repr_cons();
 };
 
 /** @class SpecialOptDefine
@@ -190,7 +190,7 @@ class SpecialOptDefine: public SpecialOptObj {
         void prepare(Pair *pc);
         Pair *call(ArgList *args, Environment * &envt, 
                     Continuation * &cont, FrameObj ** &top_ptr);
-        string ext_repr();
+        ReprCons *get_repr_cons();
 };
 
 /** @class SpecialOptSet
@@ -202,7 +202,7 @@ class SpecialOptSet: public SpecialOptObj {
         void prepare(Pair *pc);
         Pair *call(ArgList *args, Environment * &envt, 
                     Continuation * &cont, FrameObj ** &top_ptr);
-        string ext_repr();
+        ReprCons *get_repr_cons();
 };
 
 /** @class SpecialOptLambda
@@ -215,7 +215,7 @@ class SpecialOptQuote: public SpecialOptObj {
         Pair *call(ArgList *args, Environment * &envt, 
                     Continuation * &cont, FrameObj ** &top_ptr);
 
-        string ext_repr();
+        ReprCons *get_repr_cons();
 };
 
 /** @class SpecialOptEval
@@ -230,7 +230,7 @@ class SpecialOptEval: public SpecialOptObj {
         Pair *call(ArgList *args, Environment * &envt, 
                     Continuation * &cont, FrameObj ** &top_ptr);
 
-        string ext_repr();
+        ReprCons *get_repr_cons();
 };
 
 #define BUILTIN_PROC_DEF(func)\
