@@ -50,7 +50,7 @@ bool EvalObj::is_bool_obj() {
     return otype & CLS_BOOL_OBJ;
 }
 
-ClassType EvalObj::get_otype() {
+int EvalObj::get_otype() {
     return otype;
 }
 

@@ -7,7 +7,7 @@
 using std::string;
 
 const int TOKEN_BUFF_SIZE = 65536;
-const int PARSE_STACK_SIZE = 65536;
+const int PARSE_STACK_SIZE = 262144;
 
 /** @class Tokenizor 
  * Break down the input string stream into tokens

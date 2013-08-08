@@ -7,6 +7,7 @@
 
 using std::string;
 
+const int EQUAL_QUEUE_SIZE = 262144;
 bool is_list(Pair *ptr);
 
 /** @class InexactNumObj
@@ -266,6 +267,7 @@ BUILTIN_PROC_DEF(reverse);
 BUILTIN_PROC_DEF(list_tail);
 
 BUILTIN_PROC_DEF(is_eqv);
+BUILTIN_PROC_DEF(is_equal);
 
 BUILTIN_PROC_DEF(display);
 

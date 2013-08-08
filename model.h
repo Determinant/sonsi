@@ -23,15 +23,17 @@ const int CLS_REPR_STR = 1 << 4;
 
 const int CLS_SIM_OBJ = 1 << 0;
 const int CLS_CONS_OBJ = 1 << 1;
-const int CLS_SYM_OBJ = 1 << 2;
+
 const int CLS_OPT_OBJ = 1 << 3;
+
+const int CLS_SYM_OBJ = 1 << 2;
 const int CLS_NUM_OBJ = 1 << 4;
 const int CLS_BOOL_OBJ = 1 << 5;
 const int CLS_CHAR_OBJ = 1 << 6;
 const int CLS_STR_OBJ = 1 << 7;
 const int CLS_VECT_OBJ = 1 << 8;
 
-const int REPR_STACK_SIZE = 65536;
+const int REPR_STACK_SIZE = 262144;
 
 #define TO_PAIR(ptr) \
     (static_cast<Pair*>(ptr))
@@ -102,7 +104,7 @@ class EvalObj : public FrameObj {
         bool is_num_obj();
         /** Check if the object is a boolean */
         bool is_bool_obj();
-        ClassType get_otype();
+        int get_otype();
         virtual void prepare(Pair *pc);
         /** Any EvalObj has its external representation */
         string ext_repr();
@@ -366,9 +368,8 @@ typedef vector<EvalObj*> EvalObjVec;
  * Vector support (currently a wrapper of STL vector)
  */
 class VecObj: public EvalObj {
-    private:
-        EvalObjVec vec;
     public:
+        EvalObjVec vec;
         /** Construct a vector object */
         VecObj();
         int get_size();

@@ -5,7 +5,6 @@
 #include <cstdio>
 
 extern Pair *empty_list;
-const int EVAL_STACK_SIZE = 65536;
 FrameObj *eval_stack[EVAL_STACK_SIZE];
 
 void Evaluator::add_builtin_routines() {
@@ -54,6 +53,7 @@ void Evaluator::add_builtin_routines() {
 
     ADD_BUILTIN_PROC("eqv?", is_eqv);
     ADD_BUILTIN_PROC("eq?", is_eqv);
+    ADD_BUILTIN_PROC("equal?", is_equal);
 
     ADD_BUILTIN_PROC("display", display);
 }
@@ -67,8 +67,6 @@ void push(Pair * &pc, FrameObj ** &top_ptr, Environment *envt) {
     if (pc->car->is_simple_obj())           // Not an opt invocation
     {
         *top_ptr = envt->get_obj(pc->car);  // Objectify the symbol
-        // static_cast because of is_simple_obj() is true
-        static_cast<EvalObj*>(*top_ptr)->prepare(pc);
         top_ptr++;
         pc = pc->next;                      // Move to the next instruction
     }
@@ -82,6 +80,7 @@ void push(Pair * &pc, FrameObj ** &top_ptr, Environment *envt) {
             throw TokenError(pc->car->ext_repr(), RUN_ERR_WRONG_NUM_OF_ARGS); 
         // static_cast because of is_simple_obj() is false
         pc = static_cast<Pair*>(pc->car);  // Go deeper to enter the call
+        envt->get_obj(pc->car)->prepare(pc);
     }
 }
 

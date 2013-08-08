@@ -1256,6 +1256,107 @@ BUILTIN_PROC_DEF(is_eqv) {
     return new BoolObj(obj1 == obj2);
 }
 
+
+BUILTIN_PROC_DEF(is_equal) {
+
+#define INC1(x) (++(x) == t1 ? (x) = q1:0)
+#define INC2(x) (++(x) == t2 ? (x) = q2:0)
+    
+    static EvalObj *q1[EQUAL_QUEUE_SIZE], *q2[EQUAL_QUEUE_SIZE];
+    static EvalObj ** const t1 = q1 + EQUAL_QUEUE_SIZE;
+    static EvalObj ** const t2 = q2 + EQUAL_QUEUE_SIZE;
+
+    ARGS_EXACTLY_TWO;
+    EvalObj **l1 = q1, **r1 = l1;
+    EvalObj **l2 = q2, **r2 = l2;
+
+    *r1++ = args->car;
+    *r2++ = TO_PAIR(args->cdr)->car;
+
+    EvalObj *a, *b;
+    for (; l1 != r1; INC1(l1), INC2(l2))
+    {
+        // Different types
+        int otype = (a = *l1)->get_otype();
+        if (otype != (b = *l2)->get_otype())
+            return new BoolObj(false);
+        if (a == empty_list)
+            continue;
+        if (otype & CLS_CONS_OBJ)
+        {
+            *r1 = TO_PAIR(a)->car;
+            INC1(r1);
+            *r1 = TO_PAIR(a)->cdr;
+            INC1(r1);
+
+            *r2 = TO_PAIR(b)->car;
+            INC2(r2);
+            *r2 = TO_PAIR(b)->cdr;
+            INC2(r2);
+        }
+        else if (otype & CLS_VECT_OBJ)
+        {
+            VecObj *va = static_cast<VecObj*>(a);
+            VecObj *vb = static_cast<VecObj*>(b);
+            if (va->get_size() != vb->get_size())
+                return new BoolObj(false);
+            for (EvalObjVec::iterator 
+                    it = va->vec.begin(); 
+                    it != va->vec.end(); it++)
+            {
+                *r1 = TO_PAIR(a)->car;
+                INC1(r1);
+            }
+
+            for (EvalObjVec::iterator 
+                    it = vb->vec.begin(); 
+                    it != vb->vec.end(); it++)
+            {
+                *r2 = TO_PAIR(b)->car;
+                INC2(r2);
+            }
+        }
+        else if (otype & CLS_BOOL_OBJ)
+        {
+            if (static_cast<BoolObj*>(a)->val != 
+                static_cast<BoolObj*>(b)->val)
+                return new BoolObj(false);
+        }
+        else if (otype & CLS_SYM_OBJ)
+        {
+            if (static_cast<SymObj*>(a)->val !=
+                static_cast<SymObj*>(b)->val)
+                return new BoolObj(false);
+        }
+        else if (otype & CLS_NUM_OBJ)
+        {
+            NumObj *num1 = static_cast<NumObj*>(a);
+            NumObj *num2 = static_cast<NumObj*>(b);
+            if (num1->is_exact() != num2->is_exact())
+            return new BoolObj(false);
+            if (num1->level < num2->level)
+                if (!num1->eq(num1->convert(num2)))
+                    return new BoolObj(false);
+            else
+                if (!num2->eq(num2->convert(num1)))
+                    return new BoolObj(false);
+        }
+        else if (otype & CLS_CHAR_OBJ)
+        {
+            if (static_cast<CharObj*>(a)->ch !=
+                static_cast<CharObj*>(b)->ch)
+                return new BoolObj(false); // (char=?)
+        }
+        else if (otype & CLS_STR_OBJ)
+        {
+            if (static_cast<StrObj*>(a)->str !=
+                static_cast<StrObj*>(b)->str)
+                return new BoolObj(false); // (string=?)
+        }
+    }
+    return new BoolObj(true);
+}
+
 BUILTIN_PROC_DEF(display) {
     ARGS_EXACTLY_ONE;
     printf("%s\n", args->car->ext_repr().c_str());
