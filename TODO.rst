@@ -1,1 +1,4 @@
+- non-recursive ext_repr implementation
+- non-recursive equal? predicate
+- Garbage Collection?
 - Add macro support
