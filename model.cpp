@@ -38,7 +38,7 @@ bool EvalObj::is_opt_obj() {
 }
 
 bool EvalObj::is_pair_obj() {
-    return this != empty_list && (otype & CLS_CONS_OBJ);
+    return this != empty_list && (otype & CLS_PAIR_OBJ);
 }
 
 
@@ -86,7 +86,7 @@ string EvalObj::ext_repr() {
 }
 
 Pair::Pair(EvalObj *_car, EvalObj *_cdr) : 
-    EvalObj(CLS_CONS_OBJ), car(_car), cdr(_cdr), skip(false), 
+    EvalObj(CLS_PAIR_OBJ), car(_car), cdr(_cdr), skip(false), 
     next(NULL) {}
 
 ReprCons *Pair::get_repr_cons() {

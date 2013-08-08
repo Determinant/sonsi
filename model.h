@@ -22,7 +22,7 @@ const int CLS_REPR_CONS = 1 << 3;
 const int CLS_REPR_STR = 1 << 4;
 
 const int CLS_SIM_OBJ = 1 << 0;
-const int CLS_CONS_OBJ = 1 << 1;
+const int CLS_PAIR_OBJ = 1 << 1;
 
 const int CLS_OPT_OBJ = 1 << 3;
 
@@ -84,7 +84,7 @@ class EvalObj : public FrameObj {
     public:
         /**
          * Construct an EvalObj
-         * @param otype the type of the EvalObj (CLS_CONS_OBJ for a
+         * @param otype the type of the EvalObj (CLS_PAIR_OBJ for a
          * construction, CLS_SIM_OBJ for a simple object), which defaults to
          * CLS_SIM_OBJ
          */

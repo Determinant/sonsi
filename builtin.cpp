@@ -1282,7 +1282,7 @@ BUILTIN_PROC_DEF(is_equal) {
             return new BoolObj(false);
         if (a == empty_list)
             continue;
-        if (otype & CLS_CONS_OBJ)
+        if (otype & CLS_PAIR_OBJ)
         {
             *r1 = TO_PAIR(a)->car;
             INC1(r1);
