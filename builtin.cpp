@@ -19,7 +19,7 @@ static const int NUM_LVL_INT = 3;
 #define ARGS_EXACTLY_TWO \
     if (args == empty_list ||  \
         args->cdr == empty_list || \
-        TO_CONS(args->cdr)->cdr != empty_list) \
+        TO_PAIR(args->cdr)->cdr != empty_list) \
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS) 
 
 #define ARGS_EXACTLY_ONE \
@@ -31,12 +31,12 @@ static const int NUM_LVL_INT = 3;
     if (args == empty_list) \
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
 
-bool is_list(Cons *ptr) {
+bool is_list(Pair *ptr) {
     if (ptr == empty_list) return true;
     EvalObj *nptr; 
     for (;;) 
         if ((nptr = ptr->cdr)->is_cons_obj()) 
-            ptr = TO_CONS(nptr); 
+            ptr = TO_PAIR(nptr); 
         else break; 
     return ptr->cdr == empty_list;
 }
@@ -539,13 +539,13 @@ string IntNumObj::ext_repr() {
 
 SpecialOptIf::SpecialOptIf() : SpecialOptObj("if") {}
 
-void SpecialOptIf::prepare(Cons *pc) {
+void SpecialOptIf::prepare(Pair *pc) {
 #define IF_EXP_ERR \
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
     state = 0;  // Prepared
 
     if (pc->cdr->is_cons_obj())
-        pc = TO_CONS(pc->cdr);
+        pc = TO_PAIR(pc->cdr);
     else 
         IF_EXP_ERR;
 //    if (pc == empty_list)
@@ -554,7 +554,7 @@ void SpecialOptIf::prepare(Cons *pc) {
     pc->skip = false;
 
     if (pc->cdr->is_cons_obj())
-        pc = TO_CONS(pc->cdr);
+        pc = TO_PAIR(pc->cdr);
     else
         IF_EXP_ERR;
  //   if (pc == empty_list)
@@ -565,8 +565,8 @@ void SpecialOptIf::prepare(Cons *pc) {
     {
         if (pc->cdr->is_cons_obj())
         {
-            TO_CONS(pc->cdr)->skip = true;
-            if (TO_CONS(pc->cdr)->cdr != empty_list)
+            TO_PAIR(pc->cdr)->skip = true;
+            if (TO_PAIR(pc->cdr)->cdr != empty_list)
                 IF_EXP_ERR;
         }
         else
@@ -574,41 +574,41 @@ void SpecialOptIf::prepare(Cons *pc) {
     }
 }
 
-void SpecialOptIf::pre_call(ArgList *args, Cons *pc,
+void SpecialOptIf::pre_call(ArgList *args, Pair *pc,
         Environment *envt) {
     // static_cast because it's a call invocation
-    pc = TO_CONS(TO_CONS(pc->car)->cdr); 
+    pc = TO_PAIR(TO_PAIR(pc->car)->cdr); 
 
     // Condition evaluated and the decision is made
     state = 1;
 
-    if (TO_CONS(args->cdr)->car->is_true())
+    if (TO_PAIR(args->cdr)->car->is_true())
     {
         pc->skip = true;
-        pc = TO_CONS(pc->cdr);
+        pc = TO_PAIR(pc->cdr);
         pc->skip = false;
         if (pc->cdr != empty_list)
-            TO_CONS(pc->cdr)->skip = true; // Eval the former
+            TO_PAIR(pc->cdr)->skip = true; // Eval the former
     }
     else
     {
         pc->skip = true;
-        pc = TO_CONS(pc->cdr);
+        pc = TO_PAIR(pc->cdr);
         pc->skip = true;
         if (pc->cdr != empty_list)
-            TO_CONS(pc->cdr)->skip = false; //Eval the latter
+            TO_PAIR(pc->cdr)->skip = false; //Eval the latter
     }
 }
 
-EvalObj *SpecialOptIf::post_call(ArgList *args, Cons *pc,
+EvalObj *SpecialOptIf::post_call(ArgList *args, Pair *pc,
         Environment *envt) {
     // Value already evaluated, so just return it
-    return TO_CONS(args->cdr)->car;
+    return TO_PAIR(args->cdr)->car;
 }
 
-Cons *SpecialOptIf::call(ArgList *args, Environment * &envt, 
+Pair *SpecialOptIf::call(ArgList *args, Environment * &envt, 
         Continuation * &cont, FrameObj ** &top_ptr) {
-    Cons *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
+    Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     if (state) 
     {
         *top_ptr++ = post_call(args, ret_addr, envt);
@@ -620,7 +620,7 @@ Cons *SpecialOptIf::call(ArgList *args, Environment * &envt,
         top_ptr += 2;
         // Undo pop and invoke again
         // static_cast because it's a call invocation
-        return TO_CONS(ret_addr->car)->next;
+        return TO_PAIR(ret_addr->car)->next;
     }
 }
 
@@ -631,11 +631,11 @@ SpecialOptLambda::SpecialOptLambda() : SpecialOptObj("lambda") {}
 do  \
 { \
     EvalObj *nptr; \
-    Cons *ptr; \
+    Pair *ptr; \
     for (ptr = pc;;)  \
     { \
         if ((nptr = ptr->cdr)->is_cons_obj()) \
-            ptr = TO_CONS(nptr); \
+            ptr = TO_PAIR(nptr); \
         else break; \
         ptr->skip = flag; \
     } \
@@ -656,11 +656,11 @@ do  \
 { \
     if (p == empty_list) break; \
     EvalObj *nptr; \
-    Cons *ptr; \
-    for (ptr = TO_CONS(p);;)  \
+    Pair *ptr; \
+    for (ptr = TO_PAIR(p);;)  \
     { \
         if ((nptr = ptr->cdr)->is_cons_obj()) \
-            ptr = TO_CONS(nptr); \
+            ptr = TO_PAIR(nptr); \
         else break; \
         CHECK_SYMBOL(ptr->car); \
     } \
@@ -670,26 +670,26 @@ do  \
 while (0)
 
 
-void SpecialOptLambda::prepare(Cons *pc) {
+void SpecialOptLambda::prepare(Pair *pc) {
     // Do not evaluate anything
     FILL_MARKS(pc, true);
 }
 
-Cons *SpecialOptLambda::call(ArgList *args, Environment * &envt, 
+Pair *SpecialOptLambda::call(ArgList *args, Environment * &envt, 
         Continuation * &cont, FrameObj ** &top_ptr) {
 
-    Cons *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
-    Cons *pc = static_cast<Cons*>(ret_addr->car);
+    Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
+    Pair *pc = static_cast<Pair*>(ret_addr->car);
     // TODO: remove the following two lines?
     if (pc->cdr == empty_list)
         throw TokenError(name, SYN_ERR_EMPTY_PARA_LIST);
-    if (TO_CONS(pc->cdr)->cdr == empty_list)
+    if (TO_PAIR(pc->cdr)->cdr == empty_list)
         throw TokenError(name, SYN_ERR_MISS_OR_EXTRA_EXP);
 
      // Clear the flag to avoid side-effects (e.g. proc calling)
     FILL_MARKS(pc, false);
    
-    pc = TO_CONS(pc->cdr);                  // Now pointintg to params
+    pc = TO_PAIR(pc->cdr);                  // Now pointintg to params
     if (pc->car->is_simple_obj())
         CHECK_SYMBOL(pc->car);
     else
@@ -698,8 +698,8 @@ Cons *SpecialOptLambda::call(ArgList *args, Environment * &envt,
 
     // store a list of expressions inside <body>
 
-    ASTList *body = TO_CONS(pc->cdr);       // Truncate the expression list
-    for (Cons *ptr = body; ptr != empty_list; ptr = TO_CONS(ptr->cdr))
+    Pair *body = TO_PAIR(pc->cdr);       // Truncate the expression list
+    for (Pair *ptr = body; ptr != empty_list; ptr = TO_PAIR(ptr->cdr))
         ptr->next = NULL;    // Make each expression an orphan
 
     *top_ptr++ = new ProcObj(body, envt, params);
@@ -710,40 +710,40 @@ string SpecialOptLambda::ext_repr() { return string("#<Builtin Macro: lambda>");
 
 SpecialOptDefine::SpecialOptDefine() : SpecialOptObj("define") {}
 
-void SpecialOptDefine::prepare(Cons *pc) {
+void SpecialOptDefine::prepare(Pair *pc) {
     if (!pc->cdr->is_cons_obj())
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
 
-    if (TO_CONS(pc->cdr)->car->is_simple_obj())  // Simple value assignment
+    if (TO_PAIR(pc->cdr)->car->is_simple_obj())  // Simple value assignment
     {
-        pc = TO_CONS(pc->cdr);
+        pc = TO_PAIR(pc->cdr);
         if (!pc->cdr->is_cons_obj())
             throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
         pc->skip = true;           // Skip the identifier
-        TO_CONS(pc->cdr)->skip = false; 
+        TO_PAIR(pc->cdr)->skip = false; 
     }                                   // Procedure definition
     else FILL_MARKS(pc, true);          // Skip all parts
 }
 
-Cons *SpecialOptDefine::call(ArgList *args, Environment * &envt, 
+Pair *SpecialOptDefine::call(ArgList *args, Environment * &envt, 
         Continuation * &cont, FrameObj ** &top_ptr) {
-    Cons *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
-    Cons *pc = static_cast<Cons*>(ret_addr->car);
+    Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
+    Pair *pc = static_cast<Pair*>(ret_addr->car);
     EvalObj *obj;
     SymObj *id;
-    EvalObj *first = TO_CONS(pc->cdr)->car;
+    EvalObj *first = TO_PAIR(pc->cdr)->car;
     if (first->is_simple_obj())
     {
         if (!first->is_sym_obj())
             throw TokenError(first->ext_repr(), SYN_ERR_NOT_AN_ID);
         ARGS_EXACTLY_TWO;
         id = static_cast<SymObj*>(first);
-        obj = TO_CONS(args->cdr)->car;
+        obj = TO_PAIR(args->cdr)->car;
     }
     else
     {
         // static_cast because of is_simple_obj() is false
-        Cons *plst = static_cast<Cons*>(first);
+        Pair *plst = static_cast<Pair*>(first);
 
         if (plst == empty_list)
             throw TokenError(name, SYN_ERR_EMPTY_PARA_LIST);
@@ -758,12 +758,12 @@ Cons *SpecialOptDefine::call(ArgList *args, Environment * &envt,
         // Clear the flag to avoid side-effects (e.g. proc calling)
         FILL_MARKS(pc, false);
 
-        ASTList *body = TO_CONS(TO_CONS(pc->cdr)->cdr);   // Truncate the expression list
+        Pair *body = TO_PAIR(TO_PAIR(pc->cdr)->cdr);   // Truncate the expression list
 
         if (body == empty_list)
             throw TokenError(name, SYN_ERR_MISS_OR_EXTRA_EXP);
 
-        for (Cons *ptr = body; ptr != empty_list; ptr = TO_CONS(ptr->cdr))
+        for (Pair *ptr = body; ptr != empty_list; ptr = TO_PAIR(ptr->cdr))
             ptr->next = NULL;           // Make each expression a orphan
 
         obj = new ProcObj(body, envt, params);
@@ -775,27 +775,27 @@ Cons *SpecialOptDefine::call(ArgList *args, Environment * &envt,
 
 string SpecialOptDefine::ext_repr() { return string("#<Builtin Macro: define>"); }
 
-void SpecialOptSet::prepare(Cons *pc) {
+void SpecialOptSet::prepare(Pair *pc) {
     if (!pc->cdr->is_cons_obj())
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
 
-    pc = TO_CONS(pc->cdr);
+    pc = TO_PAIR(pc->cdr);
 
     pc->skip = true;       // Skip the identifier
 
     if (!pc->cdr->is_cons_obj())
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
 
-    pc = TO_CONS(pc->cdr);
+    pc = TO_PAIR(pc->cdr);
 
     pc->skip = false; 
 }
 
-Cons *SpecialOptSet::call(ArgList *args, Environment * &envt, 
+Pair *SpecialOptSet::call(ArgList *args, Environment * &envt, 
         Continuation * &cont, FrameObj ** &top_ptr) {
-    Cons *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
-    Cons *pc = static_cast<Cons*>(ret_addr->car);
-    EvalObj *first = TO_CONS(pc->cdr)->car;
+    Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
+    Pair *pc = static_cast<Pair*>(ret_addr->car);
+    EvalObj *first = TO_PAIR(pc->cdr)->car;
 
     if (!first->is_sym_obj())
         throw TokenError(first->ext_repr(), SYN_ERR_NOT_AN_ID);
@@ -803,7 +803,7 @@ Cons *SpecialOptSet::call(ArgList *args, Environment * &envt,
 
     SymObj *id = static_cast<SymObj*>(first);
 
-    bool flag = envt->add_binding(id, TO_CONS(args->cdr)->car, false);
+    bool flag = envt->add_binding(id, TO_PAIR(args->cdr)->car, false);
     if (!flag) throw TokenError(id->ext_repr(), RUN_ERR_UNBOUND_VAR);
     *top_ptr++ = new UnspecObj();
     return ret_addr->next;
@@ -815,18 +815,18 @@ string SpecialOptSet::ext_repr() { return string("#<Builtin Macro: set!>"); }
 
 SpecialOptQuote::SpecialOptQuote() : SpecialOptObj("quote") {}
 
-void SpecialOptQuote::prepare(Cons *pc) {
+void SpecialOptQuote::prepare(Pair *pc) {
     // Do not evaluate anything
     FILL_MARKS(pc, true);
 }
 
-Cons *SpecialOptQuote::call(ArgList *args, Environment * &envt, 
+Pair *SpecialOptQuote::call(ArgList *args, Environment * &envt, 
         Continuation * &cont, FrameObj ** &top_ptr) {
-    Cons *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
-    Cons *pc = static_cast<Cons*>(ret_addr->car);
+    Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
+    Pair *pc = static_cast<Pair*>(ret_addr->car);
     // revert
     FILL_MARKS(pc, false);
-    *top_ptr++ = TO_CONS(pc->cdr)->car;
+    *top_ptr++ = TO_PAIR(pc->cdr)->car;
     return ret_addr->next;
 }
 
@@ -834,27 +834,27 @@ string SpecialOptQuote::ext_repr() { return string("#<Builtin Macro: quote>"); }
 
 SpecialOptEval::SpecialOptEval() : SpecialOptObj("eval") {}
 
-void SpecialOptEval::prepare(Cons *pc) {
+void SpecialOptEval::prepare(Pair *pc) {
     state = 0;
 }
 
-Cons *SpecialOptEval::call(ArgList *args, Environment * &envt, 
+Pair *SpecialOptEval::call(ArgList *args, Environment * &envt, 
         Continuation * &cont, FrameObj ** &top_ptr) {
     if (args->cdr == empty_list ||
-        TO_CONS(args->cdr)->cdr != empty_list)
+        TO_PAIR(args->cdr)->cdr != empty_list)
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
-    Cons *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
-    Cons *pc = static_cast<Cons*>(ret_addr->car);
+    Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
+    Pair *pc = static_cast<Pair*>(ret_addr->car);
     if (state)
     {
-        *top_ptr++ = TO_CONS(args->cdr)->car;
+        *top_ptr++ = TO_PAIR(args->cdr)->car;
         return ret_addr->next;          // Move to the next instruction
     }
     else
     {
         state = 1;
         top_ptr += 2;
-        return TO_CONS(args->cdr);
+        return TO_PAIR(args->cdr);
     }
 }
 
@@ -862,7 +862,7 @@ string SpecialOptEval::ext_repr() { return string("#<Builtin Macro: eval>"); }
 
 BUILTIN_PROC_DEF(make_pair) {
     ARGS_EXACTLY_TWO;
-    return new Cons(args->car, TO_CONS(args->cdr)->car);
+    return new Pair(args->car, TO_PAIR(args->cdr)->car);
 }
 
 BUILTIN_PROC_DEF(pair_car) {
@@ -870,7 +870,7 @@ BUILTIN_PROC_DEF(pair_car) {
     if (!args->car->is_cons_obj())
         throw TokenError("pair", RUN_ERR_WRONG_TYPE);
 
-    return TO_CONS(args->car)->car;
+    return TO_PAIR(args->car)->car;
 }
 
 BUILTIN_PROC_DEF(pair_cdr) {
@@ -878,7 +878,7 @@ BUILTIN_PROC_DEF(pair_cdr) {
     if (!args->car->is_cons_obj())
         throw TokenError("pair", RUN_ERR_WRONG_TYPE);
 
-    return TO_CONS(args->car)->cdr;
+    return TO_PAIR(args->car)->cdr;
 }
 
 BUILTIN_PROC_DEF(make_list) {
@@ -890,7 +890,7 @@ BUILTIN_PROC_DEF(make_list) {
 BUILTIN_PROC_DEF(num_add) {
     ARGS_AT_LEAST_ONE;
     NumObj *res = new IntNumObj(0), *opr; // the most accurate type
-    for (;args != empty_list; args = TO_CONS(args->cdr))
+    for (;args != empty_list; args = TO_PAIR(args->cdr))
     {
         if (!args->car->is_num_obj())        // not a number
             throw TokenError("a number", RUN_ERR_WRONG_TYPE);
@@ -911,8 +911,8 @@ BUILTIN_PROC_DEF(num_sub) {
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
 
     NumObj *res = static_cast<NumObj*>(args->car), *opr;
-    args = TO_CONS(args->cdr);
-    for (; args != empty_list; args = TO_CONS(args->cdr))
+    args = TO_PAIR(args->cdr);
+    for (; args != empty_list; args = TO_PAIR(args->cdr))
     {
         if (!args->car->is_num_obj())        // not a number
             throw TokenError("a number", RUN_ERR_WRONG_TYPE);
@@ -932,7 +932,7 @@ BUILTIN_PROC_DEF(num_sub) {
 BUILTIN_PROC_DEF(num_mul) {
     ARGS_AT_LEAST_ONE;
     NumObj *res = new IntNumObj(1), *opr; // the most accurate type
-    for (;args != empty_list; args = TO_CONS(args->cdr))
+    for (;args != empty_list; args = TO_PAIR(args->cdr))
     {
         if (!args->car->is_num_obj())        // not a number
             throw TokenError("a number", RUN_ERR_WRONG_TYPE);
@@ -953,8 +953,8 @@ BUILTIN_PROC_DEF(num_div) {
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
 
     NumObj *res = static_cast<NumObj*>(args->car), *opr;
-    args = TO_CONS(args->cdr);
-    for (; args != empty_list; args = TO_CONS(args->cdr))
+    args = TO_PAIR(args->cdr);
+    for (; args != empty_list; args = TO_PAIR(args->cdr))
     {
         if (!args->car->is_num_obj())        // not a number
             throw TokenError("a number", RUN_ERR_WRONG_TYPE);
@@ -978,7 +978,7 @@ BUILTIN_PROC_DEF(num_lt) {
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
 
     NumObj *last = static_cast<NumObj*>(args->car), *opr; 
-    for (; args != empty_list; args = TO_CONS(args->cdr), last = opr)
+    for (; args != empty_list; args = TO_PAIR(args->cdr), last = opr)
     {
         if (!args->car->is_num_obj())        // not a number
             throw TokenError("a number", RUN_ERR_WRONG_TYPE);
@@ -1002,7 +1002,7 @@ BUILTIN_PROC_DEF(num_gt) {
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
 
     NumObj *last = static_cast<NumObj*>(args->car), *opr; 
-    for (; args != empty_list; args = TO_CONS(args->cdr), last = opr)
+    for (; args != empty_list; args = TO_PAIR(args->cdr), last = opr)
     {
         if (!args->car->is_num_obj())        // not a number
             throw TokenError("a number", RUN_ERR_WRONG_TYPE);
@@ -1026,7 +1026,7 @@ BUILTIN_PROC_DEF(num_eq) {
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
 
     NumObj *last = static_cast<NumObj*>(args->car), *opr; 
-    for (; args != empty_list; args = TO_CONS(args->cdr), last = opr)
+    for (; args != empty_list; args = TO_PAIR(args->cdr), last = opr)
     {
         if (!args->car->is_num_obj())        // not a number
             throw TokenError("a number", RUN_ERR_WRONG_TYPE);
@@ -1061,7 +1061,7 @@ BUILTIN_PROC_DEF(pair_set_car) {
     ARGS_EXACTLY_TWO;
     if (!args->car->is_cons_obj())
         throw TokenError("pair", RUN_ERR_WRONG_TYPE);
-    TO_CONS(args->car)->car = TO_CONS(args->cdr)->car;
+    TO_PAIR(args->car)->car = TO_PAIR(args->cdr)->car;
     return new UnspecObj();
 }
 
@@ -1069,7 +1069,7 @@ BUILTIN_PROC_DEF(pair_set_cdr) {
     ARGS_EXACTLY_TWO;
     if (!args->car->is_cons_obj())
         throw TokenError("pair", RUN_ERR_WRONG_TYPE);
-    TO_CONS(args->car)->cdr = TO_CONS(args->cdr)->car;
+    TO_PAIR(args->car)->cdr = TO_PAIR(args->cdr)->car;
     return new UnspecObj();
 }
 
@@ -1084,12 +1084,12 @@ BUILTIN_PROC_DEF(is_list) {
         return new BoolObj(true);
     if (!args->car->is_cons_obj())
         return new BoolObj(false);
-    args = TO_CONS(args->car);
+    args = TO_PAIR(args->car);
     EvalObj *nptr;
     for (;;)
     {
         if ((nptr = args->cdr)->is_cons_obj())
-            args = TO_CONS(nptr);
+            args = TO_PAIR(nptr);
         else break;
     }
     return new BoolObj(args->cdr == empty_list);
@@ -1117,11 +1117,11 @@ BUILTIN_PROC_DEF(length) {
         throw TokenError("a list", RUN_ERR_WRONG_TYPE);
     int num = 0;
     EvalObj *nptr;
-    for (args = TO_CONS(args->car);;)
+    for (args = TO_PAIR(args->car);;)
     {
         num++;
         if ((nptr = args->cdr)->is_cons_obj())
-            args = TO_CONS(nptr);
+            args = TO_PAIR(nptr);
         else 
             break;
     }
@@ -1130,43 +1130,43 @@ BUILTIN_PROC_DEF(length) {
     return new IntNumObj(mpz_class(num));
 }
 
-Cons *copy_list(Cons *src, EvalObj * &tail) {
+Pair *copy_list(Pair *src, EvalObj * &tail) {
     if (src == empty_list)
         throw NormalError(INT_ERR);
     EvalObj* nptr;
-    Cons head(NULL, NULL);
+    Pair head(NULL, NULL);
     tail = &head;
     for (;;)
     {
-        TO_CONS(tail)->cdr = new Cons(*src);
-        tail = TO_CONS(TO_CONS(tail)->cdr);
+        TO_PAIR(tail)->cdr = new Pair(*src);
+        tail = TO_PAIR(TO_PAIR(tail)->cdr);
         if ((nptr = src->cdr)->is_cons_obj())
-            src = TO_CONS(nptr);
+            src = TO_PAIR(nptr);
         else break;
     }
-    return TO_CONS(head.cdr);
+    return TO_PAIR(head.cdr);
 }
 
 BUILTIN_PROC_DEF(append) {
     EvalObj *tail = empty_list, *head = tail;
-    for (; args != empty_list; args = TO_CONS(args->cdr))
+    for (; args != empty_list; args = TO_PAIR(args->cdr))
     {
         if (tail == empty_list)
         {
             head = args->car;
             if (head->is_cons_obj())
-                head = copy_list(TO_CONS(head), tail);
+                head = copy_list(TO_PAIR(head), tail);
             else tail = head;
         }
         else 
         {
             if (tail->is_cons_obj())
             {
-                Cons *prev = TO_CONS(tail);
+                Pair *prev = TO_PAIR(tail);
                 if (prev->cdr != empty_list)
                     throw TokenError("empty list", RUN_ERR_WRONG_TYPE);
                 if (args->car->is_cons_obj())
-                    prev->cdr = copy_list(TO_CONS(args->car), tail);
+                    prev->cdr = copy_list(TO_PAIR(args->car), tail);
                 else
                     prev->cdr = args->car;
             }
@@ -1179,11 +1179,11 @@ BUILTIN_PROC_DEF(append) {
 
 BUILTIN_PROC_DEF(reverse) {
     ARGS_EXACTLY_ONE;
-    Cons *tail = empty_list;
+    Pair *tail = empty_list;
     EvalObj *ptr;
     for (ptr = args->car; 
-            ptr->is_cons_obj(); ptr = TO_CONS(ptr)->cdr)
-        tail = new Cons(TO_CONS(ptr)->car, tail);
+            ptr->is_cons_obj(); ptr = TO_PAIR(ptr)->cdr)
+        tail = new Pair(TO_PAIR(ptr)->car, tail);
     if (ptr != empty_list)
         throw TokenError("a list", RUN_ERR_WRONG_TYPE);
     return tail;
@@ -1191,7 +1191,7 @@ BUILTIN_PROC_DEF(reverse) {
 
 BUILTIN_PROC_DEF(list_tail) {
     ARGS_EXACTLY_TWO;
-    EvalObj *sec = TO_CONS(args->cdr)->car;
+    EvalObj *sec = TO_PAIR(args->cdr)->car;
     if (!sec->is_num_obj() || 
             static_cast<NumObj*>(sec)->level != NUM_LVL_INT)
         throw TokenError("an exact integer", RUN_ERR_WRONG_TYPE);
@@ -1200,13 +1200,13 @@ BUILTIN_PROC_DEF(list_tail) {
         throw TokenError("a non-negative integer", RUN_ERR_WRONG_TYPE);
     EvalObj *ptr;
     for (i = 0, ptr = args->car;
-            ptr->is_cons_obj(); ptr = TO_CONS(ptr)->cdr, i++)
+            ptr->is_cons_obj(); ptr = TO_PAIR(ptr)->cdr, i++)
         if (i == k) break;
     if (i != k)
         throw TokenError("a pair", RUN_ERR_WRONG_TYPE);
     EvalObj *tail;
     if (ptr->is_cons_obj())
-        return copy_list(TO_CONS(ptr), tail);
+        return copy_list(TO_PAIR(ptr), tail);
     else
         return ptr;
 }
@@ -1214,7 +1214,7 @@ BUILTIN_PROC_DEF(list_tail) {
 BUILTIN_PROC_DEF(is_eqv) {
     ARGS_EXACTLY_TWO;
     EvalObj *obj1 = args->car;
-    EvalObj *obj2 = TO_CONS(args->cdr)->car;
+    EvalObj *obj2 = TO_PAIR(args->cdr)->car;
     ClassType otype = obj1->get_otype();
 
     if (otype != obj2->get_otype()) return new BoolObj(false);

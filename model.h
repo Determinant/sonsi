@@ -27,10 +27,11 @@ const int CLS_NUM_OBJ = 1 << 4;
 const int CLS_BOOL_OBJ = 1 << 5;
 const int CLS_CHAR_OBJ = 1 << 6;
 const int CLS_STR_OBJ = 1 << 7;
+const int CLS_VECT_OBJ = 1 << 8;
 
 
-#define TO_CONS(ptr) \
-    (static_cast<Cons*>(ptr))
+#define TO_PAIR(ptr) \
+    (static_cast<Pair*>(ptr))
 
 /** @class FrameObj
  * Objects that can be held in the evaluation stack
@@ -60,14 +61,10 @@ class FrameObj {
          * @return true for yes
          */
         bool is_parse_bracket();
-
-#ifdef DEBUG
-        virtual string _debug_repr() = 0;  
-#endif
 };
 
 
-class Cons;
+class Pair;
 /** @class EvalObj
  * Objects that represents a value in evaluation
  */
@@ -77,7 +74,7 @@ class EvalObj : public FrameObj {
          * Report the type of the EvalObj, which can avoid the use of
          * dynamic_cast to improve efficiency. See the constructor for detail
          */
-        ClassType otype;
+        int otype;
     public:
         /**
          * Construct an EvalObj
@@ -85,78 +82,72 @@ class EvalObj : public FrameObj {
          * construction, CLS_SIM_OBJ for a simple object), which defaults to
          * CLS_SIM_OBJ
          */
-        EvalObj(ClassType otype = CLS_SIM_OBJ);
+        EvalObj(int otype = CLS_SIM_OBJ);
         /** Check if the object is a simple object (instead of a call
          * invocation) 
-         * @return true if the object is not a construction (Cons)
+         * @return true if the object is not a construction (Pair)
          * */
         bool is_simple_obj();
         /** Check if the object is a symobl */
         bool is_sym_obj();
         /** Check if the object is an operator */
         bool is_opt_obj();
-        /** Check if the object is a Cons */
+        /** Check if the object is a Pair */
         bool is_cons_obj();
         /** Check if the object is a number */
         bool is_num_obj();
         /** Check if the object is a boolean */
         bool is_bool_obj();
         ClassType get_otype();
-        virtual void prepare(Cons *pc);
+        virtual void prepare(Pair *pc);
         /** Any EvalObj has its external representation */
-        virtual string ext_repr() = 0;  
+        virtual string ext_repr();
         /** Always true for all EvalObjs except BoolObj */
         virtual bool is_true();         
-#ifdef DEBUG
-        virtual string _debug_repr();
-        virtual void _debug_print();
-#endif
 };
 
-/** @class Cons
+/** @class Pair
  * Pair construct, which can be used to represent a list, or further
  * more, a syntax tree
  * (car . cdr) in Scheme
  */
-class Cons : public EvalObj {
+class Pair : public EvalObj {
     public:
         EvalObj *car;                   /**< car (as in Scheme) */
         EvalObj *cdr;                      /**< cdr (as in Scheme) */
         bool skip;                      /**< Wether to skip the current branch */
-        Cons* next;                     /**< The next branch in effect */
+        Pair* next;                     /**< The next branch in effect */
 
-        Cons(EvalObj *car, EvalObj *cdr);  /**< Create a Cons (car . cdr) */
-#ifdef DEBUG
-        void _debug_print();
-        string _debug_repr();
-#endif
-        string ext_repr();
+        Pair(EvalObj *car, EvalObj *cdr);  /**< Create a Pair (car . cdr) */
 };
 
 /** @class EmptyList
  * The empty list (special situation of a list)
  */
-class EmptyList: public Cons {
+class EmptyList: public Pair {
     public:
         EmptyList();
-#ifdef DEBUG
-        string _debug_repr();
-#endif
         string ext_repr();
 };
 
 /** @class RetAddr
- * Tracking the caller's Cons pointer
+ * Tracking the caller's Pair pointer
  */
 class RetAddr : public FrameObj {
     public:
-        Cons* addr;                      /**< The return address  */
+        Pair* addr;                      /**< The return address  */
         /** Constructs a return address object which refers to the node addr in
          * the AST */
-        RetAddr(Cons *addr);
-#ifdef DEBUG
-        string _debug_repr();
-#endif
+        RetAddr(Pair *addr);
+};
+
+class ReprConstructor : public FrameObj {
+    virtual EvalObj *next();
+};
+
+class ExtRepr : public FrameObj {
+    public:
+    string repr;
 };
 
 /** @class ParseBracket
@@ -167,9 +158,6 @@ class ParseBracket : public FrameObj {
         unsigned char btype;            /**< The type of the bracket */
         /** Construct a ParseBracket object */
         ParseBracket(unsigned char btype);
-#ifdef DEBUG
-        string _debug_repr();
-#endif
 };
 
 /** @class UnspecObj
@@ -178,9 +166,6 @@ class ParseBracket : public FrameObj {
 class UnspecObj: public EvalObj {
     public:
         UnspecObj();
-#ifdef DEBUG
-        string _debug_repr();
-#endif
         string ext_repr();
 };
 
@@ -199,9 +184,7 @@ class SymObj: public EvalObj {
 };
 
 // Everything is cons
-typedef Cons ASTList;
-typedef Cons SymbolList;
-typedef Cons ArgList;
+typedef Pair ArgList;
 class Environment;
 class Continuation;
 
@@ -219,7 +202,7 @@ class OptObj: public EvalObj {
          * @param top_ptr Pointing to the top of the stack (may be modified)
          * @return New value for pc register 
          */
-        virtual Cons *call(ArgList *args, Environment * &envt, 
+        virtual Pair *call(ArgList *args, Environment * &envt, 
                             Continuation * &cont, FrameObj ** &top_ptr) = 0;
 };
 
@@ -229,19 +212,16 @@ class OptObj: public EvalObj {
 class ProcObj: public OptObj {
     public:
         /** The procedure body, a list of expressions to be evaluated */
-        ASTList *body;        
+        Pair *body;        
         /** The arguments: <list> | var1 ... | var1 var2 ... . varn */
         EvalObj *params;
         /** Pointer to the environment */
         Environment *envt;
 
         /** Conctructs a ProcObj */
-        ProcObj(ASTList *body, Environment *envt, EvalObj *params);
-        Cons *call(ArgList *args, Environment * &envt,
+        ProcObj(Pair *body, Environment *envt, EvalObj *params);
+        Pair *call(ArgList *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
-#ifdef DEBUG
-        string _debug_repr();
-#endif
         string ext_repr();
 };
 
@@ -271,11 +251,8 @@ class BuiltinProcObj: public OptObj {
          * @param name the name of this built-in procedure
          */
         BuiltinProcObj(BuiltinProc proc, string name);
-        Cons *call(ArgList *args, Environment * &envt,
+        Pair *call(ArgList *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
-#ifdef DEBUG
-        string _debug_repr();
-#endif
         string ext_repr();
 };
 
@@ -371,7 +348,6 @@ class VecObj: public EvalObj {
         void resize(int new_size);
         /** Add a new element to the rear */
         void push_back(EvalObj *new_elem);
-        string ext_repr();
 };
 
 typedef map<string, EvalObj*> Str2EvalObj;
@@ -411,15 +387,15 @@ class Continuation {
         /** Linking the previous continuation on the chain */
         Continuation *prev_cont;    
         Environment *envt;  /**< The saved envt */
-        Cons *pc;           /**< The saved pc */
+        Pair *pc;           /**< The saved pc */
         /** Pointing to the current expression that is being evaluated.
          * When its value goes to empty_list, the call is accomplished.
          */
-        ASTList *proc_body;
+        Pair *proc_body;
 
         /** Create a continuation */
-        Continuation(Environment *envt, Cons *pc, Continuation *prev_cont, 
-                ASTList *proc_body);
+        Continuation(Environment *envt, Pair *pc, Continuation *prev_cont, 
+                Pair *proc_body);
 };
 
 #endif

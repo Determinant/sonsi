@@ -10,7 +10,7 @@ using std::stringstream;
 
 static char buff[TOKEN_BUFF_SIZE];
 static FrameObj *parse_stack[PARSE_STACK_SIZE];
-extern Cons *empty_list;
+extern Pair *empty_list;
 
 Tokenizor::Tokenizor() : stream(stdin), buff_ptr(buff), escaping(false) {}
 void Tokenizor::set_stream(FILE *_stream) {
@@ -145,7 +145,7 @@ EvalObj *ASTGenerator::to_obj(const string &str) {
 #define IS_BRAKET(ptr) \
     ((ptr)->is_parse_bracket())
 
-Cons *ASTGenerator::absorb(Tokenizor *tk) {
+Pair *ASTGenerator::absorb(Tokenizor *tk) {
     FrameObj **top_ptr = parse_stack;
     for (;;)
     {
@@ -157,8 +157,8 @@ Cons *ASTGenerator::absorb(Tokenizor *tk) {
             if (bptr->btype == 2)
             {
                 top_ptr -= 2;
-                Cons *lst_cdr = new Cons(TO_EVAL(*(top_ptr + 1)), empty_list);
-                Cons *lst = new Cons(new SymObj("quote"), lst_cdr);
+                Pair *lst_cdr = new Pair(TO_EVAL(*(top_ptr + 1)), empty_list);
+                Pair *lst = new Pair(new SymObj("quote"), lst_cdr);
                 lst->next = lst_cdr;
                 lst_cdr->next = NULL;
                 *top_ptr++ = lst;
@@ -166,7 +166,7 @@ Cons *ASTGenerator::absorb(Tokenizor *tk) {
         }
 
         if (top_ptr > parse_stack && !IS_BRAKET(*parse_stack))
-            return new Cons(TO_EVAL(*(top_ptr - 1)), empty_list);
+            return new Pair(TO_EVAL(*(top_ptr - 1)), empty_list);
         string token;
         if (!tk->get_token(token)) return NULL;
         if (token == "(")       // a list
@@ -188,15 +188,15 @@ Cons *ASTGenerator::absorb(Tokenizor *tk) {
                 {
                     if (improper || 
                         lst == empty_list || 
-                        TO_CONS(lst)->cdr != empty_list)
+                        TO_PAIR(lst)->cdr != empty_list)
                         throw NormalError(PAR_ERR_IMPROPER_PAIR);
                     improper = true;
-                    lst = TO_CONS(lst)->car;
+                    lst = TO_PAIR(lst)->car;
                 }
                 else
                 {
-                    Cons *_lst = new Cons(obj, lst);    // Collect the list
-                    _lst->next = lst->is_cons_obj() ? TO_CONS(lst) : NULL;
+                    Pair *_lst = new Pair(obj, lst);    // Collect the list
+                    _lst->next = lst->is_cons_obj() ? TO_PAIR(lst) : NULL;
                     lst = _lst;
                 }
             }
@@ -208,7 +208,7 @@ Cons *ASTGenerator::absorb(Tokenizor *tk) {
             {
                 if (improper) throw NormalError(PAR_ERR_IMPROPER_VECT);
                 VecObj *vec = new VecObj();
-                for (Cons *ptr = TO_CONS(lst); ptr != empty_list; ptr = TO_CONS(ptr->cdr))
+                for (Pair *ptr = TO_PAIR(lst); ptr != empty_list; ptr = TO_PAIR(ptr->cdr))
                     vec->push_back(ptr->car);
                 *top_ptr++ = vec;
             }

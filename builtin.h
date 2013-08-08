@@ -7,7 +7,7 @@
 
 using std::string;
 
-bool is_list(Cons *ptr);
+bool is_list(Pair *ptr);
 
 /** @class InexactNumObj
  * Inexact number implementation (using doubles)
@@ -152,18 +152,18 @@ class SpecialOptIf: public SpecialOptObj {
          * The evaluator will call this after the <condition> exp is evaluated.
          * And this function tells the evaluator which of <consequence> and
          * <alternative> should be evaluted. */
-        void pre_call(ArgList *args, Cons *pc, 
+        void pre_call(ArgList *args, Pair *pc, 
                 Environment *envt);
         /** The system will call this again after the desired result is
          * evaluated, so just return it to let the evaluator know the it's the
          * answer.
          */
-        EvalObj *post_call(ArgList *args, Cons *pc, 
+        EvalObj *post_call(ArgList *args, Pair *pc, 
                 Environment *envt);
     public:
         SpecialOptIf();
-        void prepare(Cons *pc);
-        Cons *call(ArgList *args, Environment * &envt, 
+        void prepare(Pair *pc);
+        Pair *call(ArgList *args, Environment * &envt, 
                     Continuation * &cont, FrameObj ** &top_ptr);
         string ext_repr();
 };
@@ -174,8 +174,8 @@ class SpecialOptIf: public SpecialOptObj {
 class SpecialOptLambda: public SpecialOptObj {
     public:
         SpecialOptLambda();
-        void prepare(Cons *pc);
-        Cons *call(ArgList *args, Environment * &envt, 
+        void prepare(Pair *pc);
+        Pair *call(ArgList *args, Environment * &envt, 
                     Continuation * &cont, FrameObj ** &top_ptr);
 
         string ext_repr();
@@ -187,8 +187,8 @@ class SpecialOptLambda: public SpecialOptObj {
 class SpecialOptDefine: public SpecialOptObj {
     public:
         SpecialOptDefine(); 
-        void prepare(Cons *pc);
-        Cons *call(ArgList *args, Environment * &envt, 
+        void prepare(Pair *pc);
+        Pair *call(ArgList *args, Environment * &envt, 
                     Continuation * &cont, FrameObj ** &top_ptr);
         string ext_repr();
 };
@@ -199,8 +199,8 @@ class SpecialOptDefine: public SpecialOptObj {
 class SpecialOptSet: public SpecialOptObj {
     public:
         SpecialOptSet();
-        void prepare(Cons *pc);
-        Cons *call(ArgList *args, Environment * &envt, 
+        void prepare(Pair *pc);
+        Pair *call(ArgList *args, Environment * &envt, 
                     Continuation * &cont, FrameObj ** &top_ptr);
         string ext_repr();
 };
@@ -211,8 +211,8 @@ class SpecialOptSet: public SpecialOptObj {
 class SpecialOptQuote: public SpecialOptObj {
     public:
         SpecialOptQuote();
-        void prepare(Cons *pc);
-        Cons *call(ArgList *args, Environment * &envt, 
+        void prepare(Pair *pc);
+        Pair *call(ArgList *args, Environment * &envt, 
                     Continuation * &cont, FrameObj ** &top_ptr);
 
         string ext_repr();
@@ -226,8 +226,8 @@ class SpecialOptEval: public SpecialOptObj {
         unsigned char state; /**< 0 for prepared, 1 for pre_called */
     public:
         SpecialOptEval();
-        void prepare(Cons *pc);
-        Cons *call(ArgList *args, Environment * &envt, 
+        void prepare(Pair *pc);
+        Pair *call(ArgList *args, Environment * &envt, 
                     Continuation * &cont, FrameObj ** &top_ptr);
 
         string ext_repr();

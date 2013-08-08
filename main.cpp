@@ -6,14 +6,7 @@
 #include <cstdio>
 
 #ifdef DEBUG
-extern Cons *empty_list;
-void tree_print(Cons *ptr) {
-    ptr->_debug_print();
-    if (ptr->car->is_cons_obj())
-        tree_print(TO_CONS(ptr->car));
-    if (ptr->cdr->is_cons_obj())
-        tree_print(TO_CONS(ptr->cdr));
-}
+extern Pair *empty_list;
 #endif
 
 int main() {
@@ -28,9 +21,8 @@ int main() {
         fprintf(stderr, "Sonsi> ");
         try
         {
-            Cons *tree = ast->absorb(tk);
+            Pair *tree = ast->absorb(tk);
             if (!tree) break;
-            //tree_print(tree);
             fprintf(stderr, "Ret> $%d = %s\n", rcnt++, 
                     eval->run_expr(tree)->ext_repr().c_str());
         }

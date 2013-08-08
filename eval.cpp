@@ -4,7 +4,7 @@
 #include "consts.h"
 #include <cstdio>
 
-extern Cons *empty_list;
+extern Pair *empty_list;
 const int EVAL_STACK_SIZE = 65536;
 FrameObj *eval_stack[EVAL_STACK_SIZE];
 
@@ -63,7 +63,7 @@ Evaluator::Evaluator() {
     add_builtin_routines();
 }
 
-void push(Cons * &pc, FrameObj ** &top_ptr, Environment *envt) {
+void push(Pair * &pc, FrameObj ** &top_ptr, Environment *envt) {
     if (pc->car->is_simple_obj())           // Not an opt invocation
     {
         *top_ptr = envt->get_obj(pc->car);  // Objectify the symbol
@@ -78,22 +78,16 @@ void push(Cons * &pc, FrameObj ** &top_ptr, Environment *envt) {
             throw NormalError(SYN_ERR_EMPTY_COMB);
 
         *top_ptr++ = new RetAddr(pc);       // Push the return address
-        if (!is_list(TO_CONS(pc->car)))
+        if (!is_list(TO_PAIR(pc->car)))
             throw TokenError(pc->car->ext_repr(), RUN_ERR_WRONG_NUM_OF_ARGS); 
         // static_cast because of is_simple_obj() is false
-        pc = static_cast<Cons*>(pc->car);  // Go deeper to enter the call
+        pc = static_cast<Pair*>(pc->car);  // Go deeper to enter the call
     }
 }
 
-void stack_print(FrameObj **top_ptr) {
-    for (FrameObj **ptr = eval_stack; ptr != top_ptr; ptr++)
-        printf("%s\n", (*ptr)->_debug_repr().c_str());
-    puts("");
-}
-
-EvalObj *Evaluator::run_expr(Cons *prog) {
+EvalObj *Evaluator::run_expr(Pair *prog) {
     FrameObj **top_ptr = eval_stack;
-    Cons *pc = prog;
+    Pair *pc = prog;
     Continuation *cont = NULL;
     // envt is this->envt
     push(pc, top_ptr, envt);   
@@ -105,14 +99,14 @@ EvalObj *Evaluator::run_expr(Cons *prog) {
             push(pc, top_ptr, envt);
         else
         {
-            Cons *args = empty_list;
+            Pair *args = empty_list;
             while (!(*(--top_ptr))->is_ret_addr())
-                args = new Cons(static_cast<EvalObj*>(*top_ptr), args);
+                args = new Pair(static_cast<EvalObj*>(*top_ptr), args);
             //< static_cast because the while condition
             RetAddr *ret_addr = static_cast<RetAddr*>(*top_ptr);
             if (!ret_addr->addr)
             {
-                Cons *nexp = TO_CONS(cont->proc_body->cdr);
+                Pair *nexp = TO_PAIR(cont->proc_body->cdr);
                 cont->proc_body = nexp;
                 if (nexp == empty_list)
                 {

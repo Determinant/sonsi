@@ -31,7 +31,7 @@ class Tokenizor {
 
 /** @class ASTGenerator
  * Read the tokens and build up an Abstract Syntax Tree (which is in effect a
- * Cons)
+ * Pair)
  */
 class ASTGenerator {
     private:
@@ -43,7 +43,7 @@ class ASTGenerator {
          * @param tk pointer to a Tokenizor
          * @return Abstract Syntax Tree
          */
-        Cons *absorb(Tokenizor *tk); 
+        Pair *absorb(Tokenizor *tk); 
 };
 
 #endif

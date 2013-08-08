@@ -11,7 +11,7 @@ class Evaluator {
         void add_builtin_routines();    /**< Add builtin routines to the env */
     public:
         Evaluator();
-        EvalObj *run_expr(Cons *prog);  /**< Interpret a program */
+        EvalObj *run_expr(Pair *prog);  /**< Interpret a program */
 };
 
 #endif
