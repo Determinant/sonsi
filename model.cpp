@@ -123,10 +123,10 @@ string UnspecObj::_debug_repr() { return ext_repr(); }
 SymObj::SymObj(const string &str) : 
     EvalObj(CLS_SIM_OBJ | CLS_SYM_OBJ), val(str) {}
 
-string SymObj::ext_repr() { return "#<Symbol: " + val + ">"; }
+string SymObj::ext_repr() { return val; }
 
 #ifdef DEBUG
-string SymObj::_debug_repr() { return ext_repr(); }
+string SymObj::_debug_repr() { return "#<Symbol: " + val + ">"; }
 #endif
 
 OptObj::OptObj() : EvalObj(CLS_SIM_OBJ | CLS_OPT_OBJ) {}
@@ -156,7 +156,7 @@ Cons *ProcObj::call(ArgList *args, Environment * &genvt,
         _envt->add_binding(static_cast<SymObj*>(TO_CONS(ppar)->car), args->car);
     }
 
-    if (!ppar->is_cons_obj())
+    if (ppar->is_sym_obj())
         _envt->add_binding(static_cast<SymObj*>(ppar), args->cdr); // (... . var_n)
     else if (args->cdr != empty_list || ppar != empty_list)
         throw TokenError("", RUN_ERR_WRONG_NUM_OF_ARGS);
