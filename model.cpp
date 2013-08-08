@@ -52,6 +52,10 @@ bool EvalObj::is_bool_obj() {
     return otype & CLS_BOOL_OBJ;
 }
 
+ClassType EvalObj::get_otype() {
+    return otype;
+}
+
 #ifdef DEBUG
 string EvalObj::_debug_repr() {
     return ext_repr();
@@ -196,11 +200,11 @@ NumObj::NumObj(NumLvl _level, bool _exactness) :
 
 bool NumObj::is_exact() { return exactness; }
 
-StrObj::StrObj(string _str) : EvalObj(CLS_SIM_OBJ), str(_str) {}
+StrObj::StrObj(string _str) : EvalObj(CLS_SIM_OBJ | CLS_STR_OBJ), str(_str) {}
 
 string StrObj::ext_repr() { return str; }
 
-CharObj::CharObj(char _ch) : EvalObj(CLS_SIM_OBJ), ch(_ch) {}
+CharObj::CharObj(char _ch) : EvalObj(CLS_SIM_OBJ | CLS_CHAR_OBJ), ch(_ch) {}
 
 CharObj *CharObj::from_string(string repr) {
     int len = repr.length();

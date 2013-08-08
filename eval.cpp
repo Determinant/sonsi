@@ -52,6 +52,9 @@ void Evaluator::add_builtin_routines() {
     ADD_BUILTIN_PROC("reverse", reverse);
     ADD_BUILTIN_PROC("list-tail", list_tail);
 
+    ADD_BUILTIN_PROC("eqv?", is_eqv);
+    ADD_BUILTIN_PROC("eq?", is_eqv);
+
     ADD_BUILTIN_PROC("display", display);
 }
 

@@ -265,6 +265,8 @@ BUILTIN_PROC_DEF(append);
 BUILTIN_PROC_DEF(reverse);
 BUILTIN_PROC_DEF(list_tail);
 
+BUILTIN_PROC_DEF(is_eqv);
+
 BUILTIN_PROC_DEF(display);
 
 

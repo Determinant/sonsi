@@ -25,6 +25,8 @@ const int CLS_SYM_OBJ = 1 << 2;
 const int CLS_OPT_OBJ = 1 << 3;
 const int CLS_NUM_OBJ = 1 << 4;
 const int CLS_BOOL_OBJ = 1 << 5;
+const int CLS_CHAR_OBJ = 1 << 6;
+const int CLS_STR_OBJ = 1 << 7;
 
 
 #define TO_CONS(ptr) \
@@ -99,6 +101,7 @@ class EvalObj : public FrameObj {
         bool is_num_obj();
         /** Check if the object is a boolean */
         bool is_bool_obj();
+        ClassType get_otype();
         virtual void prepare(Cons *pc);
         /** Any EvalObj has its external representation */
         virtual string ext_repr() = 0;  

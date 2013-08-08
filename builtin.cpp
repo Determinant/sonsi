@@ -1211,6 +1211,39 @@ BUILTIN_PROC_DEF(list_tail) {
         return ptr;
 }
 
+BUILTIN_PROC_DEF(is_eqv) {
+    ARGS_EXACTLY_TWO;
+    EvalObj *obj1 = args->car;
+    EvalObj *obj2 = TO_CONS(args->cdr)->car;
+    ClassType otype = obj1->get_otype();
+
+    if (otype != obj2->get_otype()) return new BoolObj(false);
+    if (otype & CLS_BOOL_OBJ)
+        return new BoolObj(
+            static_cast<BoolObj*>(obj1)->val == 
+            static_cast<BoolObj*>(obj2)->val);
+    if (otype & CLS_SYM_OBJ)
+        return new BoolObj(
+            static_cast<SymObj*>(obj1)->val ==
+            static_cast<SymObj*>(obj2)->val);
+    if (otype & CLS_NUM_OBJ)
+    {
+        NumObj *num1 = static_cast<NumObj*>(obj1);
+        NumObj *num2 = static_cast<NumObj*>(obj2);
+        if (num1->is_exact() != num2->is_exact())
+            return new BoolObj(false);
+        if (num1->level < num2->level)
+            return new BoolObj(num1->eq(num1->convert(num2)));
+        else
+            return new BoolObj(num2->eq(num2->convert(num1)));
+    }
+    if (otype & CLS_CHAR_OBJ)
+        return new BoolObj(
+            static_cast<CharObj*>(obj1)->ch ==
+            static_cast<CharObj*>(obj2)->ch);    // (char=?)
+    return new BoolObj(obj1 == obj2);
+}
+
 BUILTIN_PROC_DEF(display) {
     ARGS_EXACTLY_ONE;
     printf("%s\n", args->car->ext_repr().c_str());
