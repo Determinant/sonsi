@@ -133,8 +133,8 @@ OptObj::OptObj() : EvalObj(CLS_SIM_OBJ | CLS_OPT_OBJ) {}
 
 ProcObj::ProcObj(ASTList *_body, 
                     Environment *_envt, 
-                    SymbolList *_para_list) :
-    OptObj(), body(_body), envt(_envt), para_list(_para_list) {}
+                    EvalObj *_params) :
+    OptObj(), body(_body), envt(_envt), params(_params) {}
 
 Cons *ProcObj::call(ArgList *args, Environment * &genvt,
                     Continuation * &cont, FrameObj ** &top_ptr) {
@@ -144,20 +144,21 @@ Cons *ProcObj::call(ArgList *args, Environment * &genvt,
     Continuation *_cont = new Continuation(genvt, ret_addr, cont, body);
     // Create local env and recall the closure
     Environment *_envt = new Environment(envt);   
-    // static_cast<SymObj*> because the para_list is already checked
-    Cons *ppar;
-    EvalObj *nptr;
-    for (ppar = para_list;
-            ppar != empty_list; 
-            ppar = TO_CONS(ppar->cdr))
+    // static_cast<SymObj*> because the params is already checked
+    EvalObj *ppar, *nptr;
+    for (ppar = params;
+            ppar->is_cons_obj(); 
+            ppar = TO_CONS(ppar)->cdr)
     {
-        if ((nptr = args->cdr)->is_cons_obj())
+        if ((nptr = args->cdr) != empty_list)
             args = TO_CONS(nptr);
         else break;
-        _envt->add_binding(static_cast<SymObj*>(ppar->car), args->car);
+        _envt->add_binding(static_cast<SymObj*>(TO_CONS(ppar)->car), args->car);
     }
 
-    if (args->cdr != empty_list || ppar != empty_list)
+    if (!ppar->is_cons_obj())
+        _envt->add_binding(static_cast<SymObj*>(ppar), args->cdr); // (... . var_n)
+    else if (args->cdr != empty_list || ppar != empty_list)
         throw TokenError("", RUN_ERR_WRONG_NUM_OF_ARGS);
 
     genvt = _envt;

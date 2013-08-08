@@ -117,10 +117,12 @@ class IntNumObj: public ExactNumObj {
         int val;
         /** Construct a integer */
         IntNumObj(int val);
+        int get_i();
 #else
         mpz_class val;
         /** Construct a integer */
         IntNumObj(mpz_class val);
+        int get_i();
 #endif
         /** Try to construct an IntNumObj object 
          * @return NULL if failed
@@ -260,6 +262,8 @@ BUILTIN_PROC_DEF(is_list);
 BUILTIN_PROC_DEF(make_list);
 BUILTIN_PROC_DEF(length);
 BUILTIN_PROC_DEF(append);
+BUILTIN_PROC_DEF(reverse);
+BUILTIN_PROC_DEF(list_tail);
 
 BUILTIN_PROC_DEF(display);
 

@@ -49,6 +49,8 @@ void Evaluator::add_builtin_routines() {
     ADD_BUILTIN_PROC("list", make_list);
     ADD_BUILTIN_PROC("length", length);
     ADD_BUILTIN_PROC("append", append);
+    ADD_BUILTIN_PROC("reverse", reverse);
+    ADD_BUILTIN_PROC("list-tail", list_tail);
 
     ADD_BUILTIN_PROC("display", display);
 }

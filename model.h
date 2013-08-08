@@ -227,13 +227,13 @@ class ProcObj: public OptObj {
     public:
         /** The procedure body, a list of expressions to be evaluated */
         ASTList *body;        
-        /** The arguments, a list of Symbols */
-        SymbolList *para_list;
+        /** The arguments: <list> | var1 ... | var1 var2 ... . varn */
+        EvalObj *params;
         /** Pointer to the environment */
         Environment *envt;
 
         /** Conctructs a ProcObj */
-        ProcObj(ASTList *body, Environment *envt, SymbolList *para_list);
+        ProcObj(ASTList *body, Environment *envt, EvalObj *params);
         Cons *call(ArgList *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
 #ifdef DEBUG

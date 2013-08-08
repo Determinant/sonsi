@@ -469,6 +469,7 @@ IntNumObj *IntNumObj::from_string(string repr) {
     }
     return new IntNumObj(val);
 }
+int IntNumObj::get_i() { return val; }
 #else
 IntNumObj::IntNumObj(mpz_class _val) : ExactNumObj(NUM_LVL_INT), val(_val) {}
 IntNumObj *IntNumObj::from_string(string repr) {
@@ -482,6 +483,7 @@ IntNumObj *IntNumObj::from_string(string repr) {
         return NULL;
     }
 }
+int IntNumObj::get_i() { return val.get_si(); }
 #endif
 
 IntNumObj *IntNumObj::convert(NumObj *obj) {
@@ -630,17 +632,24 @@ do  \
 { \
     EvalObj *nptr; \
     Cons *ptr; \
-    for (ptr = TO_CONS(pc->cdr);;)  \
+    for (ptr = pc;;)  \
     { \
-        ptr->skip = flag; \
         if ((nptr = ptr->cdr)->is_cons_obj()) \
             ptr = TO_CONS(nptr); \
         else break; \
+        ptr->skip = flag; \
     } \
     if (ptr->cdr != empty_list) \
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS); \
 } \
 while (0)
+
+#define CHECK_SYMBOL(ptr) \
+do \
+{ \
+    if (!(ptr)->is_sym_obj()) \
+        throw TokenError("a symbol", RUN_ERR_WRONG_TYPE); \
+} while (0)
 
 #define CHECK_PARA_LIST(p) \
 do  \
@@ -650,14 +659,13 @@ do  \
     Cons *ptr; \
     for (ptr = TO_CONS(p);;)  \
     { \
-        if (!ptr->car->is_sym_obj()) \
-            throw TokenError(ptr->car->ext_repr(), RUN_ERR_WRONG_TYPE); \
         if ((nptr = ptr->cdr)->is_cons_obj()) \
             ptr = TO_CONS(nptr); \
         else break; \
+        CHECK_SYMBOL(ptr->car); \
     } \
     if (ptr->cdr != empty_list) \
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS); \
+       CHECK_SYMBOL(ptr->cdr); \
 } \
 while (0)
 
@@ -681,9 +689,12 @@ Cons *SpecialOptLambda::call(ArgList *args, Environment * &envt,
      // Clear the flag to avoid side-effects (e.g. proc calling)
     FILL_MARKS(pc, false);
    
-    pc = TO_CONS(pc->cdr);
-    CHECK_PARA_LIST(pc->car);
-    SymbolList *para_list = static_cast<SymbolList*>(pc->car); 
+    pc = TO_CONS(pc->cdr);                  // Now pointintg to params
+    if (pc->car->is_simple_obj())
+        CHECK_SYMBOL(pc->car);
+    else
+        CHECK_PARA_LIST(pc->car);
+    EvalObj *params = pc->car;
 
     // store a list of expressions inside <body>
 
@@ -691,7 +702,7 @@ Cons *SpecialOptLambda::call(ArgList *args, Environment * &envt,
     for (Cons *ptr = body; ptr != empty_list; ptr = TO_CONS(ptr->cdr))
         ptr->next = NULL;    // Make each expression an orphan
 
-    *top_ptr++ = new ProcObj(body, envt, para_list);
+    *top_ptr++ = new ProcObj(body, envt, params);
     return ret_addr->next;  // Move to the next instruction
 }
 
@@ -736,12 +747,14 @@ Cons *SpecialOptDefine::call(ArgList *args, Environment * &envt,
 
         if (plst == empty_list)
             throw TokenError(name, SYN_ERR_EMPTY_PARA_LIST);
-        if (!plst->car->is_sym_obj())
-            throw TokenError(first->ext_repr(), SYN_ERR_NOT_AN_ID);
-        CHECK_PARA_LIST(plst->cdr);
+        CHECK_SYMBOL(plst->car);
+        if (plst->cdr->is_simple_obj())
+            CHECK_SYMBOL(plst->cdr);
+        else
+            CHECK_PARA_LIST(plst->cdr);
 
         id = static_cast<SymObj*>(plst->car);
-        ArgList *para_list = TO_CONS(plst->cdr);
+        EvalObj *params = plst->cdr;
         // Clear the flag to avoid side-effects (e.g. proc calling)
         FILL_MARKS(pc, false);
 
@@ -753,7 +766,7 @@ Cons *SpecialOptDefine::call(ArgList *args, Environment * &envt,
         for (Cons *ptr = body; ptr != empty_list; ptr = TO_CONS(ptr->cdr))
             ptr->next = NULL;           // Make each expression a orphan
 
-        obj = new ProcObj(body, envt, para_list);
+        obj = new ProcObj(body, envt, params);
     }
     envt->add_binding(id, obj);
     *top_ptr++ = new UnspecObj();
@@ -1123,7 +1136,7 @@ Cons *copy_list(Cons *src, EvalObj * &tail) {
     EvalObj* nptr;
     Cons head(NULL, NULL);
     tail = &head;
-    for (; src != empty_list;)
+    for (;;)
     {
         TO_CONS(tail)->cdr = new Cons(*src);
         tail = TO_CONS(TO_CONS(tail)->cdr);
@@ -1164,6 +1177,39 @@ BUILTIN_PROC_DEF(append) {
     return head;
 }
 
+BUILTIN_PROC_DEF(reverse) {
+    ARGS_EXACTLY_ONE;
+    Cons *tail = empty_list;
+    EvalObj *ptr;
+    for (ptr = args->car; 
+            ptr->is_cons_obj(); ptr = TO_CONS(ptr)->cdr)
+        tail = new Cons(TO_CONS(ptr)->car, tail);
+    if (ptr != empty_list)
+        throw TokenError("a list", RUN_ERR_WRONG_TYPE);
+    return tail;
+}
+
+BUILTIN_PROC_DEF(list_tail) {
+    ARGS_EXACTLY_TWO;
+    EvalObj *sec = TO_CONS(args->cdr)->car;
+    if (!sec->is_num_obj() || 
+            static_cast<NumObj*>(sec)->level != NUM_LVL_INT)
+        throw TokenError("an exact integer", RUN_ERR_WRONG_TYPE);
+    int i, k = static_cast<IntNumObj*>(sec)->get_i();
+    if (k < 0)
+        throw TokenError("a non-negative integer", RUN_ERR_WRONG_TYPE);
+    EvalObj *ptr;
+    for (i = 0, ptr = args->car;
+            ptr->is_cons_obj(); ptr = TO_CONS(ptr)->cdr, i++)
+        if (i == k) break;
+    if (i != k)
+        throw TokenError("a pair", RUN_ERR_WRONG_TYPE);
+    EvalObj *tail;
+    if (ptr->is_cons_obj())
+        return copy_list(TO_CONS(ptr), tail);
+    else
+        return ptr;
+}
 
 BUILTIN_PROC_DEF(display) {
     ARGS_EXACTLY_ONE;
