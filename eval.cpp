@@ -34,6 +34,7 @@ void Evaluator::add_builtin_routines() {
 
     ADD_BUILTIN_PROC("exact?", num_is_exact);
     ADD_BUILTIN_PROC("inexact?", num_is_inexact);
+    ADD_BUILTIN_PROC("number?", is_number);
 
     ADD_BUILTIN_PROC("not", bool_not);
     ADD_BUILTIN_PROC("boolean?", is_boolean);

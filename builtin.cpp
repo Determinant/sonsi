@@ -1028,6 +1028,7 @@ BUILTIN_PROC_DEF(num_lt) {
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
 
     NumObj *last = static_cast<NumObj*>(args->car), *opr;
+    args = TO_PAIR(args->cdr);
     for (; args != empty_list; args = TO_PAIR(args->cdr), last = opr)
     {
         if (!args->car->is_num_obj())        // not a number
@@ -1052,6 +1053,7 @@ BUILTIN_PROC_DEF(num_gt) {
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
 
     NumObj *last = static_cast<NumObj*>(args->car), *opr;
+    args = TO_PAIR(args->cdr);
     for (; args != empty_list; args = TO_PAIR(args->cdr), last = opr)
     {
         if (!args->car->is_num_obj())        // not a number
@@ -1076,6 +1078,7 @@ BUILTIN_PROC_DEF(num_eq) {
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
 
     NumObj *last = static_cast<NumObj*>(args->car), *opr;
+    args = TO_PAIR(args->cdr);
     for (; args != empty_list; args = TO_PAIR(args->cdr), last = opr)
     {
         if (!args->car->is_num_obj())        // not a number
@@ -1415,6 +1418,11 @@ do { \
         }
     }
     return new BoolObj(true);
+}
+
+BUILTIN_PROC_DEF(is_number) {
+    ARGS_EXACTLY_ONE;
+    return new BoolObj(args->car->is_num_obj());
 }
 
 BUILTIN_PROC_DEF(display) {

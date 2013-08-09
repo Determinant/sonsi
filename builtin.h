@@ -262,6 +262,7 @@ BUILTIN_PROC_DEF(num_eq);
 
 BUILTIN_PROC_DEF(num_is_exact);
 BUILTIN_PROC_DEF(num_is_inexact);
+BUILTIN_PROC_DEF(is_number);
 
 BUILTIN_PROC_DEF(bool_not);
 BUILTIN_PROC_DEF(is_boolean);
