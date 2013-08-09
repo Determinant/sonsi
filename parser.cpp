@@ -48,6 +48,7 @@ string str_to_lower(string str) {
     for (size_t i = 0; i < len; i++)
         if ('A' <= str[i] && str[i] <= 'Z')
             str[i] -= 'A' - 'a';
+    return str;
 }
 
 bool Tokenizor::get_token(string &ret) {
