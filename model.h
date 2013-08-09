@@ -5,11 +5,13 @@
 #include <list>
 #include <map>
 #include <vector>
+#include <set>
 
 using std::list;
 using std::string;
 using std::map;
 using std::vector;
+using std::set;
 
 // the range of unsigned char is enough for these types
 typedef unsigned char ClassType;  
@@ -113,7 +115,9 @@ class EvalObj : public FrameObj {
         virtual ReprCons *get_repr_cons() = 0;
 };
 
-class ListReprCons;
+typedef set<EvalObj*> EvalObjAddrHash;
+
+class PairReprCons;
 /** @class Pair
  * Pair construct, which can be used to represent a list, or further
  * more, a syntax tree
@@ -152,9 +156,10 @@ class RetAddr : public FrameObj {
 
 class ReprCons {
     public:
+        EvalObj *ori;
         bool done;
         string repr;
-        ReprCons(bool done); 
+        ReprCons(bool done, EvalObj *ori = NULL); 
         virtual EvalObj *next(const string &prev) = 0;
 };
 
@@ -164,11 +169,12 @@ class ReprStr : public ReprCons {
         EvalObj *next(const string &prev);
 };
 
-class ListReprCons : public ReprCons {
+class PairReprCons : public ReprCons {
     private:
+        int state;
         EvalObj *ptr;
     public:
-        ListReprCons(Pair *ptr);
+        PairReprCons(Pair *ptr, EvalObj *ori);
         EvalObj *next(const string &prev);
 };
 
@@ -178,7 +184,7 @@ class VectReprCons : public ReprCons {
         VecObj *ptr;
         int idx;
     public:
-        VectReprCons(VecObj *ptr);
+        VectReprCons(VecObj *ptr, EvalObj *ori);
         EvalObj *next(const string &prev);
 };
 

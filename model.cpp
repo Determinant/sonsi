@@ -4,6 +4,7 @@
 #include "consts.h"
 
 static ReprCons *repr_stack[REPR_STACK_SIZE];
+EvalObjAddrHash hash;
 
 FrameObj::FrameObj(ClassType _ftype) : ftype(_ftype) {}
 
@@ -59,30 +60,40 @@ bool EvalObj::is_true() {
 }
 
 string EvalObj::ext_repr() {
+    hash.clear();
+    // TODO: Performance improvement 
+    // (from possibly O(n^2logn) to strictly O(nlogn))
     ReprCons **top_ptr = repr_stack; 
     *top_ptr++ = this->get_repr_cons();
-    //printf("%s\n", (this->get_repr_cons())->repr.c_str());
     EvalObj *obj;
+    hash.insert(this);
     while (!(*repr_stack)->done)
     {
         if ((*(top_ptr - 1))->done)
         {
-            top_ptr--;
-            obj = (*(top_ptr - 1))->next((*top_ptr)->repr + " ");
+            hash.erase((*--top_ptr)->ori);
+            obj = (*(top_ptr - 1))->next((*top_ptr)->repr);
             if (obj)
-                *top_ptr++ = obj->get_repr_cons();
-            else
             {
-                *(top_ptr - 1) = new ReprStr((*(top_ptr - 1))->repr);
+                *top_ptr++ = obj->get_repr_cons();
+                if (hash.count((*(top_ptr - 1))->ori))
+                    *(top_ptr - 1) = new ReprStr("#cyc#");
             }
+            else
+                *(top_ptr - 1) = new ReprStr((*(top_ptr - 1))->repr);
         }
         else
         {
             obj = (*(top_ptr - 1))->next("");
             *top_ptr++ = obj->get_repr_cons();
+            if (hash.count((*(top_ptr - 1))->ori))
+                *(top_ptr - 1) = new ReprStr("#cyc#");
         }
     }
-    return (*repr_stack)->repr;
+    string &res = (*repr_stack)->repr;
+    if (this->is_pair_obj())
+        res = "(" + res + ")";
+    return res;
 }
 
 Pair::Pair(EvalObj *_car, EvalObj *_cdr) : 
@@ -90,7 +101,7 @@ Pair::Pair(EvalObj *_car, EvalObj *_cdr) :
     next(NULL) {}
 
 ReprCons *Pair::get_repr_cons() {
-    return new ListReprCons(this);
+    return new PairReprCons(this, this);
 }
 
 RetAddr::RetAddr(Pair *_addr) : FrameObj(CLS_RET_ADDR), addr(_addr) {}
@@ -224,7 +235,7 @@ void VecObj::push_back(EvalObj *new_elem) {
 }
 
 ReprCons *VecObj::get_repr_cons() {
-    return new VectReprCons(this);
+    return new VectReprCons(this, this);
 }
 
 StrObj *StrObj::from_string(string repr) {
@@ -278,38 +289,47 @@ Continuation::Continuation(Environment *_envt, Pair *_pc,
     envt(_envt), pc(_pc), prev_cont(_prev_cont), 
     proc_body(_proc_body) {}
 
-ReprCons::ReprCons(bool _done) : done(_done) {}
+ReprCons::ReprCons(bool _done, EvalObj *_ori) : done(_done), ori(_ori) {}
 ReprStr::ReprStr(string _repr) : ReprCons(true) { repr = _repr; }
 EvalObj *ReprStr::next(const string &prev) {
     throw NormalError(INT_ERR);
 }
 
-ListReprCons::ListReprCons(Pair *_ptr) : 
-    ReprCons(false), ptr(_ptr) { repr = "("; }
+PairReprCons::PairReprCons(Pair *_ptr, EvalObj *_ori) : 
+    ReprCons(false, _ori), ptr(_ptr), state(0) {}
 
-EvalObj *ListReprCons::next(const string &prev) {
+EvalObj *PairReprCons::next(const string &prev) {
     repr += prev;
     EvalObj *res;
-    if (ptr->is_simple_obj())
+    if (state == 0)
     {
-        repr += ". ";
-        res = ptr;
-        ptr = empty_list;
+        state = 1;
+        res = TO_PAIR(ptr)->car;
+        if (res->is_pair_obj()) 
+            repr += "(";
         return res;
     }
-    if (ptr == empty_list)
+    else if (state == 1)
+    {   
+        state = 2;
+        if (TO_PAIR(ptr)->car->is_pair_obj()) 
+            repr += ")";
+        ptr = TO_PAIR(ptr)->cdr;
+        repr += " ";
+        if (ptr->is_simple_obj())
+            repr += ". ";
+        if (ptr == empty_list)
+            return NULL;
+        return ptr;
+    }
+    else 
     {
-        *repr.rbegin() = ')';
         return NULL;
     }
-
-    res = TO_PAIR(ptr)->car;
-    ptr = TO_PAIR(ptr)->cdr;
-    return res;
 }
 
-VectReprCons::VectReprCons(VecObj *_ptr) :
-    ReprCons(false), ptr(_ptr), idx(0) { repr = "#("; }
+VectReprCons::VectReprCons(VecObj *_ptr, EvalObj *_ori) :
+    ReprCons(false, _ori), ptr(_ptr), idx(0) { repr = "#("; }
 
 EvalObj *VectReprCons::next(const string &prev) {
     repr += prev;

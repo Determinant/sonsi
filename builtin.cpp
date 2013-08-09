@@ -1,4 +1,3 @@
-#include "exc.h"
 #include "consts.h"
 #include "builtin.h"
 #include "model.h"
