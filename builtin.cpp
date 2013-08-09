@@ -1335,9 +1335,8 @@ do { \
         int otype = (a = *l1)->get_otype();
         if (otype != (b = *l2)->get_otype())
             return new BoolObj(false);
-        if (a == empty_list)
-            continue;
-        if (otype & CLS_PAIR_OBJ)
+        if (a != empty_list && b != empty_list &&
+            otype & CLS_PAIR_OBJ)
         {
             *r1 = TO_PAIR(a)->car;
             INC1(r1);
@@ -1363,7 +1362,7 @@ do { \
                     it = va->vec.begin();
                     it != va->vec.end(); it++)
             {
-                *r1 = TO_PAIR(a)->car;
+                *r1 = *it;
                 INC1(r1);
                 CHK1;
             }
@@ -1372,7 +1371,7 @@ do { \
                     it = vb->vec.begin();
                     it != vb->vec.end(); it++)
             {
-                *r2 = TO_PAIR(b)->car;
+                *r2 = *it;
                 INC2(r2);
                 CHK2;
             }
@@ -1418,6 +1417,8 @@ do { \
                 static_cast<StrObj*>(b)->str)
                 return new BoolObj(false); // (string=?)
         }
+        else if (a != b)
+            return new BoolObj(false);
     }
     return new BoolObj(true);
 }

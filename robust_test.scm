@@ -218,3 +218,6 @@ src
 (if #f 1 ()) ; Error
 ; "Test double quotes in comments"
 (display " Test double quotes outside the comments ; ;; ; ; ")
+
+(equal? #(1 2 '()) #(1 2 '(1)))
+(equal? #(1 2 '(1)) #(1 2 '(1)))
