@@ -327,6 +327,7 @@ RatNumObj *RatNumObj::from_string(string repr) {
     try
     {
         mpq_class ret(repr, 10);
+        ret.canonicalize();
         return new RatNumObj(ret);
     }
     catch (std::invalid_argument &e)
