@@ -1,4 +1,4 @@
-- non-recursive equal? predicate
-- ext_repr optimization 
+- Testing
 - Garbage Collection?
+- ext_repr optimization 
 - Add macro support

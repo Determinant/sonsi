@@ -172,3 +172,49 @@ t
 src
 (eval src)
 (eval '(g 0))
+
+(define f (lambda (x) (+ x x))) ;; test comments
+((lambda (x y) (f 3)) 1 2)      ;; first-class procedure
+; this is a single line comment
+; another line
+(define f (lambda (x) (lambda (y) (+ x y))))
+
+(f 1)   ; #<procedure>
+
+((f 1) 2) ; 3
+
+(define g (lambda (x) (define y 2) (+ x y)))
+(g 3)
+
+((lambda () (display 2) (display 1) (+ 1 2)))
+(define g (lambda (x) (if (= x 5) 0 ((lambda () (display x) (g (+ x 1)))))))
+(g 0)
+
+(define g (lambda (x)
+            (if (= x 5)
+              0
+              ((lambda ()
+                 (display x)
+                 (g (+ x 1)))))))
+(g 0)
+
+(define square (lambda (x) (* x x)))
+
+(square 2)
+
+(define (f x y)
+  ((lambda (a b)
+	 (+ (* x (square a))
+		(* y b)
+		(* a b)))
+   (+ 1 (* x y ))
+   (- 1 y)))
+
+(f 1 2)
+
+((lambda (x + y) (+ x y)) 4 / 2) ; a classic trick
+
+(if #t 1 ())
+(if #f 1 ()) ; Error
+; "Test double quotes in comments"
+(display " Test double quotes outside the comments ; ;; ; ; ")

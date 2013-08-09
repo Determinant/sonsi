@@ -43,7 +43,7 @@ void Tokenizor::set_stream(FILE *_stream) {
     } while (0)
 #define TOP (*(buff_ptr - 1))
 
-void str_to_lower(string &str) {
+string str_to_lower(string str) {
     size_t len = str.length();
     for (size_t i = 0; i < len; i++)
         if ('A' <= str[i] && str[i] <= 'Z')
@@ -112,11 +112,7 @@ bool Tokenizor::get_token(string &ret) {
                 else
                     *buff_ptr++ = ch;
             }
-            if (flag)
-            {
-                str_to_lower(ret);
-                return true;
-            }
+            if (flag) return true;
         }
     }
     if (buff_ptr != buff) POP;
@@ -135,7 +131,7 @@ EvalObj *ASTGenerator::to_obj(const string &str) {
     if ((res = RealNumObj::from_string(str))) return res;
     if ((res = CompNumObj::from_string(str))) return res;
     if ((res = StrObj::from_string(str))) return res;
-    return new SymObj(str); // otherwise we assume it a symbol
+    return new SymObj(str_to_lower(str)); // otherwise we assume it a symbol
 }
 
 #define TO_EVAL(ptr) \
