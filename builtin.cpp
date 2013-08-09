@@ -6,6 +6,7 @@
 #include <sstream>
 #include <cctype>
 #include <cstdlib>
+#include <iomanip>
 
 using std::stringstream;
 
@@ -34,6 +35,7 @@ static const int NUM_LVL_INT = 3;
 string double_to_str(double val, bool force_sign = false) {
     stringstream ss;
     if (force_sign) ss << std::showpos;
+    ss << std::setprecision(16);
     ss << val;
     return ss.str();
 }
