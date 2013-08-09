@@ -71,24 +71,29 @@ string EvalObj::ext_repr() {
     {
         if ((*(top_ptr - 1))->done)
         {
-            hash.erase((*--top_ptr)->ori);
-            obj = (*(top_ptr - 1))->next((*top_ptr)->repr);
+            top_ptr -= 2;
+            obj = (*top_ptr)->next((*(top_ptr + 1))->repr);
             if (obj)
             {
-                *top_ptr++ = obj->get_repr_cons();
-                if (hash.count((*(top_ptr - 1))->ori))
-                    *(top_ptr - 1) = new ReprStr("#cyc#");
+                *(++top_ptr) = obj->get_repr_cons();
+                if (hash.count((*top_ptr)->ori))
+                    *top_ptr = new ReprStr("#inf#");
             }
             else
-                *(top_ptr - 1) = new ReprStr((*(top_ptr - 1))->repr);
+            {
+                hash.erase((*top_ptr)->ori);
+                *top_ptr = new ReprStr((*top_ptr)->repr);
+            }
         }
         else
         {
-            obj = (*(top_ptr - 1))->next("");
-            *top_ptr++ = obj->get_repr_cons();
-            if (hash.count((*(top_ptr - 1))->ori))
-                *(top_ptr - 1) = new ReprStr("#cyc#");
+            top_ptr--;
+            obj = (*top_ptr)->next("");
+            *(++top_ptr) = obj->get_repr_cons();
+            if (hash.count((*top_ptr)->ori))
+                *top_ptr = new ReprStr("#inf#");
         }
+        top_ptr++;
     }
     string &res = (*repr_stack)->repr;
     if (this->is_pair_obj())
@@ -315,11 +320,11 @@ EvalObj *PairReprCons::next(const string &prev) {
         if (TO_PAIR(ptr)->car->is_pair_obj()) 
             repr += ")";
         ptr = TO_PAIR(ptr)->cdr;
+        if (ptr == empty_list)
+            return NULL;
         repr += " ";
         if (ptr->is_simple_obj())
             repr += ". ";
-        if (ptr == empty_list)
-            return NULL;
         return ptr;
     }
     else 
@@ -333,10 +338,21 @@ VectReprCons::VectReprCons(VecObj *_ptr, EvalObj *_ori) :
 
 EvalObj *VectReprCons::next(const string &prev) {
     repr += prev;
+
+    if (idx && ptr->get_obj(idx - 1)->is_pair_obj())
+        repr += ")";
+
     if (idx == ptr->get_size())
     {
-        *repr.rbegin() = ')';
+        repr += ")";
         return NULL;
     }
-    else return ptr->get_obj(idx++);
+    else 
+    {
+        if (idx) repr += " ";
+        EvalObj *res = ptr->get_obj(idx++);
+        if (res->is_pair_obj())
+            repr += "(";
+        return res;
+    }
 }

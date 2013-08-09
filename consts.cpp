@@ -15,5 +15,7 @@ const char *ERR_MSG[] = {
     "Unknown character name: %s",
     "Improper pair structure",
     "Improper vector structure",
-    "Bad formal %s in expression"
+    "Bad formal %s in expression",
+    "Queue overflowed: the expected expansion is too long!",
+    "%s stack overflowed!"
 };

@@ -1258,12 +1258,24 @@ BUILTIN_PROC_DEF(is_eqv) {
 
 BUILTIN_PROC_DEF(is_equal) {
 
-#define INC1(x) (++(x) == t1 ? (x) = q1:0)
-#define INC2(x) (++(x) == t2 ? (x) = q2:0)
+//#define INC1(x) (++(x) == t1 ? (x) = q1:0)
+//#define INC2(x) (++(x) == t2 ? (x) = q2:0)
+#define INC1(x) (++(x))
+#define INC2(x) (++(x))
+#define CHK1 \
+do { \
+    if (r1 == q1 + EQUAL_QUEUE_SIZE)  \
+        throw NormalError(RUN_ERR_QUEUE_OVERFLOW); \
+} while (0)
+
+#define CHK2 \
+do { \
+    if (r2 == q2 + EQUAL_QUEUE_SIZE)  \
+        throw NormalError(RUN_ERR_QUEUE_OVERFLOW); \
+} while (0)
+
     
     static EvalObj *q1[EQUAL_QUEUE_SIZE], *q2[EQUAL_QUEUE_SIZE];
-    static EvalObj ** const t1 = q1 + EQUAL_QUEUE_SIZE;
-    static EvalObj ** const t2 = q2 + EQUAL_QUEUE_SIZE;
 
     ARGS_EXACTLY_TWO;
     EvalObj **l1 = q1, **r1 = l1;
@@ -1285,13 +1297,17 @@ BUILTIN_PROC_DEF(is_equal) {
         {
             *r1 = TO_PAIR(a)->car;
             INC1(r1);
+            CHK1;
             *r1 = TO_PAIR(a)->cdr;
             INC1(r1);
+            CHK1;
 
             *r2 = TO_PAIR(b)->car;
             INC2(r2);
+            CHK2;
             *r2 = TO_PAIR(b)->cdr;
             INC2(r2);
+            CHK2;
         }
         else if (otype & CLS_VECT_OBJ)
         {
@@ -1305,6 +1321,7 @@ BUILTIN_PROC_DEF(is_equal) {
             {
                 *r1 = TO_PAIR(a)->car;
                 INC1(r1);
+                CHK1;
             }
 
             for (EvalObjVec::iterator 
@@ -1313,6 +1330,7 @@ BUILTIN_PROC_DEF(is_equal) {
             {
                 *r2 = TO_PAIR(b)->car;
                 INC2(r2);
+                CHK2;
             }
         }
         else if (otype & CLS_BOOL_OBJ)

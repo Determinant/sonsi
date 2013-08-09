@@ -93,6 +93,8 @@ EvalObj *Evaluator::run_expr(Pair *prog) {
 
     while((*eval_stack)->is_ret_addr())
     {
+        if (top_ptr == eval_stack + EVAL_STACK_SIZE)
+            throw TokenError("Evaluation", RUN_ERR_STACK_OVERFLOW);
         for (; pc && pc->skip; pc = pc->next);
         if (pc)
             push(pc, top_ptr, envt);

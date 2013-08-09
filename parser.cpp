@@ -149,6 +149,9 @@ Pair *ASTGenerator::absorb(Tokenizor *tk) {
     FrameObj **top_ptr = parse_stack;
     for (;;)
     {
+        if (top_ptr == parse_stack + PARSE_STACK_SIZE)
+            throw TokenError("Parser", RUN_ERR_STACK_OVERFLOW);
+
         if (top_ptr - parse_stack > 1 && 
                 !IS_BRAKET(*(top_ptr - 1)) &&
                 IS_BRAKET(*(top_ptr - 2)))
