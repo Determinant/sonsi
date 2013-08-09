@@ -26,7 +26,7 @@ class CompNumObj: public InexactNumObj {
 
         /** Construct a complex number */
         CompNumObj(double _real, double _imag);
-        /** Try to construct an CompNumObj object 
+        /** Try to construct an CompNumObj object
          * @return NULL if failed
          */
         static CompNumObj *from_string(string repr);
@@ -51,7 +51,7 @@ class RealNumObj: public InexactNumObj {
         double real;
         /** Construct a real number */
         RealNumObj(double _real);
-        /** Try to construct an RealNumObj object 
+        /** Try to construct an RealNumObj object
          * @return NULL if failed
          */
         static RealNumObj *from_string(string repr);
@@ -91,7 +91,7 @@ class RatNumObj: public ExactNumObj {
         mpq_class val;
         RatNumObj(mpq_class val);
 #endif
-        /** Try to construct an RatNumObj object 
+        /** Try to construct an RatNumObj object
          * @return NULL if failed
          */
         static RatNumObj *from_string(string repr);
@@ -124,7 +124,7 @@ class IntNumObj: public ExactNumObj {
         IntNumObj(mpz_class val);
         int get_i();
 #endif
-        /** Try to construct an IntNumObj object 
+        /** Try to construct an IntNumObj object
          * @return NULL if failed
          */
         static IntNumObj *from_string(string repr);
@@ -148,22 +148,22 @@ class IntNumObj: public ExactNumObj {
 class SpecialOptIf: public SpecialOptObj {
     private:
         unsigned char state; /**< 0 for prepared, 1 for pre_called */
-        /** 
+        /**
          * The evaluator will call this after the <condition> exp is evaluated.
          * And this function tells the evaluator which of <consequence> and
          * <alternative> should be evaluted. */
-        void pre_call(ArgList *args, Pair *pc, 
+        void pre_call(ArgList *args, Pair *pc,
                 Environment *envt);
         /** The system will call this again after the desired result is
          * evaluated, so just return it to let the evaluator know the it's the
          * answer.
          */
-        EvalObj *post_call(ArgList *args, Pair *pc, 
+        EvalObj *post_call(ArgList *args, Pair *pc,
                 Environment *envt);
     public:
         SpecialOptIf();
         void prepare(Pair *pc);
-        Pair *call(ArgList *args, Environment * &envt, 
+        Pair *call(ArgList *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
         ReprCons *get_repr_cons();
 };
@@ -175,7 +175,7 @@ class SpecialOptLambda: public SpecialOptObj {
     public:
         SpecialOptLambda();
         void prepare(Pair *pc);
-        Pair *call(ArgList *args, Environment * &envt, 
+        Pair *call(ArgList *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
 
         ReprCons *get_repr_cons();
@@ -186,9 +186,9 @@ class SpecialOptLambda: public SpecialOptObj {
  */
 class SpecialOptDefine: public SpecialOptObj {
     public:
-        SpecialOptDefine(); 
+        SpecialOptDefine();
         void prepare(Pair *pc);
-        Pair *call(ArgList *args, Environment * &envt, 
+        Pair *call(ArgList *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
         ReprCons *get_repr_cons();
 };
@@ -200,7 +200,7 @@ class SpecialOptSet: public SpecialOptObj {
     public:
         SpecialOptSet();
         void prepare(Pair *pc);
-        Pair *call(ArgList *args, Environment * &envt, 
+        Pair *call(ArgList *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
         ReprCons *get_repr_cons();
 };
@@ -212,7 +212,7 @@ class SpecialOptQuote: public SpecialOptObj {
     public:
         SpecialOptQuote();
         void prepare(Pair *pc);
-        Pair *call(ArgList *args, Environment * &envt, 
+        Pair *call(ArgList *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
 
         ReprCons *get_repr_cons();
@@ -227,7 +227,7 @@ class SpecialOptEval: public SpecialOptObj {
     public:
         SpecialOptEval();
         void prepare(Pair *pc);
-        Pair *call(ArgList *args, Environment * &envt, 
+        Pair *call(ArgList *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
 
         ReprCons *get_repr_cons();
@@ -242,7 +242,7 @@ class SpecialOptAnd: public SpecialOptObj {
     public:
         SpecialOptAnd();
         void prepare(Pair *pc);
-        Pair *call(ArgList *args, Environment * &envt, 
+        Pair *call(ArgList *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
 
         ReprCons *get_repr_cons();

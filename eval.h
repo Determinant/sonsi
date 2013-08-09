@@ -3,7 +3,7 @@
 #include "model.h"
 
 const int EVAL_STACK_SIZE = 262144;
-/** @class Evaluator 
+/** @class Evaluator
  * A runtime platform of interpreting
  */
 class Evaluator {

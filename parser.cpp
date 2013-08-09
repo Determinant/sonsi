@@ -24,7 +24,7 @@ void Tokenizor::set_stream(FILE *_stream) {
 #define IS_SLASH(ch) \
     ((ch) == '\\')
 #define IS_BRACKET(ch) \
-    ((ch) == '(' || (ch) == ')') 
+    ((ch) == '(' || (ch) == ')')
 #define IS_SPACE(ch) \
     ((ch) == ' ' || (ch) == '\t' || IS_NEWLINE(ch))
 #define IS_COMMENT(ch) \
@@ -66,7 +66,7 @@ bool Tokenizor::get_token(string &ret) {
                 case 't': *buff_ptr++ = '\t'; break;
                 default: {
                              buff_ptr = buff;
-                             throw TokenError(string("") + ch, 
+                             throw TokenError(string("") + ch,
                                      PAR_ERR_ILLEGAL_CHAR_IN_ESC);
                          }
             }
@@ -96,23 +96,23 @@ bool Tokenizor::get_token(string &ret) {
                             flag = true;
                         }
                     }
-                    else if (IS_QUOTE(ch))  
+                    else if (IS_QUOTE(ch))
                     {
                         // in a double-quote which is being enclosed
                         *buff_ptr++ = '\"';
                         POP;
-                        return true;    // prevent duplicate quote sign 
+                        return true;    // prevent duplicate quote sign
                     }
                 }
             }
-            if (in_quote || !IS_SPACE(ch)) 
+            if (in_quote || !IS_SPACE(ch))
             {
                 if (in_quote && IS_SLASH(ch))
                     escaping = true;
-                else 
+                else
                     *buff_ptr++ = ch;
             }
-            if (flag) 
+            if (flag)
             {
                 str_to_lower(ret);
                 return true;
@@ -120,7 +120,7 @@ bool Tokenizor::get_token(string &ret) {
         }
     }
     if (buff_ptr != buff) POP;
-    return false; // can't read more 
+    return false; // can't read more
 }
 
 ASTGenerator::ASTGenerator() {}
@@ -152,7 +152,7 @@ Pair *ASTGenerator::absorb(Tokenizor *tk) {
         if (top_ptr == parse_stack + PARSE_STACK_SIZE)
             throw TokenError("Parser", RUN_ERR_STACK_OVERFLOW);
 
-        if (top_ptr - parse_stack > 1 && 
+        if (top_ptr - parse_stack > 1 &&
                 !IS_BRAKET(*(top_ptr - 1)) &&
                 IS_BRAKET(*(top_ptr - 2)))
         {
@@ -173,7 +173,7 @@ Pair *ASTGenerator::absorb(Tokenizor *tk) {
         string token;
         if (!tk->get_token(token)) return NULL;
         if (token == "(")       // a list
-            *top_ptr++ = new ParseBracket(0);  
+            *top_ptr++ = new ParseBracket(0);
         else if (token == "#(") // a vector
             *top_ptr++ = new ParseBracket(1);
         else if (token == "\'") // syntatic sugar for quote
@@ -189,8 +189,8 @@ Pair *ASTGenerator::absorb(Tokenizor *tk) {
                 EvalObj *obj = TO_EVAL(*top_ptr);
                 if (obj->is_sym_obj() && static_cast<SymObj*>(obj)->val == ".")
                 {
-                    if (improper || 
-                        lst == empty_list || 
+                    if (improper ||
+                        lst == empty_list ||
                         TO_PAIR(lst)->cdr != empty_list)
                         throw NormalError(PAR_ERR_IMPROPER_PAIR);
                     improper = true;
@@ -203,7 +203,7 @@ Pair *ASTGenerator::absorb(Tokenizor *tk) {
                     lst = _lst;
                 }
             }
-            
+
             ParseBracket *bptr = TO_BRACKET(*top_ptr);
             if (bptr->btype == 0)
                 *top_ptr++ = lst;

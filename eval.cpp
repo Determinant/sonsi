@@ -78,7 +78,7 @@ void push(Pair * &pc, FrameObj ** &top_ptr, Environment *envt) {
 
         *top_ptr++ = new RetAddr(pc);       // Push the return address
         if (!is_list(TO_PAIR(pc->car)))
-            throw TokenError(pc->car->ext_repr(), RUN_ERR_WRONG_NUM_OF_ARGS); 
+            throw TokenError(pc->car->ext_repr(), RUN_ERR_WRONG_NUM_OF_ARGS);
         // static_cast because of is_simple_obj() is false
         pc = static_cast<Pair*>(pc->car);  // Go deeper to enter the call
         envt->get_obj(pc->car)->prepare(pc);
@@ -90,7 +90,7 @@ EvalObj *Evaluator::run_expr(Pair *prog) {
     Pair *pc = prog;
     Continuation *cont = NULL;
     // envt is this->envt
-    push(pc, top_ptr, envt);   
+    push(pc, top_ptr, envt);
 
     while((*eval_stack)->is_ret_addr())
     {
@@ -120,7 +120,7 @@ EvalObj *Evaluator::run_expr(Pair *prog) {
                 else pc = nexp;
                 top_ptr++;
             }
-            else 
+            else
             {
                 EvalObj *opt = args->car;
                 if (opt->is_opt_obj())

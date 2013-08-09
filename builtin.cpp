@@ -19,7 +19,7 @@ static const int NUM_LVL_INT = 3;
     if (args == empty_list ||  \
         args->cdr == empty_list || \
         TO_PAIR(args->cdr)->cdr != empty_list) \
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS) 
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
 
 #define ARGS_EXACTLY_ONE \
     if (args == empty_list || \
@@ -46,7 +46,7 @@ string int_to_str(int val) {
 
 double str_to_double(string repr, bool &flag) {
     const char *nptr = repr.c_str();
-    char *endptr; 
+    char *endptr;
     double val = strtod(nptr, &endptr);
     if (endptr == nptr || endptr != nptr + repr.length())
     {
@@ -59,7 +59,7 @@ double str_to_double(string repr, bool &flag) {
 
 int str_to_int(string repr, bool &flag) {
     const char *nptr = repr.c_str();
-    char *endptr; 
+    char *endptr;
     int val = strtol(nptr, &endptr, 10);
     if (endptr == nptr || endptr != nptr + repr.length())
     {
@@ -95,10 +95,10 @@ CompNumObj::CompNumObj(double _real, double _imag) :
                 spos = i;
                 sign = repr[i] == '-';
             }
-            else if (repr[i] == 'i' || repr[i] == 'I') 
+            else if (repr[i] == 'i' || repr[i] == 'I')
                 ipos = i;
 
-        if (spos == -1 || ipos == -1 || !(spos < ipos)) 
+        if (spos == -1 || ipos == -1 || !(spos < ipos))
             return NULL;
 
         double real = 0, imag = 1;
@@ -118,7 +118,7 @@ CompNumObj::CompNumObj(double _real, double _imag) :
 #ifndef GMP_SUPPORT
                 real = rat_ptr->a / double(rat_ptr->b);
 #else
-                real = rat_ptr->val.get_d();                
+                real = rat_ptr->val.get_d();
 #endif
             else if ((real_ptr = RealNumObj::from_string(real_str)))
                 real = real_ptr->real;
@@ -148,11 +148,11 @@ CompNumObj::CompNumObj(double _real, double _imag) :
     }
 
 CompNumObj *CompNumObj::convert(NumObj *obj) {
-    switch (obj->level) 
+    switch (obj->level)
     {
-        case NUM_LVL_COMP : 
+        case NUM_LVL_COMP :
             return static_cast<CompNumObj*>(obj); break;
-        case NUM_LVL_REAL : 
+        case NUM_LVL_REAL :
             return new CompNumObj(static_cast<RealNumObj*>(obj)->real, 0);
             break;
         case NUM_LVL_RAT :
@@ -238,7 +238,7 @@ RealNumObj *RealNumObj::from_string(string repr) {
 RealNumObj *RealNumObj::convert(NumObj *obj) {
     switch (obj->level)
     {
-        case NUM_LVL_REAL: 
+        case NUM_LVL_REAL:
             return static_cast<RealNumObj*>(obj); break;
         case NUM_LVL_RAT:
             {
@@ -296,7 +296,7 @@ ReprCons *RealNumObj::get_repr_cons() {
 ExactNumObj::ExactNumObj(NumLvl level) : NumObj(level, true) {}
 
 #ifndef GMP_SUPPORT
-RatNumObj::RatNumObj(int _a, int _b) : 
+RatNumObj::RatNumObj(int _a, int _b) :
     ExactNumObj(NUM_LVL_RAT), a(_a), b(_b) {
         int g = gcd(a, b);
         a /= g;
@@ -318,13 +318,13 @@ RatNumObj *RatNumObj::from_string(string repr) {
     return new RatNumObj(a, b);
 }
 #else
-RatNumObj::RatNumObj(mpq_class _val) : 
+RatNumObj::RatNumObj(mpq_class _val) :
     ExactNumObj(NUM_LVL_RAT), val(_val) {
     val.canonicalize();
 }
 
 RatNumObj *RatNumObj::from_string(string repr) {
-    try 
+    try
     {
         mpq_class ret(repr, 10);
         return new RatNumObj(ret);
@@ -347,7 +347,7 @@ RatNumObj *RatNumObj::convert(NumObj *obj) {
             return new RatNumObj(static_cast<IntNumObj*>(obj)->val, 1);
 #else
             return new RatNumObj(mpq_class(
-                        static_cast<IntNumObj*>(obj)->val, 
+                        static_cast<IntNumObj*>(obj)->val,
                         mpz_class(1)));
 #endif
     }
@@ -463,7 +463,7 @@ int IntNumObj::get_i() { return val; }
 #else
 IntNumObj::IntNumObj(mpz_class _val) : ExactNumObj(NUM_LVL_INT), val(_val) {}
 IntNumObj *IntNumObj::from_string(string repr) {
-    try 
+    try
     {
         mpz_class ret(repr, 10);
         return new IntNumObj(ret);
@@ -538,7 +538,7 @@ void SpecialOptIf::prepare(Pair *pc) {
 
     if (pc->cdr->is_pair_obj())
         first = TO_PAIR(pc->cdr);
-    else 
+    else
         IF_EXP_ERR;
 
     if (first->cdr->is_pair_obj())
@@ -565,7 +565,7 @@ void SpecialOptIf::pre_call(ArgList *args, Pair *pc,
         Environment *envt) {
     // prepare has guaranteed ...
     pc = TO_PAIR(pc->car);
-    Pair *first = TO_PAIR(pc->cdr); 
+    Pair *first = TO_PAIR(pc->cdr);
     Pair *second = TO_PAIR(first->cdr);
     Pair *third = TO_PAIR(second->cdr);
 
@@ -590,10 +590,10 @@ EvalObj *SpecialOptIf::post_call(ArgList *args, Pair *pc,
     return TO_PAIR(args->cdr)->car;
 }
 
-Pair *SpecialOptIf::call(ArgList *args, Environment * &envt, 
+Pair *SpecialOptIf::call(ArgList *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
     Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
-    if (state) 
+    if (state)
     {
         *top_ptr++ = post_call(args, ret_addr, envt);
         return ret_addr->next;          // Move to the next instruction
@@ -608,8 +608,8 @@ Pair *SpecialOptIf::call(ArgList *args, Environment * &envt,
     }
 }
 
-ReprCons *SpecialOptIf::get_repr_cons() { 
-    return new ReprStr("#<Builtin Macro: if>"); 
+ReprCons *SpecialOptIf::get_repr_cons() {
+    return new ReprStr("#<Builtin Macro: if>");
 }
 
 SpecialOptLambda::SpecialOptLambda() : SpecialOptObj("lambda") {}
@@ -661,7 +661,7 @@ void SpecialOptLambda::prepare(Pair *pc) {
     pc->next = NULL;
 }
 
-Pair *SpecialOptLambda::call(ArgList *args, Environment * &envt, 
+Pair *SpecialOptLambda::call(ArgList *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
 
     Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
@@ -673,10 +673,10 @@ Pair *SpecialOptLambda::call(ArgList *args, Environment * &envt,
     // <body> is expected
     if (first->cdr == empty_list)
         throw TokenError(name, SYN_ERR_MISS_OR_EXTRA_EXP);
-    
+
     // Restore the next pointer
     pc->next = TO_PAIR(pc->cdr);            // CHECK_COM made it always okay
-   
+
     if (first->car->is_simple_obj())
         CHECK_SYMBOL(first->car);
     else
@@ -692,8 +692,8 @@ Pair *SpecialOptLambda::call(ArgList *args, Environment * &envt,
     return ret_addr->next;  // Move to the next instruction
 }
 
-ReprCons *SpecialOptLambda::get_repr_cons() { 
-    return new ReprStr("#<Builtin Macro: lambda>"); 
+ReprCons *SpecialOptLambda::get_repr_cons() {
+    return new ReprStr("#<Builtin Macro: lambda>");
 }
 
 SpecialOptDefine::SpecialOptDefine() : SpecialOptObj("define") {}
@@ -712,14 +712,14 @@ void SpecialOptDefine::prepare(Pair *pc) {
         pc->next = second;                      // Skip the identifier
         second->next = NULL;
     }                                           // Procedure definition
-    else 
+    else
     {
         CHECK_COM(pc);
         pc->next = NULL; // Skip all parts
     }
 }
 
-Pair *SpecialOptDefine::call(ArgList *args, Environment * &envt, 
+Pair *SpecialOptDefine::call(ArgList *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
     Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     Pair *pc = static_cast<Pair*>(ret_addr->car);
@@ -748,7 +748,7 @@ Pair *SpecialOptDefine::call(ArgList *args, Environment * &envt,
 
         id = static_cast<SymObj*>(plst->car);
         EvalObj *params = plst->cdr;
-        
+
         // Restore the next pointer
         pc->next = TO_PAIR(pc->cdr);
 
@@ -767,8 +767,8 @@ Pair *SpecialOptDefine::call(ArgList *args, Environment * &envt,
     return ret_addr->next;
 }
 
-ReprCons *SpecialOptDefine::get_repr_cons() { 
-    return new ReprStr("#<Builtin Macro: define>"); 
+ReprCons *SpecialOptDefine::get_repr_cons() {
+    return new ReprStr("#<Builtin Macro: define>");
 }
 
 void SpecialOptSet::prepare(Pair *pc) {
@@ -781,14 +781,14 @@ void SpecialOptSet::prepare(Pair *pc) {
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
 
     second = TO_PAIR(pc->cdr);
-    if (second->cdr != empty_list) 
+    if (second->cdr != empty_list)
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
 
     pc->next = second;
     second->next = NULL;
 }
 
-Pair *SpecialOptSet::call(ArgList *args, Environment * &envt, 
+Pair *SpecialOptSet::call(ArgList *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
     Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     Pair *pc = static_cast<Pair*>(ret_addr->car);
@@ -807,8 +807,8 @@ Pair *SpecialOptSet::call(ArgList *args, Environment * &envt,
 
 SpecialOptSet::SpecialOptSet() : SpecialOptObj("set!") {}
 
-ReprCons *SpecialOptSet::get_repr_cons() { 
-    return new ReprStr("#<Builtin Macro: set!>"); 
+ReprCons *SpecialOptSet::get_repr_cons() {
+    return new ReprStr("#<Builtin Macro: set!>");
 }
 
 SpecialOptQuote::SpecialOptQuote() : SpecialOptObj("quote") {}
@@ -819,7 +819,7 @@ void SpecialOptQuote::prepare(Pair *pc) {
     pc->next = NULL;
 }
 
-Pair *SpecialOptQuote::call(ArgList *args, Environment * &envt, 
+Pair *SpecialOptQuote::call(ArgList *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
     Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     Pair *pc = static_cast<Pair*>(ret_addr->car);
@@ -829,8 +829,8 @@ Pair *SpecialOptQuote::call(ArgList *args, Environment * &envt,
     return ret_addr->next;
 }
 
-ReprCons *SpecialOptQuote::get_repr_cons() { 
-    return new ReprStr("#<Builtin Macro: quote>"); 
+ReprCons *SpecialOptQuote::get_repr_cons() {
+    return new ReprStr("#<Builtin Macro: quote>");
 }
 
 SpecialOptEval::SpecialOptEval() : SpecialOptObj("eval") {}
@@ -839,7 +839,7 @@ void SpecialOptEval::prepare(Pair *pc) {
     state = 0;
 }
 
-Pair *SpecialOptEval::call(ArgList *args, Environment * &envt, 
+Pair *SpecialOptEval::call(ArgList *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
     if (args->cdr == empty_list ||
         TO_PAIR(args->cdr)->cdr != empty_list)
@@ -858,8 +858,8 @@ Pair *SpecialOptEval::call(ArgList *args, Environment * &envt,
     }
 }
 
-ReprCons *SpecialOptEval::get_repr_cons() { 
-    return new ReprStr("#<Builtin Macro: eval>"); 
+ReprCons *SpecialOptEval::get_repr_cons() {
+    return new ReprStr("#<Builtin Macro: eval>");
 }
 
 SpecialOptAnd::SpecialOptAnd() : SpecialOptObj("and") {}
@@ -873,7 +873,7 @@ void SpecialOptAnd::prepare(Pair *pc) {
     }
 }
 
-Pair *SpecialOptAnd::call(ArgList *args, Environment * &envt, 
+Pair *SpecialOptAnd::call(ArgList *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
     Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     Pair *pc = static_cast<Pair*>(ret_addr->car);
@@ -906,8 +906,8 @@ Pair *SpecialOptAnd::call(ArgList *args, Environment * &envt,
     throw NormalError(INT_ERR);
 }
 
-ReprCons *SpecialOptAnd::get_repr_cons() { 
-    return new ReprStr("#<Builtin Macro: and>"); 
+ReprCons *SpecialOptAnd::get_repr_cons() {
+    return new ReprStr("#<Builtin Macro: and>");
 }
 
 BUILTIN_PROC_DEF(make_pair) {
@@ -951,7 +951,7 @@ BUILTIN_PROC_DEF(num_add) {
             _res =  opr->convert(_res);
         res = _res->add(opr);
     }
-    return res; 
+    return res;
 }
 
 BUILTIN_PROC_DEF(num_sub) {
@@ -974,7 +974,7 @@ BUILTIN_PROC_DEF(num_sub) {
             _res =  opr->convert(_res);
         res = _res->sub(opr);
     }
-    return res; 
+    return res;
 }
 
 
@@ -993,7 +993,7 @@ BUILTIN_PROC_DEF(num_mul) {
             _res =  opr->convert(_res);
         res = _res->mul(opr);
     }
-    return res; 
+    return res;
 }
 
 BUILTIN_PROC_DEF(num_div) {
@@ -1016,7 +1016,7 @@ BUILTIN_PROC_DEF(num_div) {
             _res =  opr->convert(_res);
         res = _res->div(opr);
     }
-    return res; 
+    return res;
 }
 
 BUILTIN_PROC_DEF(num_lt) {
@@ -1026,7 +1026,7 @@ BUILTIN_PROC_DEF(num_lt) {
     if (!args->car->is_num_obj())
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
 
-    NumObj *last = static_cast<NumObj*>(args->car), *opr; 
+    NumObj *last = static_cast<NumObj*>(args->car), *opr;
     for (; args != empty_list; args = TO_PAIR(args->cdr), last = opr)
     {
         if (!args->car->is_num_obj())        // not a number
@@ -1050,7 +1050,7 @@ BUILTIN_PROC_DEF(num_gt) {
     if (!args->car->is_num_obj())
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
 
-    NumObj *last = static_cast<NumObj*>(args->car), *opr; 
+    NumObj *last = static_cast<NumObj*>(args->car), *opr;
     for (; args != empty_list; args = TO_PAIR(args->cdr), last = opr)
     {
         if (!args->car->is_num_obj())        // not a number
@@ -1074,7 +1074,7 @@ BUILTIN_PROC_DEF(num_eq) {
     if (!args->car->is_num_obj())
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
 
-    NumObj *last = static_cast<NumObj*>(args->car), *opr; 
+    NumObj *last = static_cast<NumObj*>(args->car), *opr;
     for (; args != empty_list; args = TO_PAIR(args->cdr), last = opr)
     {
         if (!args->car->is_num_obj())        // not a number
@@ -1148,14 +1148,14 @@ BUILTIN_PROC_DEF(num_is_exact) {
     ARGS_EXACTLY_ONE;
     if (!args->car->is_num_obj())
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
-    return new BoolObj(static_cast<NumObj*>(args->car)->is_exact()); 
+    return new BoolObj(static_cast<NumObj*>(args->car)->is_exact());
 }
 
 BUILTIN_PROC_DEF(num_is_inexact) {
     ARGS_EXACTLY_ONE;
     if (!args->car->is_num_obj())
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
-    return new BoolObj(!static_cast<NumObj*>(args->car)->is_exact()); 
+    return new BoolObj(!static_cast<NumObj*>(args->car)->is_exact());
 }
 
 BUILTIN_PROC_DEF(length) {
@@ -1171,7 +1171,7 @@ BUILTIN_PROC_DEF(length) {
         num++;
         if ((nptr = args->cdr)->is_pair_obj())
             args = TO_PAIR(nptr);
-        else 
+        else
             break;
     }
     if (args->cdr != empty_list)
@@ -1207,7 +1207,7 @@ BUILTIN_PROC_DEF(append) {
                 head = copy_list(TO_PAIR(head), tail);
             else tail = head;
         }
-        else 
+        else
         {
             if (tail->is_pair_obj())
             {
@@ -1230,7 +1230,7 @@ BUILTIN_PROC_DEF(reverse) {
     ARGS_EXACTLY_ONE;
     Pair *tail = empty_list;
     EvalObj *ptr;
-    for (ptr = args->car; 
+    for (ptr = args->car;
             ptr->is_pair_obj(); ptr = TO_PAIR(ptr)->cdr)
         tail = new Pair(TO_PAIR(ptr)->car, tail);
     if (ptr != empty_list)
@@ -1241,7 +1241,7 @@ BUILTIN_PROC_DEF(reverse) {
 BUILTIN_PROC_DEF(list_tail) {
     ARGS_EXACTLY_TWO;
     EvalObj *sec = TO_PAIR(args->cdr)->car;
-    if (!sec->is_num_obj() || 
+    if (!sec->is_num_obj() ||
             static_cast<NumObj*>(sec)->level != NUM_LVL_INT)
         throw TokenError("an exact integer", RUN_ERR_WRONG_TYPE);
     int i, k = static_cast<IntNumObj*>(sec)->get_i();
@@ -1269,7 +1269,7 @@ BUILTIN_PROC_DEF(is_eqv) {
     if (otype != obj2->get_otype()) return new BoolObj(false);
     if (otype & CLS_BOOL_OBJ)
         return new BoolObj(
-            static_cast<BoolObj*>(obj1)->val == 
+            static_cast<BoolObj*>(obj1)->val ==
             static_cast<BoolObj*>(obj2)->val);
     if (otype & CLS_SYM_OBJ)
         return new BoolObj(
@@ -1312,7 +1312,7 @@ do { \
         throw NormalError(RUN_ERR_QUEUE_OVERFLOW); \
 } while (0)
 
-    
+
     static EvalObj *q1[EQUAL_QUEUE_SIZE], *q2[EQUAL_QUEUE_SIZE];
 
     ARGS_EXACTLY_TWO;
@@ -1353,8 +1353,8 @@ do { \
             VecObj *vb = static_cast<VecObj*>(b);
             if (va->get_size() != vb->get_size())
                 return new BoolObj(false);
-            for (EvalObjVec::iterator 
-                    it = va->vec.begin(); 
+            for (EvalObjVec::iterator
+                    it = va->vec.begin();
                     it != va->vec.end(); it++)
             {
                 *r1 = TO_PAIR(a)->car;
@@ -1362,8 +1362,8 @@ do { \
                 CHK1;
             }
 
-            for (EvalObjVec::iterator 
-                    it = vb->vec.begin(); 
+            for (EvalObjVec::iterator
+                    it = vb->vec.begin();
                     it != vb->vec.end(); it++)
             {
                 *r2 = TO_PAIR(b)->car;
@@ -1373,7 +1373,7 @@ do { \
         }
         else if (otype & CLS_BOOL_OBJ)
         {
-            if (static_cast<BoolObj*>(a)->val != 
+            if (static_cast<BoolObj*>(a)->val !=
                 static_cast<BoolObj*>(b)->val)
                 return new BoolObj(false);
         }

@@ -19,7 +19,7 @@ int main() {
         {
             Pair *tree = ast->absorb(tk);
             if (!tree) break;
-            fprintf(stderr, "Ret> $%d = %s\n", rcnt++, 
+            fprintf(stderr, "Ret> $%d = %s\n", rcnt++,
                     eval->run_expr(tree)->ext_repr().c_str());
         }
         catch (GeneralError &e)

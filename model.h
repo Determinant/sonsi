@@ -14,8 +14,8 @@ using std::vector;
 using std::set;
 
 // the range of unsigned char is enough for these types
-typedef unsigned char ClassType;  
-typedef unsigned char NumLvl;      
+typedef unsigned char ClassType;
+typedef unsigned char NumLvl;
 
 const int CLS_RET_ADDR = 1 << 0;
 const int CLS_EVAL_OBJ = 1 << 1;
@@ -49,7 +49,7 @@ class FrameObj {
          * Report the type of the FrameObj, which can avoid the use of
          * dynamic_cast to improve efficiency. See the constructor for detail
          */
-        ClassType ftype;   
+        ClassType ftype;
     public:
         /**
          * Construct an EvalObj
@@ -92,7 +92,7 @@ class EvalObj : public FrameObj {
          */
         EvalObj(int otype = CLS_SIM_OBJ);
         /** Check if the object is a simple object (instead of a call
-         * invocation) 
+         * invocation)
          * @return true if the object is not a construction (Pair)
          * */
         bool is_simple_obj();
@@ -111,7 +111,7 @@ class EvalObj : public FrameObj {
         /** Any EvalObj has its external representation */
         string ext_repr();
         /** Always true for all EvalObjs except BoolObj */
-        virtual bool is_true();         
+        virtual bool is_true();
         virtual ReprCons *get_repr_cons() = 0;
 };
 
@@ -158,7 +158,7 @@ class ReprCons {
         EvalObj *ori;
         bool done;
         string repr;
-        ReprCons(bool done, EvalObj *ori = NULL); 
+        ReprCons(bool done, EvalObj *ori = NULL);
         virtual EvalObj *next(const string &prev) = 0;
 };
 
@@ -234,9 +234,9 @@ class OptObj: public EvalObj {
          * @param envt The current environment (may be modified)
          * @param cont The current continuation (may be modified)
          * @param top_ptr Pointing to the top of the stack (may be modified)
-         * @return New value for pc register 
+         * @return New value for pc register
          */
-        virtual Pair *call(ArgList *args, Environment * &envt, 
+        virtual Pair *call(ArgList *args, Environment * &envt,
                             Continuation * &cont, FrameObj ** &top_ptr) = 0;
 };
 
@@ -246,7 +246,7 @@ class OptObj: public EvalObj {
 class ProcObj: public OptObj {
     public:
         /** The procedure body, a list of expressions to be evaluated */
-        Pair *body;        
+        Pair *body;
         /** The arguments: <list> | var1 ... | var1 var2 ... . varn */
         EvalObj *params;
         /** Pointer to the environment */
@@ -276,7 +276,7 @@ typedef EvalObj* (*BuiltinProc)(ArgList *, const string &);
 class BuiltinProcObj: public OptObj {
     private:
         /** The function that tackle the inputs in effect */
-        BuiltinProc handler;        
+        BuiltinProc handler;
         string name;
     public:
         /**
@@ -295,11 +295,11 @@ class BuiltinProcObj: public OptObj {
  */
 class BoolObj: public EvalObj {
     public:
-        bool val;                       /**< true for \#t, false for \#f */ 
+        bool val;                       /**< true for \#t, false for \#f */
         BoolObj(bool);                  /**< Converts a C bool value to a BoolObj*/
         bool is_true();                 /**< Override EvalObj `is_true()` */
         ReprCons *get_repr_cons();
-        /** Try to construct an BoolObj object 
+        /** Try to construct an BoolObj object
          * @return NULL if failed
          */
         static BoolObj *from_string(string repr);
@@ -319,7 +319,7 @@ class NumObj: public EvalObj {
          */
         NumLvl level;
 
-        /** 
+        /**
          * Construct a general Numeric object
          */
         NumObj(NumLvl level, bool _exactness);
@@ -340,10 +340,10 @@ class NumObj: public EvalObj {
 class StrObj: public EvalObj {
     public:
         string str;
-        
+
         /** Construct a string object */
         StrObj(string str);
-        /** Try to construct an StrObj object 
+        /** Try to construct an StrObj object
          * @return NULL if failed
          */
         static StrObj *from_string(string repr);
@@ -356,10 +356,10 @@ class StrObj: public EvalObj {
 class CharObj: public EvalObj {
     public:
         char ch;
-        
+
         /** Construct a string object */
         CharObj(char ch);
-        /** Try to construct an CharObj object 
+        /** Try to construct an CharObj object
          * @return NULL if failed
          */
         static CharObj *from_string(string repr);
@@ -388,7 +388,7 @@ class VecObj: public EvalObj {
 
 typedef map<string, EvalObj*> Str2EvalObj;
 /** @class Environment
- * The environment of current evaluation, i.e. the local variable binding 
+ * The environment of current evaluation, i.e. the local variable binding
  */
 class Environment {
     private:
@@ -400,14 +400,14 @@ class Environment {
          * @param prev_envt the outer environment
          */
         Environment(Environment *prev_envt);
-        /** Add a binding entry which binds sym_obj to eval_obj 
+        /** Add a binding entry which binds sym_obj to eval_obj
          * @param def true to force the assignment
          * @return when def is set to false, this return value is true iff. the
          * assignment carried out successfully
          */
-        bool add_binding(SymObj *sym_obj, EvalObj *eval_obj, bool def = true);  
+        bool add_binding(SymObj *sym_obj, EvalObj *eval_obj, bool def = true);
         /** Extract the corresponding EvalObj if obj is a SymObj, or just
-         * simply return obj as it is 
+         * simply return obj as it is
          * @param obj the object as request
          * */
         EvalObj *get_obj(EvalObj *obj);
@@ -421,7 +421,7 @@ class Environment {
 class Continuation {
     public:
         /** Linking the previous continuation on the chain */
-        Continuation *prev_cont;    
+        Continuation *prev_cont;
         Environment *envt;  /**< The saved envt */
         Pair *pc;           /**< The saved pc */
         /** Pointing to the current expression that is being evaluated.
@@ -430,10 +430,10 @@ class Continuation {
         Pair *proc_body;
 
         /** Create a continuation */
-        Continuation(Environment *envt, Pair *pc, Continuation *prev_cont, 
+        Continuation(Environment *envt, Pair *pc, Continuation *prev_cont,
                 Pair *proc_body);
 };
 
-bool is_list();
+bool is_list(Pair *ptr);
 
 #endif
