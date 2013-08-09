@@ -15,6 +15,8 @@ static const int NUM_LVL_COMP = 0;
 static const int NUM_LVL_REAL = 1;
 static const int NUM_LVL_RAT = 2;
 static const int NUM_LVL_INT = 3;
+const double EPS = 1e-16;
+const int PREC = 16;
 
 #define ARGS_EXACTLY_TWO \
     if (args == empty_list ||  \
@@ -35,7 +37,7 @@ static const int NUM_LVL_INT = 3;
 string double_to_str(double val, bool force_sign = false) {
     stringstream ss;
     if (force_sign) ss << std::showpos;
-    ss << std::setprecision(16);
+    ss << std::setprecision(PREC);
     ss << val;
     return ss.str();
 }
@@ -79,6 +81,9 @@ int gcd(int a, int b) {
     return abs(a);
 }
 
+bool is_zero(double x) {
+    return -EPS < x && x < EPS;
+}
 
 InexactNumObj::InexactNumObj(NumLvl level) : NumObj(level, false) {}
 
@@ -200,7 +205,10 @@ NumObj *CompNumObj::mul(NumObj *_r) {
 
 NumObj *CompNumObj::div(NumObj *_r) {
     CompNumObj *r = static_cast<CompNumObj*>(_r);
-    double f = 1.0 / (C * C + D * D);
+    double f = C * C + D * D;
+    if (f == 0)
+        throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
+    f = 1 / f;
     return new CompNumObj((A * C + B * D) * f,
             (B * C - A * D) * f);
 }
@@ -300,6 +308,8 @@ ExactNumObj::ExactNumObj(NumLvl level) : NumObj(level, true) {}
 #ifndef GMP_SUPPORT
 RatNumObj::RatNumObj(int _a, int _b) :
     ExactNumObj(NUM_LVL_RAT), a(_a), b(_b) {
+        if (b == 0)
+            throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
         int g = gcd(a, b);
         a /= g;
         b /= g;
@@ -329,6 +339,8 @@ RatNumObj *RatNumObj::from_string(string repr) {
     try
     {
         mpq_class ret(repr, 10);
+        if (ret.get_den() == 0)
+            throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
         ret.canonicalize();
         return new RatNumObj(ret);
     }
@@ -505,8 +517,9 @@ NumObj *IntNumObj::div(NumObj *_r) {
 #ifndef GMP_SUPPORT
     return new RatNumObj(val, static_cast<IntNumObj*>(_r)->val);
 #else
-    return new RatNumObj(mpq_class(val,
-                static_cast<IntNumObj*>(_r)->val));
+    mpz_class d(static_cast<IntNumObj*>(_r)->val);
+    if (d == 0) throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
+    return new RatNumObj(mpq_class(val, d));
 #endif
 }
 
@@ -940,7 +953,7 @@ BUILTIN_PROC_DEF(make_list) {
 }
 
 BUILTIN_PROC_DEF(num_add) {
-    ARGS_AT_LEAST_ONE;
+//    ARGS_AT_LEAST_ONE;
     NumObj *res = new IntNumObj(0), *opr; // the most accurate type
     for (;args != empty_list; args = TO_PAIR(args->cdr))
     {
@@ -964,6 +977,12 @@ BUILTIN_PROC_DEF(num_sub) {
 
     NumObj *res = static_cast<NumObj*>(args->car), *opr;
     args = TO_PAIR(args->cdr);
+    if (args == empty_list)
+    {
+        IntNumObj _zero(0);
+        NumObj *zero = res->convert(&_zero);
+        return zero->sub(res);
+    }
     for (; args != empty_list; args = TO_PAIR(args->cdr))
     {
         if (!args->car->is_num_obj())        // not a number
@@ -982,7 +1001,7 @@ BUILTIN_PROC_DEF(num_sub) {
 
 
 BUILTIN_PROC_DEF(num_mul) {
-    ARGS_AT_LEAST_ONE;
+//    ARGS_AT_LEAST_ONE;
     NumObj *res = new IntNumObj(1), *opr; // the most accurate type
     for (;args != empty_list; args = TO_PAIR(args->cdr))
     {
@@ -1003,9 +1022,14 @@ BUILTIN_PROC_DEF(num_div) {
     ARGS_AT_LEAST_ONE;
     if (!args->car->is_num_obj())
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
-
     NumObj *res = static_cast<NumObj*>(args->car), *opr;
     args = TO_PAIR(args->cdr);
+    if (args == empty_list)
+    {
+        IntNumObj _one(1);
+        NumObj *one = res->convert(&_one);
+        return one->div(res);
+    }
     for (; args != empty_list; args = TO_PAIR(args->cdr))
     {
         if (!args->car->is_num_obj())        // not a number
@@ -1427,6 +1451,36 @@ BUILTIN_PROC_DEF(is_number) {
     ARGS_EXACTLY_ONE;
     return new BoolObj(args->car->is_num_obj());
 }
+
+BUILTIN_PROC_DEF(is_complex) {
+    ARGS_EXACTLY_ONE;
+    return new BoolObj(args->car->is_num_obj());
+    // any numbers are complex 
+}
+
+
+BUILTIN_PROC_DEF(is_real) {
+    ARGS_EXACTLY_ONE;
+    if (!args->car->is_num_obj())
+        return new BoolObj(false);
+    NumObj *obj = static_cast<NumObj*>(args->car);
+    if (obj->level >= NUM_LVL_REAL) 
+        return new BoolObj(true);
+    return new BoolObj(is_zero(static_cast<CompNumObj*>(obj)->imag));
+}
+
+BUILTIN_PROC_DEF(is_rational) {
+    ARGS_EXACTLY_ONE;
+    return new BoolObj(args->car->is_num_obj() && 
+                    static_cast<NumObj*>(args->car)->level >= NUM_LVL_RAT);
+}
+
+BUILTIN_PROC_DEF(is_integer) {
+    ARGS_EXACTLY_ONE;
+    return new BoolObj(args->car->is_num_obj() && 
+                    static_cast<NumObj*>(args->car)->level >= NUM_LVL_INT);
+}
+
 
 BUILTIN_PROC_DEF(display) {
     ARGS_EXACTLY_ONE;
