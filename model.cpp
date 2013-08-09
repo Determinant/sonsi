@@ -89,9 +89,13 @@ string EvalObj::ext_repr() {
         {
             top_ptr--;
             obj = (*top_ptr)->next("");
-            *(++top_ptr) = obj->get_repr_cons();
-            if (hash.count((*top_ptr)->ori))
-                *top_ptr = new ReprStr("#inf#");
+            if (obj)
+            {
+                *(++top_ptr) = obj->get_repr_cons();
+                if (hash.count((*top_ptr)->ori))
+                    *top_ptr = new ReprStr("#inf#");
+            }
+            else *top_ptr = new ReprStr((*top_ptr)->repr);
         }
         top_ptr++;
     }
@@ -102,7 +106,7 @@ string EvalObj::ext_repr() {
 }
 
 Pair::Pair(EvalObj *_car, EvalObj *_cdr) : 
-    EvalObj(CLS_PAIR_OBJ), car(_car), cdr(_cdr), skip(false), 
+    EvalObj(CLS_PAIR_OBJ), car(_car), cdr(_cdr), 
     next(NULL) {}
 
 ReprCons *Pair::get_repr_cons() {

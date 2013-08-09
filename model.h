@@ -127,7 +127,6 @@ class Pair : public EvalObj {
     public:
         EvalObj *car;                   /**< car (as in Scheme) */
         EvalObj *cdr;                      /**< cdr (as in Scheme) */
-        bool skip;                      /**< Wether to skip the current branch */
         Pair* next;                     /**< The next branch in effect */
 
         Pair(EvalObj *car, EvalObj *cdr);  /**< Create a Pair (car . cdr) */
