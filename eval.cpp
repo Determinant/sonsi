@@ -21,6 +21,7 @@ void Evaluator::add_builtin_routines() {
     ADD_ENTRY("set!", new SpecialOptSet());
     ADD_ENTRY("quote", new SpecialOptQuote());
     ADD_ENTRY("eval", new SpecialOptEval());
+    ADD_ENTRY("and", new SpecialOptAnd());
 
     ADD_BUILTIN_PROC("+", num_add);
     ADD_BUILTIN_PROC("-", num_sub);

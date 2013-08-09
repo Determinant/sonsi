@@ -8,7 +8,6 @@
 using std::string;
 
 const int EQUAL_QUEUE_SIZE = 262144;
-bool is_list(Pair *ptr);
 
 /** @class InexactNumObj
  * Inexact number implementation (using doubles)
@@ -227,6 +226,21 @@ class SpecialOptEval: public SpecialOptObj {
         unsigned char state; /**< 0 for prepared, 1 for pre_called */
     public:
         SpecialOptEval();
+        void prepare(Pair *pc);
+        Pair *call(ArgList *args, Environment * &envt, 
+                    Continuation * &cont, FrameObj ** &top_ptr);
+
+        ReprCons *get_repr_cons();
+};
+
+/** @class SpecialOptAnd
+ * The implementation of `and` operator
+ */
+class SpecialOptAnd: public SpecialOptObj {
+    private:
+        unsigned char state; /**< 0 for prepared, 1 for pre_called */
+    public:
+        SpecialOptAnd();
         void prepare(Pair *pc);
         Pair *call(ArgList *args, Environment * &envt, 
                     Continuation * &cont, FrameObj ** &top_ptr);

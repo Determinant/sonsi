@@ -166,3 +166,9 @@ t
 (lambda () '(1 2 3))
 (lambda () 1 2 3)
 (lambda #() 1)
+
+(define src
+  '(define g (lambda (x) (if (= x 5) 0 ((lambda () (display x) (g (+ x 1))))))))
+src
+(eval src)
+(eval '(g 0))

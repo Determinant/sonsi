@@ -30,15 +30,6 @@ static const int NUM_LVL_INT = 3;
     if (args == empty_list) \
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
 
-bool is_list(Pair *ptr) {
-    if (ptr == empty_list) return true;
-    EvalObj *nptr; 
-    for (;;) 
-        if ((nptr = ptr->cdr)->is_pair_obj()) 
-            ptr = TO_PAIR(nptr); 
-        else break; 
-    return ptr->cdr == empty_list;
-}
 
 string double_to_str(double val, bool force_sign = false) {
     stringstream ss;
@@ -95,7 +86,7 @@ CompNumObj::CompNumObj(double _real, double _imag) :
     CompNumObj *CompNumObj::from_string(string repr) {
         // spos: the position of the last sign
         // ipos: the position of i
-        int spos = -1, ipos = -1;
+        long long spos = -1, ipos = -1;
         size_t len = repr.length();
         bool sign;
         for (size_t i = 0; i < len; i++)
@@ -117,7 +108,7 @@ CompNumObj::CompNumObj(double _real, double _imag) :
         if (spos > 0)
         {
             string real_str = repr.substr(0, spos);
-            if (int_ptr = IntNumObj::from_string(real_str))
+            if ((int_ptr = IntNumObj::from_string(real_str)))
 #ifndef GMP_SUPPORT
                 real = int_ptr->val;
 #else
@@ -136,7 +127,7 @@ CompNumObj::CompNumObj(double _real, double _imag) :
         if (ipos > spos + 1)
         {
             string imag_str = repr.substr(spos + 1, ipos - spos - 1);
-            if (int_ptr = IntNumObj::from_string(imag_str))
+            if ((int_ptr = IntNumObj::from_string(imag_str)))
 #ifndef GMP_SUPPORT
                 imag = int_ptr->val;
 #else
@@ -854,7 +845,6 @@ Pair *SpecialOptEval::call(ArgList *args, Environment * &envt,
         TO_PAIR(args->cdr)->cdr != empty_list)
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
     Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
-    Pair *pc = static_cast<Pair*>(ret_addr->car);
     if (state)
     {
         *top_ptr++ = TO_PAIR(args->cdr)->car;
@@ -870,6 +860,54 @@ Pair *SpecialOptEval::call(ArgList *args, Environment * &envt,
 
 ReprCons *SpecialOptEval::get_repr_cons() { 
     return new ReprStr("#<Builtin Macro: eval>"); 
+}
+
+SpecialOptAnd::SpecialOptAnd() : SpecialOptObj("and") {}
+
+void SpecialOptAnd::prepare(Pair *pc) {
+    CHECK_COM(pc);
+    if (pc->cdr != empty_list)
+    {
+        pc->next = TO_PAIR(pc->cdr);
+        pc->next->next = NULL;
+    }
+}
+
+Pair *SpecialOptAnd::call(ArgList *args, Environment * &envt, 
+        Continuation * &cont, FrameObj ** &top_ptr) {
+    Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
+    Pair *pc = static_cast<Pair*>(ret_addr->car);
+    if (args->cdr == empty_list)
+    {
+        *top_ptr++ = new BoolObj(true);
+        return ret_addr->next;
+    }
+    EvalObj *ret = TO_PAIR(args->cdr)->car;
+    if (ret->is_true())
+    {
+        if (pc->next->cdr == empty_list) // the last member
+        {
+            *top_ptr++ = ret;
+            return ret_addr->next;
+        }
+        else
+        {
+            top_ptr += 2;
+            pc->next = TO_PAIR(pc->next->cdr);
+            pc->next->next = NULL;
+            return pc->next;
+        }
+    }
+    else
+    {
+        *top_ptr++ = ret;
+        return ret_addr->next;
+    }
+    throw NormalError(INT_ERR);
+}
+
+ReprCons *SpecialOptAnd::get_repr_cons() { 
+    return new ReprStr("#<Builtin Macro: and>"); 
 }
 
 BUILTIN_PROC_DEF(make_pair) {
@@ -893,9 +931,8 @@ BUILTIN_PROC_DEF(pair_cdr) {
     return TO_PAIR(args->car)->cdr;
 }
 
+
 BUILTIN_PROC_DEF(make_list) {
-    if (!is_list(args))
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS); 
     return args;
 }
 
@@ -1227,7 +1264,7 @@ BUILTIN_PROC_DEF(is_eqv) {
     ARGS_EXACTLY_TWO;
     EvalObj *obj1 = args->car;
     EvalObj *obj2 = TO_PAIR(args->cdr)->car;
-    ClassType otype = obj1->get_otype();
+    int otype = obj1->get_otype();
 
     if (otype != obj2->get_otype()) return new BoolObj(false);
     if (otype & CLS_BOOL_OBJ)
@@ -1353,11 +1390,15 @@ do { \
             if (num1->is_exact() != num2->is_exact())
             return new BoolObj(false);
             if (num1->level < num2->level)
+            {
                 if (!num1->eq(num1->convert(num2)))
                     return new BoolObj(false);
+            }
             else
+            {
                 if (!num2->eq(num2->convert(num1)))
                     return new BoolObj(false);
+            }
         }
         else if (otype & CLS_CHAR_OBJ)
         {

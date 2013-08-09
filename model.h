@@ -181,7 +181,7 @@ class VecObj;
 class VectReprCons : public ReprCons {
     private:
         VecObj *ptr;
-        int idx;
+        size_t idx;
     public:
         VectReprCons(VecObj *ptr, EvalObj *ori);
         EvalObj *next(const string &prev);
@@ -377,7 +377,7 @@ class VecObj: public EvalObj {
         EvalObjVec vec;
         /** Construct a vector object */
         VecObj();
-        int get_size();
+        size_t get_size();
         EvalObj *get_obj(int idx);
         /** Resize the vector */
         void resize(int new_size);
@@ -433,5 +433,7 @@ class Continuation {
         Continuation(Environment *envt, Pair *pc, Continuation *prev_cont, 
                 Pair *proc_body);
 };
+
+bool is_list();
 
 #endif
