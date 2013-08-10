@@ -106,6 +106,7 @@ class EvalObj : public FrameObj {
         bool is_num_obj();
         /** Check if the object is a boolean */
         bool is_bool_obj();
+        bool is_str_obj();
         int get_otype();
         virtual void prepare(Pair *pc);
         /** Any EvalObj has its external representation */
@@ -329,8 +330,12 @@ class NumObj: public EvalObj {
         virtual NumObj *sub(NumObj *r) = 0;
         virtual NumObj *mul(NumObj *r) = 0;
         virtual NumObj *div(NumObj *r) = 0;
-        virtual bool lt(NumObj *r) = 0;
-        virtual bool gt(NumObj *r) = 0;
+        virtual NumObj *abs();
+
+        virtual bool lt(NumObj *r);
+        virtual bool gt(NumObj *r);
+        virtual bool le(NumObj *r);
+        virtual bool ge(NumObj *r);
         virtual bool eq(NumObj *r) = 0;
 };
 

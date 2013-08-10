@@ -6,6 +6,7 @@
 #include <sstream>
 #include <cctype>
 #include <cstdlib>
+#include <cmath>
 #include <iomanip>
 
 using std::stringstream;
@@ -213,13 +214,26 @@ NumObj *CompNumObj::div(NumObj *_r) {
             (B * C - A * D) * f);
 }
 
-bool CompNumObj::lt(NumObj *_r) {
+bool NumObj::lt(NumObj *_r) {
     throw TokenError("a comparable number", RUN_ERR_WRONG_TYPE);
 }
 
-bool CompNumObj::gt(NumObj *_r) {
+bool NumObj::gt(NumObj *_r) {
     throw TokenError("a comparable number", RUN_ERR_WRONG_TYPE);
 }
+
+bool NumObj::le(NumObj *_r) {
+    throw TokenError("a comparable number", RUN_ERR_WRONG_TYPE);
+}
+
+bool NumObj::ge(NumObj *_r) {
+    throw TokenError("a comparable number", RUN_ERR_WRONG_TYPE);
+}
+
+NumObj *NumObj::abs() {
+    throw TokenError("a real number", RUN_ERR_WRONG_TYPE);
+}
+
 
 bool CompNumObj::eq(NumObj *_r) {
     CompNumObj *r = static_cast<CompNumObj*>(_r);
@@ -287,6 +301,10 @@ NumObj *RealNumObj::div(NumObj *_r) {
     return new RealNumObj(real / static_cast<RealNumObj*>(_r)->real);
 }
 
+NumObj *RealNumObj::abs() {
+    return new RealNumObj(fabs(real));
+}
+
 bool RealNumObj::eq(NumObj *_r) {
     return real == static_cast<RealNumObj*>(_r)->real;
 }
@@ -299,6 +317,15 @@ bool RealNumObj::gt(NumObj *_r) {
     return real > static_cast<RealNumObj*>(_r)->real;
 }
 
+bool RealNumObj::le(NumObj *_r) {
+    return real <= static_cast<RealNumObj*>(_r)->real;
+}
+
+bool RealNumObj::ge(NumObj *_r) {
+    return real >= static_cast<RealNumObj*>(_r)->real;
+}
+
+
 ReprCons *RealNumObj::get_repr_cons() {
     return new ReprStr(double_to_str(real));
 }
@@ -310,6 +337,7 @@ RatNumObj::RatNumObj(int _a, int _b) :
     ExactNumObj(NUM_LVL_RAT), a(_a), b(_b) {
         if (b == 0)
             throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
+        if (b < 0) a = -a, b = -b;
         int g = gcd(a, b);
         a /= g;
         b /= g;
@@ -444,12 +472,39 @@ bool RatNumObj::gt(NumObj *_r) {
 #endif
 }
 
+bool RatNumObj::le(NumObj *_r) {
+    RatNumObj *r = static_cast<RatNumObj*>(_r);
+#ifndef GMP_SUPPORT
+    return A * D <= C * B;
+#else
+    return val <= r->val;
+#endif
+}
+
+bool RatNumObj::ge(NumObj *_r) {
+    RatNumObj *r = static_cast<RatNumObj*>(_r);
+#ifndef GMP_SUPPORT
+    return A * D >= C * B;
+#else
+    return val >= r->val;
+#endif
+}
+
+
 bool RatNumObj::eq(NumObj *_r) {
     RatNumObj *r = static_cast<RatNumObj*>(_r);
 #ifndef GMP_SUPPORT
     return A * D == C * B;
 #else
     return val == r->val;
+#endif
+}
+
+NumObj *RatNumObj::abs() {
+#ifndef GMP_SUPPORT
+    return new RatNumObj((a > 0 ? a : -a), b);
+#else
+    return new RatNumObj(std::abs(val));
 #endif
 }
 
@@ -523,6 +578,38 @@ NumObj *IntNumObj::div(NumObj *_r) {
 #endif
 }
 
+NumObj *IntNumObj::abs() {
+    return new IntNumObj(std::abs(val));
+}
+
+NumObj *IntNumObj::rem(NumObj *_r) {
+    return new IntNumObj(val % static_cast<IntNumObj*>(_r)->val);
+}
+
+NumObj *IntNumObj::mod(NumObj *_r) {
+    const mpz_class &rval = static_cast<IntNumObj*>(_r)->val;
+    mpz_class ret = val % rval;
+    if (sgn(ret) != sgn(rval))
+        ret = ret + rval;
+    return new IntNumObj(ret);
+}
+
+NumObj *IntNumObj::quo(NumObj *_r) {
+    return new IntNumObj(val / static_cast<IntNumObj*>(_r)->val);
+}
+
+NumObj *IntNumObj::gcd(NumObj *_r) {
+    mpz_t g;
+    mpz_gcd(g, val.get_mpz_t(), static_cast<IntNumObj*>(_r)->val.get_mpz_t());
+    return new IntNumObj(mpz_class(g));
+}
+
+NumObj *IntNumObj::lcm(NumObj *_r) {
+    mpz_t l;
+    mpz_lcm(l, val.get_mpz_t(), static_cast<IntNumObj*>(_r)->val.get_mpz_t());
+    return new IntNumObj(mpz_class(l));
+}
+
 bool IntNumObj::lt(NumObj *_r) {
     return val < static_cast<IntNumObj*>(_r)->val;
 }
@@ -530,6 +617,15 @@ bool IntNumObj::lt(NumObj *_r) {
 bool IntNumObj::gt(NumObj *_r) {
     return val > static_cast<IntNumObj*>(_r)->val;
 }
+
+bool IntNumObj::le(NumObj *_r) {
+    return val <= static_cast<IntNumObj*>(_r)->val;
+}
+
+bool IntNumObj::ge(NumObj *_r) {
+    return val >= static_cast<IntNumObj*>(_r)->val;
+}
+
 
 bool IntNumObj::eq(NumObj *_r) {
     return val == static_cast<IntNumObj*>(_r)->val;
@@ -1046,6 +1142,57 @@ BUILTIN_PROC_DEF(num_div) {
     return res;
 }
 
+BUILTIN_PROC_DEF(num_le) {
+    if (args == empty_list)
+        return new BoolObj(true);
+    // zero arguments
+    if (!args->car->is_num_obj())
+        throw TokenError("a number", RUN_ERR_WRONG_TYPE);
+
+    NumObj *last = static_cast<NumObj*>(args->car), *opr;
+    args = TO_PAIR(args->cdr);
+    for (; args != empty_list; args = TO_PAIR(args->cdr), last = opr)
+    {
+        if (!args->car->is_num_obj())        // not a number
+            throw TokenError("a number", RUN_ERR_WRONG_TYPE);
+        opr = static_cast<NumObj*>(args->car);
+        // upper type conversion
+        if (last->level < opr->level)
+            opr = last->convert(opr);
+        else
+            last = opr->convert(last);
+        if (!last->le(opr))
+            return new BoolObj(false);
+    }
+    return new BoolObj(true);
+}
+
+BUILTIN_PROC_DEF(num_ge) {
+    if (args == empty_list)
+        return new BoolObj(true);
+    // zero arguments
+    if (!args->car->is_num_obj())
+        throw TokenError("a number", RUN_ERR_WRONG_TYPE);
+
+    NumObj *last = static_cast<NumObj*>(args->car), *opr;
+    args = TO_PAIR(args->cdr);
+    for (; args != empty_list; args = TO_PAIR(args->cdr), last = opr)
+    {
+        if (!args->car->is_num_obj())        // not a number
+            throw TokenError("a number", RUN_ERR_WRONG_TYPE);
+        opr = static_cast<NumObj*>(args->car);
+        // upper type conversion
+        if (last->level < opr->level)
+            opr = last->convert(opr);
+        else
+            last = opr->convert(last);
+        if (!last->ge(opr))
+            return new BoolObj(false);
+    }
+    return new BoolObj(true);
+}
+
+
 BUILTIN_PROC_DEF(num_lt) {
     if (args == empty_list)
         return new BoolObj(true);
@@ -1479,6 +1626,84 @@ BUILTIN_PROC_DEF(is_integer) {
     ARGS_EXACTLY_ONE;
     return new BoolObj(args->car->is_num_obj() && 
                     static_cast<NumObj*>(args->car)->level >= NUM_LVL_INT);
+}
+
+BUILTIN_PROC_DEF(num_abs) {
+    ARGS_EXACTLY_ONE;
+    if (!args->car->is_num_obj())
+        throw TokenError("a number", RUN_ERR_WRONG_TYPE);
+    return static_cast<NumObj*>(args->car)->abs();
+}
+
+BUILTIN_PROC_DEF(num_mod) {
+    ARGS_EXACTLY_TWO;
+    NumObj* a = static_cast<NumObj*>(args->car);
+    NumObj* b = static_cast<NumObj*>(TO_PAIR(args->cdr)->car);
+    if (a->level != NUM_LVL_INT || b->level != NUM_LVL_INT)
+        throw TokenError("an integer", RUN_ERR_WRONG_TYPE);
+    return static_cast<IntNumObj*>(a)->mod(b);
+}
+
+BUILTIN_PROC_DEF(num_rem) {
+    ARGS_EXACTLY_TWO;
+    NumObj* a = static_cast<NumObj*>(args->car);
+    NumObj* b = static_cast<NumObj*>(TO_PAIR(args->cdr)->car);
+    if (a->level != NUM_LVL_INT || b->level != NUM_LVL_INT)
+        throw TokenError("an integer", RUN_ERR_WRONG_TYPE);
+    return static_cast<IntNumObj*>(a)->rem(b);
+}
+
+BUILTIN_PROC_DEF(num_quo) {
+    ARGS_EXACTLY_TWO;
+    NumObj* a = static_cast<NumObj*>(args->car);
+    NumObj* b = static_cast<NumObj*>(TO_PAIR(args->cdr)->car);
+    if (a->level != NUM_LVL_INT || b->level != NUM_LVL_INT)
+        throw TokenError("an integer", RUN_ERR_WRONG_TYPE);
+    return static_cast<IntNumObj*>(a)->quo(b);
+}
+
+BUILTIN_PROC_DEF(num_gcd) {
+//    ARGS_AT_LEAST_ONE;
+    NumObj *res = new IntNumObj(0);
+    IntNumObj *opr; 
+    for (;args != empty_list; args = TO_PAIR(args->cdr))
+    {
+        if (!args->car->is_num_obj())        // not a number
+            throw TokenError("a number", RUN_ERR_WRONG_TYPE);
+        if (static_cast<NumObj*>(args->car)->level != NUM_LVL_INT)        // not a number
+            throw TokenError("an integer", RUN_ERR_WRONG_TYPE);
+
+        opr = static_cast<IntNumObj*>(args->car);
+        res = opr->gcd(res);
+    }
+    return res;
+}
+
+BUILTIN_PROC_DEF(num_lcm) {
+//    ARGS_AT_LEAST_ONE;
+    NumObj *res = new IntNumObj(1);
+    IntNumObj *opr; 
+    for (;args != empty_list; args = TO_PAIR(args->cdr))
+    {
+        if (!args->car->is_num_obj())        // not a number
+            throw TokenError("a number", RUN_ERR_WRONG_TYPE);
+        if (static_cast<NumObj*>(args->car)->level != NUM_LVL_INT)        // not a number
+            throw TokenError("an integer", RUN_ERR_WRONG_TYPE);
+
+        opr = static_cast<IntNumObj*>(args->car);
+        res = opr->lcm(res);
+    }
+    return res;
+}
+
+BUILTIN_PROC_DEF(is_string) {
+    ARGS_AT_LEAST_ONE;
+    return new BoolObj(args->car->is_str_obj());
+}
+
+BUILTIN_PROC_DEF(is_symbol) {
+    ARGS_AT_LEAST_ONE;
+    return new BoolObj(args->car->is_sym_obj());
 }
 
 

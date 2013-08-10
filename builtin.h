@@ -37,8 +37,6 @@ class CompNumObj: public InexactNumObj {
         NumObj *sub(NumObj *r);
         NumObj *mul(NumObj *r);
         NumObj *div(NumObj *r);
-        bool lt(NumObj *r);
-        bool gt(NumObj *r);
         bool eq(NumObj *r);
         ReprCons *get_repr_cons();
 };
@@ -62,8 +60,11 @@ class RealNumObj: public InexactNumObj {
         NumObj *sub(NumObj *r);
         NumObj *mul(NumObj *r);
         NumObj *div(NumObj *r);
+        NumObj *abs();
         bool lt(NumObj *r);
         bool gt(NumObj *r);
+        bool le(NumObj *r);
+        bool ge(NumObj *r);
         bool eq(NumObj *r);
         ReprCons *get_repr_cons();
 
@@ -102,8 +103,11 @@ class RatNumObj: public ExactNumObj {
         NumObj *sub(NumObj *r);
         NumObj *mul(NumObj *r);
         NumObj *div(NumObj *r);
+        NumObj *abs();
         bool lt(NumObj *r);
         bool gt(NumObj *r);
+        bool le(NumObj *r);
+        bool ge(NumObj *r);
         bool eq(NumObj *r);
         ReprCons *get_repr_cons();
 };
@@ -135,8 +139,16 @@ class IntNumObj: public ExactNumObj {
         NumObj *sub(NumObj *r);
         NumObj *mul(NumObj *r);
         NumObj *div(NumObj *r);
+        NumObj *abs();
+        NumObj *mod(NumObj *r);
+        NumObj *rem(NumObj *r);
+        NumObj *quo(NumObj *r);
+        NumObj *gcd(NumObj *r);
+        NumObj *lcm(NumObj *r);
         bool lt(NumObj *r);
         bool gt(NumObj *r);
+        bool le(NumObj *r);
+        bool ge(NumObj *r);
         bool eq(NumObj *r);
         ReprCons *get_repr_cons();
 };
@@ -257,7 +269,9 @@ BUILTIN_PROC_DEF(num_mul);
 BUILTIN_PROC_DEF(num_div);
 
 BUILTIN_PROC_DEF(num_lt);
+BUILTIN_PROC_DEF(num_le);
 BUILTIN_PROC_DEF(num_gt);
+BUILTIN_PROC_DEF(num_ge);
 BUILTIN_PROC_DEF(num_eq);
 
 BUILTIN_PROC_DEF(num_is_exact);
@@ -267,6 +281,12 @@ BUILTIN_PROC_DEF(is_complex);
 BUILTIN_PROC_DEF(is_real);
 BUILTIN_PROC_DEF(is_rational);
 BUILTIN_PROC_DEF(is_integer);
+BUILTIN_PROC_DEF(num_abs);
+BUILTIN_PROC_DEF(num_mod);
+BUILTIN_PROC_DEF(num_rem);
+BUILTIN_PROC_DEF(num_quo);
+BUILTIN_PROC_DEF(num_gcd);
+BUILTIN_PROC_DEF(num_lcm);
 
 BUILTIN_PROC_DEF(bool_not);
 BUILTIN_PROC_DEF(is_boolean);
@@ -289,6 +309,8 @@ BUILTIN_PROC_DEF(is_eqv);
 BUILTIN_PROC_DEF(is_equal);
 
 BUILTIN_PROC_DEF(display);
+BUILTIN_PROC_DEF(is_string);
+BUILTIN_PROC_DEF(is_symbol);
 
 
 #endif

@@ -51,6 +51,10 @@ bool EvalObj::is_bool_obj() {
     return otype & CLS_BOOL_OBJ;
 }
 
+bool EvalObj::is_str_obj() {
+    return otype & CLS_STR_OBJ;
+}
+
 int EvalObj::get_otype() {
     return otype;
 }

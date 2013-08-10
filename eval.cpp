@@ -29,7 +29,9 @@ void Evaluator::add_builtin_routines() {
     ADD_BUILTIN_PROC("/", num_div);
 
     ADD_BUILTIN_PROC("<", num_lt);
+    ADD_BUILTIN_PROC("<=", num_le);
     ADD_BUILTIN_PROC(">", num_gt);
+    ADD_BUILTIN_PROC(">=", num_ge);
     ADD_BUILTIN_PROC("=", num_eq);
 
     ADD_BUILTIN_PROC("exact?", num_is_exact);
@@ -39,6 +41,13 @@ void Evaluator::add_builtin_routines() {
     ADD_BUILTIN_PROC("real?", is_real);
     ADD_BUILTIN_PROC("rational?", is_rational);
     ADD_BUILTIN_PROC("integer?", is_integer);
+    ADD_BUILTIN_PROC("abs", num_abs);
+    ADD_BUILTIN_PROC("modulo", num_mod);
+    ADD_BUILTIN_PROC("remainder", num_rem);
+    ADD_BUILTIN_PROC("quotient", num_quo);
+    ADD_BUILTIN_PROC("gcd", num_gcd);
+    ADD_BUILTIN_PROC("lcm", num_lcm);
+
 
     ADD_BUILTIN_PROC("not", bool_not);
     ADD_BUILTIN_PROC("boolean?", is_boolean);
@@ -62,6 +71,8 @@ void Evaluator::add_builtin_routines() {
     ADD_BUILTIN_PROC("equal?", is_equal);
 
     ADD_BUILTIN_PROC("display", display);
+    ADD_BUILTIN_PROC("string?", is_string);
+    ADD_BUILTIN_PROC("symbol?", is_symbol);
 }
 
 Evaluator::Evaluator() {
