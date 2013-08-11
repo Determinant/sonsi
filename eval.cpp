@@ -24,6 +24,8 @@ void Evaluator::add_builtin_routines() {
     ADD_ENTRY("and", new SpecialOptAnd());
     ADD_ENTRY("or", new SpecialOptOr());
     ADD_ENTRY("apply", new SpecialOptApply());
+    ADD_ENTRY("delay", new SpecialOptDelay());
+    ADD_ENTRY("force", new SpecialOptForce());
 
     ADD_BUILTIN_PROC("+", num_add);
     ADD_BUILTIN_PROC("-", num_sub);

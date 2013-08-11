@@ -55,6 +55,10 @@ bool EvalObj::is_str_obj() {
     return otype & CLS_STR_OBJ;
 }
 
+bool EvalObj::is_prom_obj() {
+    return otype & CLS_PROM_OBJ;
+}
+
 int EvalObj::get_otype() {
     return otype;
 }
@@ -384,6 +388,18 @@ VectReprCons::VectReprCons(VecObj *_ptr, EvalObj *_ori) :
             return res;
         }
     }
+
+PromObj::PromObj(EvalObj *exp) : 
+    EvalObj(CLS_SIM_OBJ | CLS_PROM_OBJ), entry(new Pair(exp, empty_list)), mem(NULL) {}
+
+Pair *PromObj::get_entry() { return entry; }
+
+ReprCons *PromObj::get_repr_cons() { return new ReprStr("#<Promise>"); }
+
+EvalObj *PromObj::get_mem() { return mem; }
+
+void PromObj::feed_mem(EvalObj *res) { mem = res; }
+
 
 bool is_list(Pair *ptr) {
     if (ptr == empty_list) return true;

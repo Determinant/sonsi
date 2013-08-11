@@ -284,6 +284,35 @@ class SpecialOptApply: public SpecialOptObj {
         ReprCons *get_repr_cons();
 };
 
+/** @class SpecialOptDelay
+ * The implementation of `delay` operator
+ */
+class SpecialOptDelay: public SpecialOptObj {
+    public:
+        SpecialOptDelay();
+        void prepare(Pair *pc);
+        Pair *call(ArgList *args, Environment * &envt,
+                    Continuation * &cont, FrameObj ** &top_ptr);
+
+        ReprCons *get_repr_cons();
+};
+
+/** @class SpecialOptForce
+ * The implementation of `force` operator
+ */
+class SpecialOptForce: public SpecialOptObj {
+    private:
+        bool state;
+        PromObj* prom;
+    public:
+        SpecialOptForce();
+        void prepare(Pair *pc);
+        Pair *call(ArgList *args, Environment * &envt,
+                    Continuation * &cont, FrameObj ** &top_ptr);
+
+        ReprCons *get_repr_cons();
+};
+
 
 
 #define BUILTIN_PROC_DEF(func)\

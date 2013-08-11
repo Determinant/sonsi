@@ -27,6 +27,7 @@ const int CLS_SIM_OBJ = 1 << 0;
 const int CLS_PAIR_OBJ = 1 << 1;
 
 const int CLS_OPT_OBJ = 1 << 3;
+const int CLS_PROM_OBJ = 1 << 9;
 
 const int CLS_SYM_OBJ = 1 << 2;
 const int CLS_NUM_OBJ = 1 << 4;
@@ -108,7 +109,8 @@ class EvalObj : public FrameObj {
         bool is_bool_obj();
         /** Check if the object is a string */
         bool is_str_obj();
-        /** Check if the object is a operator */
+        /** Check if the object is a promise */
+        bool is_prom_obj();
         int get_otype();
         virtual void prepare(Pair *pc);
         /** Any EvalObj has its external representation */
@@ -395,6 +397,22 @@ class VecObj: public EvalObj {
         void resize(int new_size);
         /** Add a new element to the rear */
         void push_back(EvalObj *new_elem);
+        ReprCons *get_repr_cons();
+};
+
+/**
+ * @class PromObj
+ * Promise support (partial)
+ */
+class PromObj: public EvalObj {
+    private:
+        Pair *entry;
+        EvalObj *mem;
+    public:
+        PromObj(EvalObj *exp);
+        Pair *get_entry();
+        EvalObj *get_mem();
+        void feed_mem(EvalObj *res);
         ReprCons *get_repr_cons();
 };
 

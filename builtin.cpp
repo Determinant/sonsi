@@ -1116,6 +1116,71 @@ ReprCons *SpecialOptApply::get_repr_cons() {
     return new ReprStr("#<Builtin Macro: apply>");
 }
 
+SpecialOptForce::SpecialOptForce() : SpecialOptObj("force") {}
+
+void SpecialOptForce::prepare(Pair *pc) {
+    state = 0;
+}
+
+Pair *SpecialOptForce::call(ArgList *args, Environment * &envt,
+        Continuation * &cont, FrameObj ** &top_ptr) {
+    if (args->cdr == empty_list ||
+        TO_PAIR(args->cdr)->cdr != empty_list)
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    args = TO_PAIR(args->cdr);
+
+    Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
+    if (state)
+    {
+        EvalObj *mem = args->car;
+        prom->feed_mem(mem);
+        *top_ptr++ = mem;
+        return ret_addr->next;          // Move to the next instruction
+    }
+    else
+    {
+        if (!args->car->is_prom_obj())
+            throw TokenError("a promise", RUN_ERR_WRONG_TYPE);
+        prom = static_cast<PromObj*>(args->car);
+        EvalObj *mem = prom->get_mem();
+        if (mem)                        // fetch from memorized result
+        {
+            *top_ptr++ = mem;
+            return ret_addr->next;      
+        }
+        else                            // force
+        {
+            state = 1;
+            top_ptr += 2;
+            return prom->get_entry();
+        }
+    }
+}
+
+ReprCons *SpecialOptForce::get_repr_cons() {
+    return new ReprStr("#<Builtin Macro: force>");
+}
+
+SpecialOptDelay::SpecialOptDelay() : SpecialOptObj("delay") {}
+
+void SpecialOptDelay::prepare(Pair *pc) {
+    if (pc->cdr == empty_list ||
+        TO_PAIR(pc->cdr)->cdr != empty_list)
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    pc->next = NULL;
+}
+
+Pair *SpecialOptDelay::call(ArgList *args, Environment * &envt,
+        Continuation * &cont, FrameObj ** &top_ptr) {
+    Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
+    Pair *pc = static_cast<Pair*>(ret_addr->car);
+    *top_ptr++ = new PromObj(TO_PAIR(pc->cdr)->car);
+    return ret_addr->next;          // Move to the next instruction
+}
+
+ReprCons *SpecialOptDelay::get_repr_cons() {
+    return new ReprStr("#<Builtin Macro: delay>");
+}
 
 
 BUILTIN_PROC_DEF(make_pair) {

@@ -1,7 +1,5 @@
-- Several built-in support
-
-  - delay
-
+- OPT:Special Opt Repr 
+- OPT:Special Arg Checking
 - Garbage Collection
 - Testing
 - Rounding support
