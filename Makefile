@@ -1,4 +1,4 @@
-main: main.o parser.o builtin.o model.o eval.o exc.o consts.o
+main: main.o parser.o builtin.o model.o eval.o exc.o consts.o types.o
 	g++ -o main $^ -pg -lgmp
 
 .cpp.o:

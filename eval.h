@@ -1,6 +1,7 @@
 #ifndef EVAL_H
 #define EVAL_H
 #include "model.h"
+#include "types.h"
 
 const int EVAL_STACK_SIZE = 262144;
 /** @class Evaluator

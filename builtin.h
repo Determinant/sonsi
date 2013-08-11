@@ -2,157 +2,12 @@
 #define BUILTIN_H
 
 #include "model.h"
+#include "types.h"
 #include <string>
-#include <gmpxx.h>
 
 using std::string;
 
 const int EQUAL_QUEUE_SIZE = 262144;
-
-/** @class InexactNumObj
- * Inexact number implementation (using doubles)
- */
-class InexactNumObj: public NumObj {
-    public:
-        InexactNumObj(NumLvl level);
-};
-
-/** @class CompNumObj
- * Complex numbers
- */
-class CompNumObj: public InexactNumObj {
-    public:
-        double real, imag;
-
-        /** Construct a complex number */
-        CompNumObj(double _real, double _imag);
-        /** Try to construct an CompNumObj object
-         * @return NULL if failed
-         */
-        static CompNumObj *from_string(string repr);
-        /** Convert to a complex number from other numeric types */
-        CompNumObj *convert(NumObj* obj);
-
-        NumObj *add(NumObj *r);
-        NumObj *sub(NumObj *r);
-        NumObj *mul(NumObj *r);
-        NumObj *div(NumObj *r);
-        bool eq(NumObj *r);
-        ReprCons *get_repr_cons();
-};
-
-/** @class RealNumObj
- * Real numbers
- */
-class RealNumObj: public InexactNumObj {
-    public:
-        double real;
-        /** Construct a real number */
-        RealNumObj(double _real);
-        /** Try to construct an RealNumObj object
-         * @return NULL if failed
-         */
-        static RealNumObj *from_string(string repr);
-        /** Convert to a real number from other numeric types */
-        RealNumObj *convert(NumObj* obj);
-
-        NumObj *add(NumObj *r);
-        NumObj *sub(NumObj *r);
-        NumObj *mul(NumObj *r);
-        NumObj *div(NumObj *r);
-        NumObj *abs();
-        bool lt(NumObj *r);
-        bool gt(NumObj *r);
-        bool le(NumObj *r);
-        bool ge(NumObj *r);
-        bool eq(NumObj *r);
-        ReprCons *get_repr_cons();
-
-};
-
-
-/** @class ExactNumObj
- * Exact number implementation (using gmp)
- */
-class ExactNumObj: public NumObj {
-    public:
-        ExactNumObj(NumLvl level);
-};
-
-/** @class RatNumObj
- * Rational numbers
- */
-class RatNumObj: public ExactNumObj {
-    public:
-#ifndef GMP_SUPPORT
-        int a, b;
-        /** Construct a rational number */
-        RatNumObj(int _a, int _b);
-#else
-        mpq_class val;
-        RatNumObj(mpq_class val);
-#endif
-        /** Try to construct an RatNumObj object
-         * @return NULL if failed
-         */
-        static RatNumObj *from_string(string repr);
-        /** Convert to a Rational number from other numeric types */
-        RatNumObj *convert(NumObj* obj);
-
-        NumObj *add(NumObj *r);
-        NumObj *sub(NumObj *r);
-        NumObj *mul(NumObj *r);
-        NumObj *div(NumObj *r);
-        NumObj *abs();
-        bool lt(NumObj *r);
-        bool gt(NumObj *r);
-        bool le(NumObj *r);
-        bool ge(NumObj *r);
-        bool eq(NumObj *r);
-        ReprCons *get_repr_cons();
-};
-
-/** @class IntNumObj
- * Integers
- */
-class IntNumObj: public ExactNumObj {
-    public:
-#ifndef GMP_SUPPORT
-        int val;
-        /** Construct a integer */
-        IntNumObj(int val);
-        int get_i();
-#else
-        mpz_class val;
-        /** Construct a integer */
-        IntNumObj(mpz_class val);
-        int get_i();
-#endif
-        /** Try to construct an IntNumObj object
-         * @return NULL if failed
-         */
-        static IntNumObj *from_string(string repr);
-        /** Convert to a integer from other numeric types */
-        IntNumObj *convert(NumObj* obj);
-
-        NumObj *add(NumObj *r);
-        NumObj *sub(NumObj *r);
-        NumObj *mul(NumObj *r);
-        NumObj *div(NumObj *r);
-        NumObj *abs();
-        NumObj *mod(NumObj *r);
-        NumObj *rem(NumObj *r);
-        NumObj *quo(NumObj *r);
-        NumObj *gcd(NumObj *r);
-        NumObj *lcm(NumObj *r);
-        bool lt(NumObj *r);
-        bool gt(NumObj *r);
-        bool le(NumObj *r);
-        bool ge(NumObj *r);
-        bool eq(NumObj *r);
-        ReprCons *get_repr_cons();
-};
-
 
 /** @class SpecialOptIf
  * The implementation of `if` operator
@@ -164,18 +19,18 @@ class SpecialOptIf: public SpecialOptObj {
          * The evaluator will call this after the <condition> exp is evaluated.
          * And this function tells the evaluator which of <consequence> and
          * <alternative> should be evaluted. */
-        void pre_call(ArgList *args, Pair *pc,
+        void pre_call(Pair *args, Pair *pc,
                 Environment *envt);
         /** The system will call this again after the desired result is
          * evaluated, so just return it to let the evaluator know the it's the
          * answer.
          */
-        EvalObj *post_call(ArgList *args, Pair *pc,
+        EvalObj *post_call(Pair *args, Pair *pc,
                 Environment *envt);
     public:
         SpecialOptIf();
         void prepare(Pair *pc);
-        Pair *call(ArgList *args, Environment * &envt,
+        Pair *call(Pair *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
         ReprCons *get_repr_cons();
 };
@@ -187,7 +42,7 @@ class SpecialOptLambda: public SpecialOptObj {
     public:
         SpecialOptLambda();
         void prepare(Pair *pc);
-        Pair *call(ArgList *args, Environment * &envt,
+        Pair *call(Pair *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
 
         ReprCons *get_repr_cons();
@@ -200,7 +55,7 @@ class SpecialOptDefine: public SpecialOptObj {
     public:
         SpecialOptDefine();
         void prepare(Pair *pc);
-        Pair *call(ArgList *args, Environment * &envt,
+        Pair *call(Pair *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
         ReprCons *get_repr_cons();
 };
@@ -212,7 +67,7 @@ class SpecialOptSet: public SpecialOptObj {
     public:
         SpecialOptSet();
         void prepare(Pair *pc);
-        Pair *call(ArgList *args, Environment * &envt,
+        Pair *call(Pair *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
         ReprCons *get_repr_cons();
 };
@@ -224,7 +79,7 @@ class SpecialOptQuote: public SpecialOptObj {
     public:
         SpecialOptQuote();
         void prepare(Pair *pc);
-        Pair *call(ArgList *args, Environment * &envt,
+        Pair *call(Pair *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
 
         ReprCons *get_repr_cons();
@@ -239,7 +94,7 @@ class SpecialOptEval: public SpecialOptObj {
     public:
         SpecialOptEval();
         void prepare(Pair *pc);
-        Pair *call(ArgList *args, Environment * &envt,
+        Pair *call(Pair *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
 
         ReprCons *get_repr_cons();
@@ -252,7 +107,7 @@ class SpecialOptAnd: public SpecialOptObj {
     public:
         SpecialOptAnd();
         void prepare(Pair *pc);
-        Pair *call(ArgList *args, Environment * &envt,
+        Pair *call(Pair *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
 
         ReprCons *get_repr_cons();
@@ -265,7 +120,7 @@ class SpecialOptOr: public SpecialOptObj {
     public:
         SpecialOptOr();
         void prepare(Pair *pc);
-        Pair *call(ArgList *args, Environment * &envt,
+        Pair *call(Pair *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
 
         ReprCons *get_repr_cons();
@@ -278,7 +133,7 @@ class SpecialOptApply: public SpecialOptObj {
     public:
         SpecialOptApply();
         void prepare(Pair *pc);
-        Pair *call(ArgList *args, Environment * &envt,
+        Pair *call(Pair *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
 
         ReprCons *get_repr_cons();
@@ -291,7 +146,7 @@ class SpecialOptDelay: public SpecialOptObj {
     public:
         SpecialOptDelay();
         void prepare(Pair *pc);
-        Pair *call(ArgList *args, Environment * &envt,
+        Pair *call(Pair *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
 
         ReprCons *get_repr_cons();
@@ -307,16 +162,14 @@ class SpecialOptForce: public SpecialOptObj {
     public:
         SpecialOptForce();
         void prepare(Pair *pc);
-        Pair *call(ArgList *args, Environment * &envt,
+        Pair *call(Pair *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
 
         ReprCons *get_repr_cons();
 };
 
-
-
 #define BUILTIN_PROC_DEF(func)\
-    EvalObj *(func)(ArgList *args, const string &name)
+    EvalObj *(func)(Pair *args, const string &name)
 
 BUILTIN_PROC_DEF(num_add);
 BUILTIN_PROC_DEF(num_sub);
@@ -371,6 +224,5 @@ BUILTIN_PROC_DEF(string_le);
 BUILTIN_PROC_DEF(string_gt);
 BUILTIN_PROC_DEF(string_ge);
 BUILTIN_PROC_DEF(string_eq);
-
 
 #endif

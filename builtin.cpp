@@ -1,23 +1,15 @@
+#include <cstdio>
+#include <cctype>
+#include <cstdlib>
+
 #include "consts.h"
 #include "builtin.h"
 #include "model.h"
 #include "exc.h"
-#include <cstdio>
-#include <sstream>
-#include <cctype>
-#include <cstdlib>
-#include <cmath>
-#include <iomanip>
+#include "types.h"
 
 using std::stringstream;
-
 extern EmptyList *empty_list;
-static const int NUM_LVL_COMP = 0;
-static const int NUM_LVL_REAL = 1;
-static const int NUM_LVL_RAT = 2;
-static const int NUM_LVL_INT = 3;
-const double EPS = 1e-16;
-const int PREC = 16;
 
 #define ARGS_EXACTLY_TWO \
     if (args == empty_list ||  \
@@ -33,611 +25,6 @@ const int PREC = 16;
 #define ARGS_AT_LEAST_ONE \
     if (args == empty_list) \
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
-
-
-string double_to_str(double val, bool force_sign = false) {
-    stringstream ss;
-    if (force_sign) ss << std::showpos;
-    ss << std::setprecision(PREC);
-    ss << val;
-    return ss.str();
-}
-
-string int_to_str(int val) {
-    stringstream ss;
-    ss << val;
-    return ss.str();
-}
-
-double str_to_double(string repr, bool &flag) {
-    const char *nptr = repr.c_str();
-    char *endptr;
-    double val = strtod(nptr, &endptr);
-    if (endptr == nptr || endptr != nptr + repr.length())
-    {
-        flag = false;
-        return 0;
-    }
-    flag = true;
-    return val;
-}
-
-int str_to_int(string repr, bool &flag) {
-    const char *nptr = repr.c_str();
-    char *endptr;
-    int val = strtol(nptr, &endptr, 10);
-    if (endptr == nptr || endptr != nptr + repr.length())
-    {
-        flag = false;
-        return 0;
-    }
-    flag = true;
-    return val;
-}
-
-
-int gcd(int a, int b) {
-    int t;
-    while (b) t = b, b = a % b, a = t;
-    return abs(a);
-}
-
-bool is_zero(double x) {
-    return -EPS < x && x < EPS;
-}
-
-InexactNumObj::InexactNumObj(NumLvl level) : NumObj(level, false) {}
-
-CompNumObj::CompNumObj(double _real, double _imag) :
-    InexactNumObj(NUM_LVL_COMP), real(_real), imag(_imag) {}
-
-    CompNumObj *CompNumObj::from_string(string repr) {
-        // spos: the position of the last sign
-        // ipos: the position of i
-        long long spos = -1, ipos = -1;
-        size_t len = repr.length();
-        bool sign;
-        for (size_t i = 0; i < len; i++)
-            if (repr[i] == '+' || repr[i] == '-')
-            {
-                spos = i;
-                sign = repr[i] == '-';
-            }
-            else if (repr[i] == 'i' || repr[i] == 'I')
-                ipos = i;
-
-        if (spos == -1 || ipos == -1 || !(spos < ipos))
-            return NULL;
-
-        double real = 0, imag = 1;
-        IntNumObj *int_ptr;
-        RatNumObj *rat_ptr;
-        RealNumObj *real_ptr;
-        if (spos > 0)
-        {
-            string real_str = repr.substr(0, spos);
-            if ((int_ptr = IntNumObj::from_string(real_str)))
-#ifndef GMP_SUPPORT
-                real = int_ptr->val;
-#else
-                real = int_ptr->val.get_d();
-#endif
-            else if ((rat_ptr = RatNumObj::from_string(real_str)))
-#ifndef GMP_SUPPORT
-                real = rat_ptr->a / double(rat_ptr->b);
-#else
-                real = rat_ptr->val.get_d();
-#endif
-            else if ((real_ptr = RealNumObj::from_string(real_str)))
-                real = real_ptr->real;
-            else return NULL;
-        }
-        if (ipos > spos + 1)
-        {
-            string imag_str = repr.substr(spos + 1, ipos - spos - 1);
-            if ((int_ptr = IntNumObj::from_string(imag_str)))
-#ifndef GMP_SUPPORT
-                imag = int_ptr->val;
-#else
-                imag = int_ptr->val.get_d();
-#endif
-            else if ((rat_ptr = RatNumObj::from_string(imag_str)))
-#ifndef GMP_SUPPORT
-                imag = rat_ptr->a / double(rat_ptr->b);
-#else
-                imag = rat_ptr->val.get_d();
-#endif
-            else if ((real_ptr = RealNumObj::from_string(imag_str)))
-                imag = real_ptr->real;
-            else return NULL;
-        }
-        if (sign) imag = -imag;
-        return new CompNumObj(real, imag);
-    }
-
-CompNumObj *CompNumObj::convert(NumObj *obj) {
-    switch (obj->level)
-    {
-        case NUM_LVL_COMP :
-            return static_cast<CompNumObj*>(obj); break;
-        case NUM_LVL_REAL :
-            return new CompNumObj(static_cast<RealNumObj*>(obj)->real, 0);
-            break;
-        case NUM_LVL_RAT :
-            {
-                RatNumObj *rat = static_cast<RatNumObj*>(obj);
-#ifndef GMP_SUPPORT
-                return new CompNumObj(rat->a / double(rat->b), 0);
-#else
-                return new CompNumObj(rat->val.get_d(), 0);
-#endif
-                break;
-            }
-        case NUM_LVL_INT :
-#ifndef GMP_SUPPORT
-            return new CompNumObj(static_cast<IntNumObj*>(obj)->val, 0);
-#else
-            return new CompNumObj(static_cast<IntNumObj*>(obj)->val.get_d(), 0);
-#endif
-    }
-    throw NormalError(INT_ERR);
-}
-
-#define A (real)
-#define B (imag)
-#define C (r->real)
-#define D (r->imag)
-
-NumObj *CompNumObj::add(NumObj *_r) {
-    CompNumObj *r = static_cast<CompNumObj*>(_r);
-    return new CompNumObj(A + C, B + D);
-}
-
-NumObj *CompNumObj::sub(NumObj *_r) {
-    CompNumObj *r = static_cast<CompNumObj*>(_r);
-    return new CompNumObj(A - C, B - D);
-}
-
-NumObj *CompNumObj::mul(NumObj *_r) {
-    CompNumObj *r = static_cast<CompNumObj*>(_r);
-    return new CompNumObj(A * C - B * D,
-            B * C + A * D);
-}
-
-NumObj *CompNumObj::div(NumObj *_r) {
-    CompNumObj *r = static_cast<CompNumObj*>(_r);
-    double f = C * C + D * D;
-    if (f == 0)
-        throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
-    f = 1 / f;
-    return new CompNumObj((A * C + B * D) * f,
-            (B * C - A * D) * f);
-}
-
-bool NumObj::lt(NumObj *_r) {
-    throw TokenError("a comparable number", RUN_ERR_WRONG_TYPE);
-}
-
-bool NumObj::gt(NumObj *_r) {
-    throw TokenError("a comparable number", RUN_ERR_WRONG_TYPE);
-}
-
-bool NumObj::le(NumObj *_r) {
-    throw TokenError("a comparable number", RUN_ERR_WRONG_TYPE);
-}
-
-bool NumObj::ge(NumObj *_r) {
-    throw TokenError("a comparable number", RUN_ERR_WRONG_TYPE);
-}
-
-NumObj *NumObj::abs() {
-    throw TokenError("a real number", RUN_ERR_WRONG_TYPE);
-}
-
-
-bool CompNumObj::eq(NumObj *_r) {
-    CompNumObj *r = static_cast<CompNumObj*>(_r);
-    return A == C && B == D; // TODO: more proper judgement
-}
-
-
-ReprCons *CompNumObj::get_repr_cons() {
-    return new ReprStr(double_to_str(real) + double_to_str(imag, true) + "i");
-}
-
-#undef A
-#undef B
-#undef C
-#undef D
-
-RealNumObj::RealNumObj(double _real) : InexactNumObj(NUM_LVL_REAL), real(_real) {}
-
-RealNumObj *RealNumObj::from_string(string repr) {
-    bool flag;
-    double real = str_to_double(repr, flag);
-    if (!flag) return NULL;
-    return new RealNumObj(real);
-}
-
-RealNumObj *RealNumObj::convert(NumObj *obj) {
-    switch (obj->level)
-    {
-        case NUM_LVL_REAL:
-            return static_cast<RealNumObj*>(obj); break;
-        case NUM_LVL_RAT:
-            {
-                RatNumObj *rat = static_cast<RatNumObj*>(obj);
-#ifndef GMP_SUPPORT
-                return new RealNumObj(rat->a / double(rat->b));
-#else
-                return new RealNumObj(rat->val.get_d());
-#endif
-                break;
-            }
-        case NUM_LVL_INT:
-#ifndef GMP_SUPPORT
-            return new RealNumObj(static_cast<IntNumObj*>(obj)->val);
-#else
-            return new RealNumObj(static_cast<IntNumObj*>(obj)->val.get_d());
-#endif
-
-    }
-    throw NormalError(INT_ERR);
-}
-
-NumObj *RealNumObj::add(NumObj *_r) {
-    return new RealNumObj(real + static_cast<RealNumObj*>(_r)->real);
-}
-
-NumObj *RealNumObj::sub(NumObj *_r) {
-    return new RealNumObj(real - static_cast<RealNumObj*>(_r)->real);
-}
-
-NumObj *RealNumObj::mul(NumObj *_r) {
-    return new RealNumObj(real * static_cast<RealNumObj*>(_r)->real);
-}
-
-NumObj *RealNumObj::div(NumObj *_r) {
-    return new RealNumObj(real / static_cast<RealNumObj*>(_r)->real);
-}
-
-NumObj *RealNumObj::abs() {
-    return new RealNumObj(fabs(real));
-}
-
-bool RealNumObj::eq(NumObj *_r) {
-    return real == static_cast<RealNumObj*>(_r)->real;
-}
-
-bool RealNumObj::lt(NumObj *_r) {
-    return real < static_cast<RealNumObj*>(_r)->real;
-}
-
-bool RealNumObj::gt(NumObj *_r) {
-    return real > static_cast<RealNumObj*>(_r)->real;
-}
-
-bool RealNumObj::le(NumObj *_r) {
-    return real <= static_cast<RealNumObj*>(_r)->real;
-}
-
-bool RealNumObj::ge(NumObj *_r) {
-    return real >= static_cast<RealNumObj*>(_r)->real;
-}
-
-
-ReprCons *RealNumObj::get_repr_cons() {
-    return new ReprStr(double_to_str(real));
-}
-
-ExactNumObj::ExactNumObj(NumLvl level) : NumObj(level, true) {}
-
-#ifndef GMP_SUPPORT
-RatNumObj::RatNumObj(int _a, int _b) :
-    ExactNumObj(NUM_LVL_RAT), a(_a), b(_b) {
-        if (b == 0)
-            throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
-        if (b < 0) a = -a, b = -b;
-        int g = gcd(a, b);
-        a /= g;
-        b /= g;
-    }
-
-RatNumObj *RatNumObj::from_string(string repr) {
-    int a, b;
-    size_t len = repr.length();
-    int pos = -1;
-    for (size_t i = 0; i < len; i++)
-        if (repr[i] == '/') { pos = i; break; }
-    bool flag;
-    a = str_to_int(repr.substr(0, pos), flag);
-    if (!flag) return NULL;
-    b = str_to_int(repr.substr(pos + 1, len - pos - 1), flag);
-    if (!flag) return NULL;
-
-    return new RatNumObj(a, b);
-}
-#else
-RatNumObj::RatNumObj(mpq_class _val) :
-    ExactNumObj(NUM_LVL_RAT), val(_val) {
-    val.canonicalize();
-}
-
-RatNumObj *RatNumObj::from_string(string repr) {
-    try
-    {
-        mpq_class ret(repr, 10);
-        if (ret.get_den() == 0)
-            throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
-        ret.canonicalize();
-        return new RatNumObj(ret);
-    }
-    catch (std::invalid_argument &e)
-    {
-        return NULL;
-    }
-}
-#endif
-
-
-RatNumObj *RatNumObj::convert(NumObj *obj) {
-    switch (obj->level)
-    {
-        case NUM_LVL_RAT:
-            return static_cast<RatNumObj*>(obj); break;
-        case NUM_LVL_INT:
-#ifndef GMP_SUPPORT
-            return new RatNumObj(static_cast<IntNumObj*>(obj)->val, 1);
-#else
-            return new RatNumObj(mpq_class(
-                        static_cast<IntNumObj*>(obj)->val,
-                        mpz_class(1)));
-#endif
-    }
-    throw NormalError(INT_ERR);
-}
-
-#define A (a)
-#define B (b)
-#define C (r->a)
-#define D (r->b)
-
-NumObj *RatNumObj::add(NumObj *_r) {
-    RatNumObj *r = static_cast<RatNumObj*>(_r);
-#ifndef GMP_SUPPORT
-    int na = A * D + B * C, nb = B * D;
-    int g = gcd(na, nb);
-    na /= g;
-    nb /= g;
-    return new RatNumObj(na, nb);
-#else
-    return new RatNumObj(val + r->val);
-#endif
-}
-
-NumObj *RatNumObj::sub(NumObj *_r) {
-    RatNumObj *r = static_cast<RatNumObj*>(_r);
-#ifndef GMP_SUPPORT
-    int na = A * D - B * C, nb = B * D;
-    int g = gcd(na, nb);
-    na /= g;
-    nb /= g;
-    return new RatNumObj(na, nb);
-#else
-    return new RatNumObj(val - r->val);
-#endif
-}
-
-NumObj *RatNumObj::mul(NumObj *_r) {
-    RatNumObj *r = static_cast<RatNumObj*>(_r);
-#ifndef GMP_SUPPORT
-    int na = A * C, nb = B * D;
-    int g = gcd(na, nb);
-    na /= g;
-    nb /= g;
-    return new RatNumObj(na, nb);
-#else
-    return new RatNumObj(val * r->val);
-#endif
-}
-
-NumObj *RatNumObj::div(NumObj *_r) {
-    RatNumObj *r = static_cast<RatNumObj*>(_r);
-#ifndef GMP_SUPPORT
-    int na = A * D, nb = B * C;
-    int g = gcd(na, nb);
-    na /= g;
-    nb /= g;
-    return new RatNumObj(na, nb);
-#else
-    return new RatNumObj(val / r->val);
-#endif
-}
-
-bool RatNumObj::lt(NumObj *_r) {
-    RatNumObj *r = static_cast<RatNumObj*>(_r);
-#ifndef GMP_SUPPORT
-    return A * D < C * B;
-#else
-    return val < r->val;
-#endif
-}
-
-bool RatNumObj::gt(NumObj *_r) {
-    RatNumObj *r = static_cast<RatNumObj*>(_r);
-#ifndef GMP_SUPPORT
-    return A * D > C * B;
-#else
-    return val > r->val;
-#endif
-}
-
-bool RatNumObj::le(NumObj *_r) {
-    RatNumObj *r = static_cast<RatNumObj*>(_r);
-#ifndef GMP_SUPPORT
-    return A * D <= C * B;
-#else
-    return val <= r->val;
-#endif
-}
-
-bool RatNumObj::ge(NumObj *_r) {
-    RatNumObj *r = static_cast<RatNumObj*>(_r);
-#ifndef GMP_SUPPORT
-    return A * D >= C * B;
-#else
-    return val >= r->val;
-#endif
-}
-
-
-bool RatNumObj::eq(NumObj *_r) {
-    RatNumObj *r = static_cast<RatNumObj*>(_r);
-#ifndef GMP_SUPPORT
-    return A * D == C * B;
-#else
-    return val == r->val;
-#endif
-}
-
-NumObj *RatNumObj::abs() {
-#ifndef GMP_SUPPORT
-    return new RatNumObj((a > 0 ? a : -a), b);
-#else
-    return new RatNumObj(std::abs(val));
-#endif
-}
-
-ReprCons *RatNumObj::get_repr_cons() {
-#ifndef GMP_SUPPORT
-    return new ReprStr(int_to_str(A) + "/" + int_to_str(B));
-#else
-    return new ReprStr(val.get_str());
-#endif
-}
-
-
-#ifndef GMP_SUPPORT
-IntNumObj::IntNumObj(int _val) : ExactNumObj(NUM_LVL_INT), val(_val) {}
-IntNumObj *IntNumObj::from_string(string repr) {
-    int val = 0;
-    for (size_t i = 0; i < repr.length(); i++)
-    {
-        if (!('0' <= repr[i] && repr[i] <= '9'))
-            return NULL;
-        val = val * 10 + repr[i] - '0';
-    }
-    return new IntNumObj(val);
-}
-int IntNumObj::get_i() { return val; }
-#else
-IntNumObj::IntNumObj(mpz_class _val) : ExactNumObj(NUM_LVL_INT), val(_val) {}
-IntNumObj *IntNumObj::from_string(string repr) {
-    try
-    {
-        mpz_class ret(repr, 10);
-        return new IntNumObj(ret);
-    }
-    catch (std::invalid_argument &e)
-    {
-        return NULL;
-    }
-}
-int IntNumObj::get_i() { return val.get_si(); }
-#endif
-
-IntNumObj *IntNumObj::convert(NumObj *obj) {
-    switch (obj->level)
-    {
-        case NUM_LVL_INT :
-            return static_cast<IntNumObj*>(obj);
-        default:
-            throw NormalError(INT_ERR);
-    }
-}
-
-NumObj *IntNumObj::add(NumObj *_r) {
-    return new IntNumObj(val + static_cast<IntNumObj*>(_r)->val);
-}
-
-NumObj *IntNumObj::sub(NumObj *_r) {
-    return new IntNumObj(val - static_cast<IntNumObj*>(_r)->val);
-}
-
-NumObj *IntNumObj::mul(NumObj *_r) {
-    return new IntNumObj(val * static_cast<IntNumObj*>(_r)->val);
-}
-
-NumObj *IntNumObj::div(NumObj *_r) {
-#ifndef GMP_SUPPORT
-    return new RatNumObj(val, static_cast<IntNumObj*>(_r)->val);
-#else
-    mpz_class d(static_cast<IntNumObj*>(_r)->val);
-    if (d == 0) throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
-    return new RatNumObj(mpq_class(val, d));
-#endif
-}
-
-NumObj *IntNumObj::abs() {
-    return new IntNumObj(std::abs(val));
-}
-
-NumObj *IntNumObj::rem(NumObj *_r) {
-    return new IntNumObj(val % static_cast<IntNumObj*>(_r)->val);
-}
-
-NumObj *IntNumObj::mod(NumObj *_r) {
-    const mpz_class &rval = static_cast<IntNumObj*>(_r)->val;
-    mpz_class ret = val % rval;
-    if (sgn(ret) != sgn(rval))
-        ret = ret + rval;
-    return new IntNumObj(ret);
-}
-
-NumObj *IntNumObj::quo(NumObj *_r) {
-    return new IntNumObj(val / static_cast<IntNumObj*>(_r)->val);
-}
-
-NumObj *IntNumObj::gcd(NumObj *_r) {
-    mpz_t g;
-    mpz_gcd(g, val.get_mpz_t(), static_cast<IntNumObj*>(_r)->val.get_mpz_t());
-    return new IntNumObj(mpz_class(g));
-}
-
-NumObj *IntNumObj::lcm(NumObj *_r) {
-    mpz_t l;
-    mpz_lcm(l, val.get_mpz_t(), static_cast<IntNumObj*>(_r)->val.get_mpz_t());
-    return new IntNumObj(mpz_class(l));
-}
-
-bool IntNumObj::lt(NumObj *_r) {
-    return val < static_cast<IntNumObj*>(_r)->val;
-}
-
-bool IntNumObj::gt(NumObj *_r) {
-    return val > static_cast<IntNumObj*>(_r)->val;
-}
-
-bool IntNumObj::le(NumObj *_r) {
-    return val <= static_cast<IntNumObj*>(_r)->val;
-}
-
-bool IntNumObj::ge(NumObj *_r) {
-    return val >= static_cast<IntNumObj*>(_r)->val;
-}
-
-
-bool IntNumObj::eq(NumObj *_r) {
-    return val == static_cast<IntNumObj*>(_r)->val;
-}
-
-ReprCons *IntNumObj::get_repr_cons() {
-#ifndef GMP_SUPPORT
-    return new ReprStr(int_to_str(val));
-#else
-    return new ReprStr(val.get_str());
-#endif
-}
 
 SpecialOptIf::SpecialOptIf() : SpecialOptObj("if") {}
 
@@ -673,7 +60,7 @@ void SpecialOptIf::prepare(Pair *pc) {
     first->next = NULL; // skip <consequence> and <alternative>
 }
 
-void SpecialOptIf::pre_call(ArgList *args, Pair *pc,
+void SpecialOptIf::pre_call(Pair *args, Pair *pc,
         Environment *envt) {
     // prepare has guaranteed ...
     pc = TO_PAIR(pc->car);
@@ -696,13 +83,13 @@ void SpecialOptIf::pre_call(ArgList *args, Pair *pc,
     }
 }
 
-EvalObj *SpecialOptIf::post_call(ArgList *args, Pair *pc,
+EvalObj *SpecialOptIf::post_call(Pair *args, Pair *pc,
         Environment *envt) {
     // Value already evaluated, so just return it
     return TO_PAIR(args->cdr)->car;
 }
 
-Pair *SpecialOptIf::call(ArgList *args, Environment * &envt,
+Pair *SpecialOptIf::call(Pair *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
     Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     if (state)
@@ -773,7 +160,7 @@ void SpecialOptLambda::prepare(Pair *pc) {
     pc->next = NULL;
 }
 
-Pair *SpecialOptLambda::call(ArgList *args, Environment * &envt,
+Pair *SpecialOptLambda::call(Pair *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
 
     Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
@@ -831,7 +218,7 @@ void SpecialOptDefine::prepare(Pair *pc) {
     }
 }
 
-Pair *SpecialOptDefine::call(ArgList *args, Environment * &envt,
+Pair *SpecialOptDefine::call(Pair *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
     Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     Pair *pc = static_cast<Pair*>(ret_addr->car);
@@ -900,7 +287,7 @@ void SpecialOptSet::prepare(Pair *pc) {
     second->next = NULL;
 }
 
-Pair *SpecialOptSet::call(ArgList *args, Environment * &envt,
+Pair *SpecialOptSet::call(Pair *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
     Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     Pair *pc = static_cast<Pair*>(ret_addr->car);
@@ -931,7 +318,7 @@ void SpecialOptQuote::prepare(Pair *pc) {
     pc->next = NULL;
 }
 
-Pair *SpecialOptQuote::call(ArgList *args, Environment * &envt,
+Pair *SpecialOptQuote::call(Pair *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
     Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     Pair *pc = static_cast<Pair*>(ret_addr->car);
@@ -951,7 +338,7 @@ void SpecialOptEval::prepare(Pair *pc) {
     state = 0;
 }
 
-Pair *SpecialOptEval::call(ArgList *args, Environment * &envt,
+Pair *SpecialOptEval::call(Pair *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
     if (args->cdr == empty_list ||
         TO_PAIR(args->cdr)->cdr != empty_list)
@@ -985,7 +372,7 @@ void SpecialOptAnd::prepare(Pair *pc) {
     }
 }
 
-Pair *SpecialOptAnd::call(ArgList *args, Environment * &envt,
+Pair *SpecialOptAnd::call(Pair *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
     Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     Pair *pc = static_cast<Pair*>(ret_addr->car);
@@ -1033,7 +420,7 @@ void SpecialOptOr::prepare(Pair *pc) {
     }
 }
 
-Pair *SpecialOptOr::call(ArgList *args, Environment * &envt,
+Pair *SpecialOptOr::call(Pair *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
     Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     Pair *pc = static_cast<Pair*>(ret_addr->car);
@@ -1074,7 +461,7 @@ SpecialOptApply::SpecialOptApply() : SpecialOptObj("apply") {}
 
 void SpecialOptApply::prepare(Pair *pc) {}
 
-Pair *SpecialOptApply::call(ArgList *args, Environment * &envt,
+Pair *SpecialOptApply::call(Pair *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
     top_ptr++;          // Recover the return address
     if (args->cdr == empty_list)
@@ -1122,7 +509,7 @@ void SpecialOptForce::prepare(Pair *pc) {
     state = 0;
 }
 
-Pair *SpecialOptForce::call(ArgList *args, Environment * &envt,
+Pair *SpecialOptForce::call(Pair *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
     if (args->cdr == empty_list ||
         TO_PAIR(args->cdr)->cdr != empty_list)
@@ -1170,7 +557,7 @@ void SpecialOptDelay::prepare(Pair *pc) {
     pc->next = NULL;
 }
 
-Pair *SpecialOptDelay::call(ArgList *args, Environment * &envt,
+Pair *SpecialOptDelay::call(Pair *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
     Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     Pair *pc = static_cast<Pair*>(ret_addr->car);
