@@ -69,6 +69,7 @@ Pair *SpecialOptIf::call(Pair *args, Environment * &envt,
         top_ptr += 2;
         return pc->next;
     }
+    throw NormalError(INT_ERR);
 }
 
 #define CHECK_SYMBOL(ptr) \
@@ -247,8 +248,6 @@ Pair *SpecialOptQuote::call(Pair *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
     Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     Pair *pc = static_cast<Pair*>(ret_addr->car);
-    // revert
-    pc->next = TO_PAIR(pc->cdr);
     *top_ptr++ = TO_PAIR(pc->cdr)->car;
     return ret_addr->next;
 }
@@ -276,6 +275,7 @@ Pair *SpecialOptEval::call(Pair *args, Environment * &envt,
         top_ptr += 2;
         return TO_PAIR(args->cdr);
     }
+    throw NormalError(INT_ERR);
 }
 
 SpecialOptAnd::SpecialOptAnd() : SpecialOptObj("and") {}
@@ -378,15 +378,15 @@ Pair *SpecialOptApply::call(Pair *args, Environment * &envt,
     if (!args->car->is_opt_obj())
         throw TokenError("an operator", RUN_ERR_WRONG_TYPE);
 
-    *top_ptr++ = args->car;
-    args = TO_PAIR(args->cdr);
+    *top_ptr++ = args->car;         // Push the operator into the stack
+    args = TO_PAIR(args->cdr);      // Examine arguments
     if (args == empty_list)
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
 
     for (; args->cdr != empty_list; args = TO_PAIR(args->cdr))
-        *top_ptr++ = args->car;
+        *top_ptr++ = args->car;     // Add leading arguments: arg_1 ...
 
-    if (args->car != empty_list)
+    if (args->car != empty_list)    // args->car is the trailing args
     {
         if (!args->car->is_pair_obj())
             throw TokenError("a list", RUN_ERR_WRONG_TYPE);
@@ -403,22 +403,22 @@ Pair *SpecialOptApply::call(Pair *args, Environment * &envt,
         if (args->cdr != empty_list)
             throw TokenError("a list", RUN_ERR_WRONG_TYPE);
     }
-    return NULL; // force the invocation
+    // force the invocation, so that the desired operator will take over
+    return NULL;
 }
 
 SpecialOptForce::SpecialOptForce() : SpecialOptObj("force") {}
 
 void SpecialOptForce::prepare(Pair *pc) {
+    if (pc->cdr == empty_list ||
+        TO_PAIR(pc->cdr)->cdr != empty_list)
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
     state = 0;
 }
 
 Pair *SpecialOptForce::call(Pair *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
-    if (args->cdr == empty_list ||
-        TO_PAIR(args->cdr)->cdr != empty_list)
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
     args = TO_PAIR(args->cdr);
-
     Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     if (state)
     {

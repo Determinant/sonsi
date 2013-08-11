@@ -293,7 +293,10 @@ VectReprCons::VectReprCons(VecObj *_ptr, EvalObj *_ori) :
     }
 
 PromObj::PromObj(EvalObj *exp) : 
-    EvalObj(CLS_SIM_OBJ | CLS_PROM_OBJ), entry(new Pair(exp, empty_list)), mem(NULL) {}
+    EvalObj(CLS_SIM_OBJ | CLS_PROM_OBJ), 
+    entry(new Pair(exp, empty_list)), mem(NULL) {
+    entry->next = NULL;
+}
 
 Pair *PromObj::get_entry() { return entry; }
 
