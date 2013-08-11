@@ -159,8 +159,6 @@ Pair *ASTGenerator::absorb(Tokenizor *tk) {
                 top_ptr -= 2;
                 Pair *lst_cdr = new Pair(TO_EVAL(*(top_ptr + 1)), empty_list);
                 Pair *lst = new Pair(new SymObj("quote"), lst_cdr);
-                lst->next = lst_cdr;
-                lst_cdr->next = NULL;
                 *top_ptr++ = lst;
             }
         }
@@ -196,7 +194,6 @@ Pair *ASTGenerator::absorb(Tokenizor *tk) {
                 else
                 {
                     Pair *_lst = new Pair(obj, lst);    // Collect the list
-                    _lst->next = lst->is_pair_obj() ? TO_PAIR(lst) : NULL;
                     lst = _lst;
                 }
             }
