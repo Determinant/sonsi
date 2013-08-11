@@ -223,3 +223,9 @@ src
 
 (equal? #(1 2 '()) #(1 2 '(1)))
 (equal? #(1 2 '(1)) #(1 2 '(1)))
+
+(define x '(1 . 1))
+(set-cdr! x x)
+(list x)
+x
+(cons x  x)
