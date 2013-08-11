@@ -17,8 +17,7 @@ SpecialOptIf::SpecialOptIf() : SpecialOptObj("if") {}
 void SpecialOptIf::prepare(Pair *pc) {
 #define IF_EXP_ERR \
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
-    state = 0;  // Prepared
-
+    
     Pair *first, *second, *third;
 
     if (pc->cdr == empty_list)
@@ -34,40 +33,56 @@ void SpecialOptIf::prepare(Pair *pc) {
         third = TO_PAIR(second->cdr);
         if (third->cdr != empty_list) IF_EXP_ERR;
     }
-    pc->next = first;
-    first->next = NULL; // skip <consequence> and <alternative>
+    pc->next = NULL;
 }
 
 Pair *SpecialOptIf::call(Pair *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
-    Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
-    if (state)
+    RetAddr *ret_info = static_cast<RetAddr*>(*top_ptr);
+    Pair *ret_addr = ret_info->addr;
+    if (ret_info->state)
     {
-        *top_ptr++ = TO_PAIR(args->cdr)->car;
-        return ret_addr->next;          // Move to the next instruction
+        if (ret_info->state == empty_list)
+        {
+            *top_ptr++ = TO_PAIR(args->cdr)->car;
+            return ret_addr->next;          // Move to the next instruction
+        }
+        else 
+        {
+            Pair *pc = TO_PAIR(ret_addr->car);
+            Pair *first = TO_PAIR(pc->cdr);
+            Pair *second = TO_PAIR(first->cdr);
+            Pair *third = TO_PAIR(second->cdr);
+
+            if (TO_PAIR(args->cdr)->car->is_true())
+            {
+                second->next = NULL;
+                // Undo pop and invoke again
+                top_ptr += 2;
+                ret_info->state = empty_list;
+                return second;
+            }
+            else if (third != empty_list)
+            {
+                third->next = NULL;
+                // Undo pop and invoke again
+                top_ptr += 2;
+                ret_info->state = empty_list;
+                return third;
+            }
+            else
+            {
+                *top_ptr++ = new UnspecObj();
+                return ret_addr->next;
+            }
+        }
     }
     else
     {
-        Pair *pc = TO_PAIR(ret_addr->car);
-        Pair *first = TO_PAIR(pc->cdr);
-        Pair *second = TO_PAIR(first->cdr);
-        Pair *third = TO_PAIR(second->cdr);
-
-        if (TO_PAIR(args->cdr)->car->is_true())
-        {
-            pc->next = second;
-            second->next = NULL;
-        }
-        else
-        {
-            pc->next = third;
-            third->next = NULL;
-        }
-        // Condition evaluated and the decision is made
-        state = 1;
-        // Undo pop and invoke again
         top_ptr += 2;
-        return pc->next;
+        ret_info->state = TO_PAIR(TO_PAIR(ret_addr->car)->cdr);
+        ret_info->state->next = NULL;
+        return ret_info->state;
     }
     throw NormalError(INT_ERR);
 }
@@ -77,6 +92,20 @@ do \
 { \
     if (!(ptr)->is_sym_obj()) \
         throw TokenError("a symbol", RUN_ERR_WRONG_TYPE); \
+} while (0)
+
+#define CHECK_NUMBER(ptr) \
+do \
+{ \
+    if (!(ptr)->is_num_obj()) \
+        throw TokenError("a number", RUN_ERR_WRONG_TYPE); \
+} while (0)
+
+#define CHECK_INT(ptr) \
+do \
+{ \
+    if ((ptr)->level != NUM_LVL_INT) \
+        throw TokenError("an integer", RUN_ERR_WRONG_TYPE); \
 } while (0)
 
 #define CHECK_PARA_LIST(p) \
@@ -149,21 +178,27 @@ void SpecialOptDefine::prepare(Pair *pc) {
         second = TO_PAIR(first->cdr);
         if (second->cdr != empty_list)
             throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
-        pc->next = second;                      // Skip the identifier
-        second->next = NULL;
     }                                           // Procedure definition
-    else pc->next = NULL; // Skip all parts
+    pc->next = NULL;
 }
 
 Pair *SpecialOptDefine::call(Pair *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
-    Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
+    RetAddr* ret_info = static_cast<RetAddr*>(*top_ptr);
+    Pair *ret_addr = ret_info->addr;
     Pair *pc = static_cast<Pair*>(ret_addr->car);
     EvalObj *obj;
     SymObj *id;
     EvalObj *first = TO_PAIR(pc->cdr)->car;
     if (first->is_simple_obj())
     {
+        if (!ret_info->state)
+        {
+            top_ptr += 2;
+            ret_info->state = TO_PAIR(TO_PAIR(pc->cdr)->cdr);
+            ret_info->state->next = NULL;
+            return ret_info->state;
+        }
         if (!first->is_sym_obj())
             throw TokenError(first->ext_repr(), SYN_ERR_NOT_AN_ID);
         id = static_cast<SymObj*>(first);
@@ -216,15 +251,23 @@ void SpecialOptSet::prepare(Pair *pc) {
     if (second->cdr != empty_list)
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
 
-    pc->next = second;
-    second->next = NULL;
+    pc->next = NULL;
 }
 
 Pair *SpecialOptSet::call(Pair *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
-    Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
+    RetAddr *ret_info = static_cast<RetAddr*>(*top_ptr);
+    Pair *ret_addr = ret_info->addr;
     Pair *pc = static_cast<Pair*>(ret_addr->car);
     EvalObj *first = TO_PAIR(pc->cdr)->car;
+
+    if (!ret_info->state)
+    {
+        top_ptr += 2;
+        ret_info->state = TO_PAIR(TO_PAIR(pc->cdr)->cdr);
+        ret_info->state->next = NULL;
+        return ret_info->state;
+    }
 
     if (!first->is_sym_obj())
         throw TokenError(first->ext_repr(), SYN_ERR_NOT_AN_ID);
@@ -255,25 +298,26 @@ Pair *SpecialOptQuote::call(Pair *args, Environment * &envt,
 SpecialOptEval::SpecialOptEval() : SpecialOptObj("eval") {}
 
 void SpecialOptEval::prepare(Pair *pc) {
-    state = 0;
+    if (pc->cdr == empty_list ||
+        TO_PAIR(pc->cdr)->cdr != empty_list)
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
 }
 
 Pair *SpecialOptEval::call(Pair *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
-    if (args->cdr == empty_list ||
-        TO_PAIR(args->cdr)->cdr != empty_list)
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
-    Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
-    if (state)
+    RetAddr *ret_info = static_cast<RetAddr*>(*top_ptr);
+    Pair *ret_addr = ret_info->addr;
+    if (ret_info->state)
     {
         *top_ptr++ = TO_PAIR(args->cdr)->car;
         return ret_addr->next;          // Move to the next instruction
     }
     else
     {
-        state = 1;
         top_ptr += 2;
-        return TO_PAIR(args->cdr);
+        ret_info->state = TO_PAIR(args->cdr);
+        ret_info->state->next = NULL;
+        return ret_info->state;
     }
     throw NormalError(INT_ERR);
 }
@@ -281,26 +325,30 @@ Pair *SpecialOptEval::call(Pair *args, Environment * &envt,
 SpecialOptAnd::SpecialOptAnd() : SpecialOptObj("and") {}
 
 void SpecialOptAnd::prepare(Pair *pc) {
-    if (pc->cdr != empty_list)
-    {
-        pc->next = TO_PAIR(pc->cdr);
-        pc->next->next = NULL;
-    }
+    pc->next = NULL;
 }
 
 Pair *SpecialOptAnd::call(Pair *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
-    Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
+    RetAddr *ret_info = static_cast<RetAddr*>(*top_ptr);
+    Pair *ret_addr = ret_info->addr;
     Pair *pc = static_cast<Pair*>(ret_addr->car);
-    if (args->cdr == empty_list)
+    if (pc->cdr == empty_list)
     {
         *top_ptr++ = new BoolObj(true);
         return ret_addr->next;
     }
+    if (!ret_info->state)
+    {
+        top_ptr += 2;
+        ret_info->state = TO_PAIR(pc->cdr);
+        ret_info->state->next = NULL;
+        return ret_info->state;
+    }
     EvalObj *ret = TO_PAIR(args->cdr)->car;
     if (ret->is_true())
     {
-        if (pc->next->cdr == empty_list) // the last member
+        if (ret_info->state->cdr == empty_list) // the last member
         {
             *top_ptr++ = ret;
             return ret_addr->next;
@@ -308,9 +356,9 @@ Pair *SpecialOptAnd::call(Pair *args, Environment * &envt,
         else
         {
             top_ptr += 2;
-            pc->next = TO_PAIR(pc->next->cdr);
-            pc->next->next = NULL;
-            return pc->next;
+            ret_info->state = TO_PAIR(ret_info->state->cdr);
+            ret_info->state->next = NULL;
+            return ret_info->state;
         }
     }
     else
@@ -324,26 +372,30 @@ Pair *SpecialOptAnd::call(Pair *args, Environment * &envt,
 SpecialOptOr::SpecialOptOr() : SpecialOptObj("or") {}
 
 void SpecialOptOr::prepare(Pair *pc) {
-    if (pc->cdr != empty_list)
-    {
-        pc->next = TO_PAIR(pc->cdr);
-        pc->next->next = NULL;
-    }
+    pc->next = NULL;
 }
 
 Pair *SpecialOptOr::call(Pair *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
+    RetAddr *ret_info = static_cast<RetAddr*>(*top_ptr);
     Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     Pair *pc = static_cast<Pair*>(ret_addr->car);
-    if (args->cdr == empty_list)
+    if (pc->cdr == empty_list)
     {
         *top_ptr++ = new BoolObj(false);
         return ret_addr->next;
     }
+    if (!ret_info->state)
+    {
+        top_ptr += 2;
+        ret_info->state = TO_PAIR(pc->cdr);
+        ret_info->state->next = NULL;
+        return ret_info->state;
+    }
     EvalObj *ret = TO_PAIR(args->cdr)->car;
     if (!ret->is_true())
     {
-        if (pc->next->cdr == empty_list) // the last member
+        if (ret_info->state->cdr == empty_list) // the last member
         {
             *top_ptr++ = ret;
             return ret_addr->next;
@@ -351,9 +403,9 @@ Pair *SpecialOptOr::call(Pair *args, Environment * &envt,
         else
         {
             top_ptr += 2;
-            pc->next = TO_PAIR(pc->next->cdr);
-            pc->next->next = NULL;
-            return pc->next;
+            ret_info->state = TO_PAIR(ret_info->state->cdr);
+            ret_info->state->next = NULL;
+            return ret_info->state;
         }
     }
     else
@@ -413,14 +465,14 @@ void SpecialOptForce::prepare(Pair *pc) {
     if (pc->cdr == empty_list ||
         TO_PAIR(pc->cdr)->cdr != empty_list)
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
-    state = 0;
 }
 
 Pair *SpecialOptForce::call(Pair *args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
     args = TO_PAIR(args->cdr);
-    Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
-    if (state)
+    RetAddr *ret_info = static_cast<RetAddr*>(*top_ptr);
+    Pair *ret_addr = ret_info->addr;
+    if (ret_info->state)
     {
         EvalObj *mem = args->car;
         prom->feed_mem(mem);
@@ -440,9 +492,10 @@ Pair *SpecialOptForce::call(Pair *args, Environment * &envt,
         }
         else                            // force
         {
-            state = 1;
             top_ptr += 2;
-            return prom->get_entry();
+            ret_info->state = prom->get_entry();
+            ret_info->state->next = NULL;
+            return ret_info->state;
         }
     }
 }
@@ -1093,35 +1146,40 @@ BUILTIN_PROC_DEF(is_integer) {
 
 BUILTIN_PROC_DEF(num_abs) {
     ARGS_EXACTLY_ONE;
-    if (!args->car->is_num_obj())
-        throw TokenError("a number", RUN_ERR_WRONG_TYPE);
+    CHECK_NUMBER(args->car);
     return static_cast<NumObj*>(args->car)->abs();
 }
 
 BUILTIN_PROC_DEF(num_mod) {
     ARGS_EXACTLY_TWO;
+    CHECK_NUMBER(args->car);
+    CHECK_NUMBER(TO_PAIR(args->cdr)->car);
     NumObj* a = static_cast<NumObj*>(args->car);
     NumObj* b = static_cast<NumObj*>(TO_PAIR(args->cdr)->car);
-    if (a->level != NUM_LVL_INT || b->level != NUM_LVL_INT)
-        throw TokenError("an integer", RUN_ERR_WRONG_TYPE);
+    CHECK_INT(a);
+    CHECK_INT(b);
     return static_cast<IntNumObj*>(a)->mod(b);
 }
 
 BUILTIN_PROC_DEF(num_rem) {
     ARGS_EXACTLY_TWO;
+    CHECK_NUMBER(args->car);
+    CHECK_NUMBER(TO_PAIR(args->cdr)->car);
     NumObj* a = static_cast<NumObj*>(args->car);
     NumObj* b = static_cast<NumObj*>(TO_PAIR(args->cdr)->car);
-    if (a->level != NUM_LVL_INT || b->level != NUM_LVL_INT)
-        throw TokenError("an integer", RUN_ERR_WRONG_TYPE);
+    CHECK_INT(a);
+    CHECK_INT(b);
     return static_cast<IntNumObj*>(a)->rem(b);
 }
 
 BUILTIN_PROC_DEF(num_quo) {
     ARGS_EXACTLY_TWO;
+    CHECK_NUMBER(args->car);
+    CHECK_NUMBER(TO_PAIR(args->cdr)->car);
     NumObj* a = static_cast<NumObj*>(args->car);
     NumObj* b = static_cast<NumObj*>(TO_PAIR(args->cdr)->car);
-    if (a->level != NUM_LVL_INT || b->level != NUM_LVL_INT)
-        throw TokenError("an integer", RUN_ERR_WRONG_TYPE);
+    CHECK_INT(a);
+    CHECK_INT(b);
     return static_cast<IntNumObj*>(a)->quo(b);
 }
 
@@ -1131,10 +1189,8 @@ BUILTIN_PROC_DEF(num_gcd) {
     IntNumObj *opr; 
     for (;args != empty_list; args = TO_PAIR(args->cdr))
     {
-        if (!args->car->is_num_obj())        // not a number
-            throw TokenError("a number", RUN_ERR_WRONG_TYPE);
-        if (static_cast<NumObj*>(args->car)->level != NUM_LVL_INT)        // not a number
-            throw TokenError("an integer", RUN_ERR_WRONG_TYPE);
+        CHECK_NUMBER(args->car);
+        CHECK_INT(static_cast<NumObj*>(args->car));
 
         opr = static_cast<IntNumObj*>(args->car);
         res = opr->gcd(res);
@@ -1148,10 +1204,8 @@ BUILTIN_PROC_DEF(num_lcm) {
     IntNumObj *opr; 
     for (;args != empty_list; args = TO_PAIR(args->cdr))
     {
-        if (!args->car->is_num_obj())        // not a number
-            throw TokenError("a number", RUN_ERR_WRONG_TYPE);
-        if (static_cast<NumObj*>(args->car)->level != NUM_LVL_INT)        // not a number
-            throw TokenError("an integer", RUN_ERR_WRONG_TYPE);
+        CHECK_NUMBER(args->car);
+        CHECK_INT(static_cast<NumObj*>(args->car));
 
         opr = static_cast<IntNumObj*>(args->car);
         res = opr->lcm(res);
@@ -1212,6 +1266,90 @@ BUILTIN_PROC_DEF(string_eq) {
     if (!obj1->is_str_obj() || !obj2->is_str_obj())
         throw TokenError("a string", RUN_ERR_WRONG_TYPE);
     return new BoolObj(static_cast<StrObj*>(obj1)->eq(static_cast<StrObj*>(obj2)));
+}
+
+BUILTIN_PROC_DEF(make_vector) {
+    ARGS_AT_LEAST_ONE;
+    if (!args->car->is_num_obj())
+        throw TokenError("a number", RUN_ERR_WRONG_TYPE);
+    if (static_cast<NumObj*>(args->car)->level != NUM_LVL_INT)
+        throw TokenError("an integer", RUN_ERR_WRONG_TYPE);
+    ssize_t len = static_cast<IntNumObj*>(args->car)->get_i();
+    if (len < 0)
+        throw TokenError("a non-negative integer", RUN_ERR_WRONG_TYPE);
+
+    EvalObj *fill; 
+
+    args = TO_PAIR(args->cdr);
+    if (args == empty_list)
+        fill = new UnspecObj();
+    else if (args->cdr == empty_list)
+        fill = args->car;
+    else 
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+
+    VecObj *res = new VecObj();
+    res->resize(size_t(len));
+    res->fill(fill);
+    return res;
+}
+
+BUILTIN_PROC_DEF(vector_set) {
+    if (args == empty_list)
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    if (!args->car->is_vect_obj())
+        throw TokenError("a vector", RUN_ERR_WRONG_TYPE);
+    VecObj *vect = static_cast<VecObj*>(args->car);
+
+    args = TO_PAIR(args->cdr);
+    if (args == empty_list)
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    CHECK_NUMBER(args->car);
+    CHECK_INT(static_cast<NumObj*>(args->car));
+    ssize_t k = static_cast<IntNumObj*>(args->car)->get_i();
+    if (k < 0)
+        throw TokenError("a non-negative integer", RUN_ERR_WRONG_TYPE);
+
+    args = TO_PAIR(args->cdr);
+    if (args == empty_list)
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    if (args->cdr != empty_list)
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+
+    vect->set(k, args->car);
+    return new UnspecObj();
+}
+
+BUILTIN_PROC_DEF(vector_ref) {
+    if (args == empty_list)
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    if (!args->car->is_vect_obj())
+        throw TokenError("a vector", RUN_ERR_WRONG_TYPE);
+    VecObj *vect = static_cast<VecObj*>(args->car);
+
+    args = TO_PAIR(args->cdr);
+    if (args == empty_list)
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    if (args->cdr != empty_list)
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+
+    CHECK_NUMBER(args->car);
+    CHECK_INT(static_cast<NumObj*>(args->car));
+    ssize_t k = static_cast<IntNumObj*>(args->car)->get_i();
+    if (k < 0)
+        throw TokenError("a non-negative integer", RUN_ERR_WRONG_TYPE);
+    return vect->get_obj(k);
+}
+
+BUILTIN_PROC_DEF(vector_length) {
+    if (args == empty_list)
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    if (!args->car->is_vect_obj())
+        throw TokenError("a vector", RUN_ERR_WRONG_TYPE);
+    if (args->cdr != empty_list)
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    VecObj *vect = static_cast<VecObj*>(args->car);
+    return new IntNumObj(vect->get_size());
 }
 
 

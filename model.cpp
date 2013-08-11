@@ -62,6 +62,10 @@ bool EvalObj::is_prom_obj() {
     return otype & CLS_PROM_OBJ;
 }
 
+bool EvalObj::is_vect_obj() {
+    return otype & CLS_VECT_OBJ;
+}
+
 int EvalObj::get_otype() {
     return otype;
 }
@@ -125,3 +129,6 @@ string EvalObj::ext_repr() {
         res = "(" + res + ")";
     return res;
 }
+
+RetAddr::RetAddr(Pair *_addr, Pair *_state) : 
+    FrameObj(CLS_RET_ADDR), addr(_addr), state(_state) {}

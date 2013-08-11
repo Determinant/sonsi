@@ -240,4 +240,9 @@ BUILTIN_PROC_DEF(string_gt);
 BUILTIN_PROC_DEF(string_ge);
 BUILTIN_PROC_DEF(string_eq);
 
+BUILTIN_PROC_DEF(make_vector);
+BUILTIN_PROC_DEF(vector_set);
+BUILTIN_PROC_DEF(vector_ref);
+BUILTIN_PROC_DEF(vector_length);
+
 #endif

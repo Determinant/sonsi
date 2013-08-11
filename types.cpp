@@ -21,7 +21,6 @@ Pair::Pair(EvalObj *_car, EvalObj *_cdr) :
         return new PairReprCons(this, this);
     }
 
-RetAddr::RetAddr(Pair *_addr) : FrameObj(CLS_RET_ADDR), addr(_addr) {}
 
 ParseBracket::ParseBracket(unsigned char _btype) :
     FrameObj(CLS_SIM_OBJ | CLS_PAR_BRA), btype(_btype) {}
@@ -138,20 +137,32 @@ ReprCons *CharObj::get_repr_cons() {
 
 VecObj::VecObj() : EvalObj(CLS_SIM_OBJ | CLS_VECT_OBJ) {}
 
-EvalObj *VecObj::get_obj(int idx) {
+EvalObj *VecObj::get_obj(size_t idx) {
     return vec[idx];
+}
+
+void VecObj::set(size_t idx, EvalObj *obj) {
+    if (idx >= get_size())
+        throw NormalError(RUN_ERR_VALUE_OUT_OF_RANGE);
+    vec[idx] = obj;
 }
 
 size_t VecObj::get_size() {
     return vec.end() - vec.begin();
 }
 
-void VecObj::resize(int new_size) {
+void VecObj::resize(size_t new_size) {
     vec.resize(new_size);
 }
 
 void VecObj::push_back(EvalObj *new_elem) {
     vec.push_back(new_elem);
+}
+
+void VecObj::fill(EvalObj *obj) {
+    for (EvalObjVec::iterator it = vec.begin();
+            it != vec.end(); it++)
+        *it = obj;
 }
 
 ReprCons *VecObj::get_repr_cons() {
@@ -203,10 +214,27 @@ ReprCons *BuiltinProcObj::get_repr_cons() {
 Environment::Environment(Environment *_prev_envt) : prev_envt(_prev_envt) {}
 
 bool Environment::add_binding(SymObj *sym_obj, EvalObj *eval_obj, bool def) {
-    bool has_key = binding.count(sym_obj->val);
-    if (!def && !has_key) return false;
-    binding[sym_obj->val] = eval_obj;
-    return true;
+    bool found = false;
+    string name(sym_obj->val);
+    if (!def)
+    {
+        for (Environment *ptr = this; ptr; ptr = ptr->prev_envt)
+        {
+            bool has_key = ptr->binding.count(name);
+            if (has_key) 
+            {
+                ptr->binding[name] = eval_obj;
+                found = true;
+                break;
+            }
+        }
+        return found;
+    }
+    else 
+    {
+        binding[name] = eval_obj;
+        return true;
+    }
 }
 
 EvalObj *Environment::get_obj(EvalObj *obj) {
@@ -368,7 +396,7 @@ CompNumObj::CompNumObj(double _real, double _imag) :
         // ipos: the position of i
         long long spos = -1, ipos = -1;
         size_t len = repr.length();
-        bool sign;
+        bool sign = false;
         for (size_t i = 0; i < len; i++)
             if (repr[i] == '+' || repr[i] == '-')
             {
@@ -855,11 +883,14 @@ NumObj *IntNumObj::abs() {
 }
 
 NumObj *IntNumObj::rem(NumObj *_r) {
-    return new IntNumObj(val % static_cast<IntNumObj*>(_r)->val);
+    const mpz_class &rval(static_cast<IntNumObj*>(_r)->val);
+    if (rval == 0) throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
+    return new IntNumObj(val % rval);
 }
 
 NumObj *IntNumObj::mod(NumObj *_r) {
     const mpz_class &rval = static_cast<IntNumObj*>(_r)->val;
+    if (rval == 0) throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
     mpz_class ret = val % rval;
     if (sgn(ret) != sgn(rval))
         ret = ret + rval;
@@ -867,7 +898,9 @@ NumObj *IntNumObj::mod(NumObj *_r) {
 }
 
 NumObj *IntNumObj::quo(NumObj *_r) {
-    return new IntNumObj(val / static_cast<IntNumObj*>(_r)->val);
+    const mpz_class &rval = static_cast<IntNumObj*>(_r)->val;
+    if (rval == 0) throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
+    return new IntNumObj(val / rval);
 }
 
 NumObj *IntNumObj::gcd(NumObj *_r) {

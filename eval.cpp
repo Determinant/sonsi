@@ -82,6 +82,11 @@ void Evaluator::add_builtin_routines() {
     ADD_BUILTIN_PROC("string>?", string_gt);
     ADD_BUILTIN_PROC("string<=?", string_ge);
     ADD_BUILTIN_PROC("string=?", string_eq);
+
+    ADD_BUILTIN_PROC("make-vector", make_vector);
+    ADD_BUILTIN_PROC("vector-set!", vector_set);
+    ADD_BUILTIN_PROC("vector-ref", vector_ref);
+    ADD_BUILTIN_PROC("vector-length", vector_length);
 }
 
 Evaluator::Evaluator() {
@@ -104,24 +109,39 @@ inline bool make_exec(Pair *ptr) {
 }
 
 inline void push(Pair * &pc, FrameObj ** &top_ptr, Environment *envt) {
+//    if (pc->car == NULL)
+ //       puts("oops");
     if (pc->car->is_simple_obj())           // Not an opt invocation
     {
         *top_ptr = envt->get_obj(pc->car);  // Objectify the symbol
         top_ptr++;
         pc = pc->next;                      // Move to the next instruction
+//        if (pc == empty_list)
+//        puts("oops");
     }
     else                                    // Operational Invocation
     {
         if (pc->car == empty_list)
             throw NormalError(SYN_ERR_EMPTY_COMB);
 
-        *top_ptr++ = new RetAddr(pc);       // Push the return address
+        *top_ptr++ = new RetAddr(pc, NULL);       // Push the return address
         if (!make_exec(TO_PAIR(pc->car)))
             throw TokenError(pc->car->ext_repr(), RUN_ERR_WRONG_NUM_OF_ARGS);
         // static_cast because of is_simple_obj() is false
         pc = static_cast<Pair*>(pc->car);  // Go deeper to enter the call
         envt->get_obj(pc->car)->prepare(pc);
     }
+}
+
+void print_stack(FrameObj **top) {
+    for (FrameObj **i = eval_stack; i < top; i++)
+    {
+        if ((*i)->is_ret_addr())
+            puts("<return addr>");
+        else 
+            printf("%s\n", static_cast<EvalObj*>(*i)->ext_repr().c_str());
+    }
+    puts("");
 }
 
 EvalObj *Evaluator::run_expr(Pair *prog) {

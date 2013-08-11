@@ -89,6 +89,8 @@ class EvalObj : public FrameObj {
         bool is_str_obj();
         /** Check if the object is a promise */
         bool is_prom_obj();
+        /** Check if the object is a vector */
+        bool is_vect_obj();
         int get_otype();
         virtual void prepare(Pair *pc);
         /** Any EvalObj has its external representation */
@@ -98,5 +100,17 @@ class EvalObj : public FrameObj {
         /** External representation construction */
         virtual ReprCons *get_repr_cons() = 0;
 };
+
+/** @class RetAddr
+ * Tracking the caller's Pair pointer
+ */
+class RetAddr : public FrameObj {/*{{{*/
+    public:
+        Pair* addr;                      /**< The return address  */
+        Pair* state;
+        /** Constructs a return address object which refers to the node addr in
+         * the AST */
+        RetAddr(Pair *addr, Pair *state = NULL);
+};/*}}}*/
 
 #endif

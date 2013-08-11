@@ -60,17 +60,6 @@ class EmptyList: public Pair {/*{{{*/
         ReprCons *get_repr_cons();
 };/*}}}*/
 
-/** @class RetAddr
- * Tracking the caller's Pair pointer
- */
-class RetAddr : public FrameObj {/*{{{*/
-    public:
-        Pair* addr;                      /**< The return address  */
-        /** Constructs a return address object which refers to the node addr in
-         * the AST */
-        RetAddr(Pair *addr);
-};/*}}}*/
-
 class ReprCons {/*{{{*/
     public:
         EvalObj *ori;
@@ -303,11 +292,15 @@ class VecObj: public EvalObj {/*{{{*/
         /** Construct a vector object */
         VecObj();
         size_t get_size();
-        EvalObj *get_obj(int idx);
+        EvalObj *get_obj(size_t idx);
         /** Resize the vector */
-        void resize(int new_size);
+        void resize(size_t new_size);
         /** Add a new element to the rear */
         void push_back(EvalObj *new_elem);
+        /** Fill the vector with obj */
+        void fill(EvalObj *obj);
+        /** Replace an existing element in the vector */
+        void set(size_t idx, EvalObj *obj);
         ReprCons *get_repr_cons();
 };/*}}}*/
 

@@ -18,5 +18,6 @@ const char *ERR_MSG[] = {
     "Bad formal %s in expression",
     "Queue overflowed: the expected expansion is too long!",
     "%s stack overflowed!",
-    "Numeric overflow!"
+    "Numeric overflow!",
+    "Value out of range"
 };
