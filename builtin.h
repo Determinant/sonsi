@@ -15,16 +15,6 @@ const int EQUAL_QUEUE_SIZE = 262144;
 class SpecialOptIf: public SpecialOptObj {/*{{{*/
     private:
         unsigned char state; /**< 0 for prepared, 1 for pre_called */
-        /**
-         * The evaluator will call this after the <condition> exp is evaluated.
-         * And this function tells the evaluator which of <consequence> and
-         * <alternative> should be evaluted. */
-        void pre_call(Pair *args, Pair *pc, Environment *envt);
-        /** The system will call this again after the desired result is
-         * evaluated, so just return it to let the evaluator know the it's the
-         * answer.
-         */
-        EvalObj *post_call(Pair *args, Pair *pc, Environment *envt);
     public:
         /** Construct a `if` operator */
         SpecialOptIf();

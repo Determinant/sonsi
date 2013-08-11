@@ -21,58 +21,21 @@ void SpecialOptIf::prepare(Pair *pc) {
 
     Pair *first, *second, *third;
 
-    if (pc->cdr->is_pair_obj())
-        first = TO_PAIR(pc->cdr);
-    else
+    if (pc->cdr == empty_list)
         IF_EXP_ERR;
+    first = TO_PAIR(pc->cdr);
 
-    if (first->cdr->is_pair_obj())
-        second = TO_PAIR(first->cdr);
-    else
+    if (first->cdr == empty_list)
         IF_EXP_ERR;
+    second = TO_PAIR(first->cdr);
 
     if (second->cdr != empty_list)
     {
-        if (second->cdr->is_pair_obj())
-        {
-            third = TO_PAIR(second->cdr);
-            if (third->cdr != empty_list)
-                IF_EXP_ERR;
-        }
-        else
-            IF_EXP_ERR;
+        third = TO_PAIR(second->cdr);
+        if (third->cdr != empty_list) IF_EXP_ERR;
     }
     pc->next = first;
     first->next = NULL; // skip <consequence> and <alternative>
-}
-
-void SpecialOptIf::pre_call(Pair *args, Pair *pc,
-        Environment *envt) {
-    // prepare has guaranteed ...
-    pc = TO_PAIR(pc->car);
-    Pair *first = TO_PAIR(pc->cdr);
-    Pair *second = TO_PAIR(first->cdr);
-    Pair *third = TO_PAIR(second->cdr);
-
-    // Condition evaluated and the decision is made
-    state = 1;
-
-    if (TO_PAIR(args->cdr)->car->is_true())
-    {
-        pc->next = second;
-        second->next = NULL;
-    }
-    else
-    {
-        pc->next = third;
-        third->next = NULL;
-    }
-}
-
-EvalObj *SpecialOptIf::post_call(Pair *args, Pair *pc,
-        Environment *envt) {
-    // Value already evaluated, so just return it
-    return TO_PAIR(args->cdr)->car;
 }
 
 Pair *SpecialOptIf::call(Pair *args, Environment * &envt,
@@ -80,35 +43,33 @@ Pair *SpecialOptIf::call(Pair *args, Environment * &envt,
     Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     if (state)
     {
-        *top_ptr++ = post_call(args, ret_addr, envt);
+        *top_ptr++ = TO_PAIR(args->cdr)->car;
         return ret_addr->next;          // Move to the next instruction
     }
     else
     {
-        pre_call(args, ret_addr, envt);
-        top_ptr += 2;
+        Pair *pc = TO_PAIR(ret_addr->car);
+        Pair *first = TO_PAIR(pc->cdr);
+        Pair *second = TO_PAIR(first->cdr);
+        Pair *third = TO_PAIR(second->cdr);
+
+        if (TO_PAIR(args->cdr)->car->is_true())
+        {
+            pc->next = second;
+            second->next = NULL;
+        }
+        else
+        {
+            pc->next = third;
+            third->next = NULL;
+        }
+        // Condition evaluated and the decision is made
+        state = 1;
         // Undo pop and invoke again
-        // static_cast because it's a call invocation
-        return TO_PAIR(ret_addr->car)->next;
+        top_ptr += 2;
+        return pc->next;
     }
 }
-
-SpecialOptLambda::SpecialOptLambda() : SpecialOptObj("lambda") {}
-#define CHECK_COM(pc)  \
-do  \
-{ \
-    EvalObj *nptr; \
-    Pair *ptr; \
-    for (ptr = pc;;)  \
-    { \
-        if ((nptr = ptr->cdr)->is_pair_obj()) \
-            ptr = TO_PAIR(nptr); \
-        else break; \
-    } \
-    if (ptr->cdr != empty_list) \
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS); \
-} \
-while (0)
 
 #define CHECK_SYMBOL(ptr) \
 do \
@@ -125,20 +86,20 @@ do  \
     Pair *ptr; \
     for (ptr = TO_PAIR(p);;)  \
     { \
+        CHECK_SYMBOL(ptr->car); \
         if ((nptr = ptr->cdr)->is_pair_obj()) \
             ptr = TO_PAIR(nptr); \
         else break; \
-        CHECK_SYMBOL(ptr->car); \
     } \
     if (ptr->cdr != empty_list) \
        CHECK_SYMBOL(ptr->cdr); \
 } \
 while (0)
 
+SpecialOptLambda::SpecialOptLambda() : SpecialOptObj("lambda") {}
 
 void SpecialOptLambda::prepare(Pair *pc) {
     // Do not evaluate anything
-    CHECK_COM(pc);
     pc->next = NULL;
 }
 
@@ -147,27 +108,26 @@ Pair *SpecialOptLambda::call(Pair *args, Environment * &envt,
 
     Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     Pair *pc = static_cast<Pair*>(ret_addr->car);
-    // TODO: remove the following two lines?
+
     if (pc->cdr == empty_list)
         throw TokenError(name, SYN_ERR_EMPTY_PARA_LIST);
     Pair *first = TO_PAIR(pc->cdr);
-    // <body> is expected
-    if (first->cdr == empty_list)
+
+    EvalObj *params = first->car;
+    // store a list of expressions inside <body>
+    Pair *body = TO_PAIR(first->cdr);       // Truncate the expression list
+
+    // Check <body>
+    if (body == empty_list)
         throw TokenError(name, SYN_ERR_MISS_OR_EXTRA_EXP);
-
-    // Restore the next pointer
-    pc->next = TO_PAIR(pc->cdr);            // CHECK_COM made it always okay
-
-    if (first->car->is_simple_obj())
+    // Check parameters
+    if (params->is_simple_obj())
         CHECK_SYMBOL(first->car);
     else
         CHECK_PARA_LIST(first->car);
-    EvalObj *params = first->car;
 
-    // store a list of expressions inside <body>
-    Pair *body = TO_PAIR(first->cdr);       // Truncate the expression list
     for (Pair *ptr = body; ptr != empty_list; ptr = TO_PAIR(ptr->cdr))
-        ptr->next = NULL;    // Make each expression an orphan
+        ptr->next = NULL;    // Make each expression isolated
 
     *top_ptr++ = new ProcObj(body, envt, params);
     return ret_addr->next;  // Move to the next instruction
@@ -176,12 +136,14 @@ Pair *SpecialOptLambda::call(Pair *args, Environment * &envt,
 SpecialOptDefine::SpecialOptDefine() : SpecialOptObj("define") {}
 
 void SpecialOptDefine::prepare(Pair *pc) {
-    if (!pc->cdr->is_pair_obj())
+    Pair *first, *second;
+    if (pc->cdr == empty_list)
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
-    Pair *first = TO_PAIR(pc->cdr), *second;
+    first = TO_PAIR(pc->cdr);
+
     if (first->car->is_simple_obj())  // Simple value assignment
     {
-        if (!first->cdr->is_pair_obj())
+        if (first->cdr == empty_list)
             throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
         second = TO_PAIR(first->cdr);
         if (second->cdr != empty_list)
@@ -189,11 +151,7 @@ void SpecialOptDefine::prepare(Pair *pc) {
         pc->next = second;                      // Skip the identifier
         second->next = NULL;
     }                                           // Procedure definition
-    else
-    {
-        CHECK_COM(pc);
-        pc->next = NULL; // Skip all parts
-    }
+    else pc->next = NULL; // Skip all parts
 }
 
 Pair *SpecialOptDefine::call(Pair *args, Environment * &envt,
@@ -218,21 +176,19 @@ Pair *SpecialOptDefine::call(Pair *args, Environment * &envt,
         if (plst == empty_list)
             throw TokenError(name, SYN_ERR_EMPTY_PARA_LIST);
         CHECK_SYMBOL(plst->car);
-        if (plst->cdr->is_simple_obj())
+        id = static_cast<SymObj*>(plst->car);
+
+        EvalObj *params = plst->cdr;
+        Pair *body = TO_PAIR(TO_PAIR(pc->cdr)->cdr);
+
+        // Check <body>
+        if (body == empty_list)
+            throw TokenError(name, SYN_ERR_MISS_OR_EXTRA_EXP);
+        // Check parameters
+        if (params->is_simple_obj())
             CHECK_SYMBOL(plst->cdr);
         else
             CHECK_PARA_LIST(plst->cdr);
-
-        id = static_cast<SymObj*>(plst->car);
-        EvalObj *params = plst->cdr;
-
-        // Restore the next pointer
-        pc->next = TO_PAIR(pc->cdr);
-
-        Pair *body = TO_PAIR(TO_PAIR(pc->cdr)->cdr);   // Truncate the expression list
-
-        if (body == empty_list)
-            throw TokenError(name, SYN_ERR_MISS_OR_EXTRA_EXP);
 
         for (Pair *ptr = body; ptr != empty_list; ptr = TO_PAIR(ptr->cdr))
             ptr->next = NULL;           // Make each expression a orphan
@@ -244,16 +200,18 @@ Pair *SpecialOptDefine::call(Pair *args, Environment * &envt,
     return ret_addr->next;
 }
 
+SpecialOptSet::SpecialOptSet() : SpecialOptObj("set!") {}
+
 void SpecialOptSet::prepare(Pair *pc) {
-    if (!pc->cdr->is_pair_obj())
+    Pair *first, *second;
+    if (pc->cdr == empty_list)
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    first = TO_PAIR(pc->cdr);
 
-    Pair *first = TO_PAIR(pc->cdr), *second;
-
-    if (!first->is_pair_obj())
+    if (first->cdr == empty_list)
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    second = TO_PAIR(first->cdr);
 
-    second = TO_PAIR(pc->cdr);
     if (second->cdr != empty_list)
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
 
@@ -278,13 +236,10 @@ Pair *SpecialOptSet::call(Pair *args, Environment * &envt,
     return ret_addr->next;
 }
 
-SpecialOptSet::SpecialOptSet() : SpecialOptObj("set!") {}
-
 SpecialOptQuote::SpecialOptQuote() : SpecialOptObj("quote") {}
 
 void SpecialOptQuote::prepare(Pair *pc) {
     // Do not evaluate anything
-    CHECK_COM(pc);
     pc->next = NULL;
 }
 
@@ -326,7 +281,6 @@ Pair *SpecialOptEval::call(Pair *args, Environment * &envt,
 SpecialOptAnd::SpecialOptAnd() : SpecialOptObj("and") {}
 
 void SpecialOptAnd::prepare(Pair *pc) {
-    CHECK_COM(pc);
     if (pc->cdr != empty_list)
     {
         pc->next = TO_PAIR(pc->cdr);
@@ -370,7 +324,6 @@ Pair *SpecialOptAnd::call(Pair *args, Environment * &envt,
 SpecialOptOr::SpecialOptOr() : SpecialOptObj("or") {}
 
 void SpecialOptOr::prepare(Pair *pc) {
-    CHECK_COM(pc);
     if (pc->cdr != empty_list)
     {
         pc->next = TO_PAIR(pc->cdr);
