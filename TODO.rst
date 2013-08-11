@@ -1,13 +1,9 @@
 - Several built-in support
-  - or
-  - string=?
-  - string<?
-  - string>?
-  - string<=?
-  - string>=?
 
+  - delay
+
+- Garbage Collection
 - Testing
 - Rounding support
-- Garbage Collection?
 - ext_repr optimization 
 - Add macro support

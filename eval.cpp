@@ -22,6 +22,8 @@ void Evaluator::add_builtin_routines() {
     ADD_ENTRY("quote", new SpecialOptQuote());
     ADD_ENTRY("eval", new SpecialOptEval());
     ADD_ENTRY("and", new SpecialOptAnd());
+    ADD_ENTRY("or", new SpecialOptOr());
+    ADD_ENTRY("apply", new SpecialOptApply());
 
     ADD_BUILTIN_PROC("+", num_add);
     ADD_BUILTIN_PROC("-", num_sub);
@@ -73,6 +75,11 @@ void Evaluator::add_builtin_routines() {
     ADD_BUILTIN_PROC("display", display);
     ADD_BUILTIN_PROC("string?", is_string);
     ADD_BUILTIN_PROC("symbol?", is_symbol);
+    ADD_BUILTIN_PROC("string<?", string_lt);
+    ADD_BUILTIN_PROC("string<=?", string_le);
+    ADD_BUILTIN_PROC("string>?", string_gt);
+    ADD_BUILTIN_PROC("string<=?", string_ge);
+    ADD_BUILTIN_PROC("string=?", string_eq);
 }
 
 Evaluator::Evaluator() {

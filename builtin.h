@@ -249,8 +249,6 @@ class SpecialOptEval: public SpecialOptObj {
  * The implementation of `and` operator
  */
 class SpecialOptAnd: public SpecialOptObj {
-    private:
-        unsigned char state; /**< 0 for prepared, 1 for pre_called */
     public:
         SpecialOptAnd();
         void prepare(Pair *pc);
@@ -259,6 +257,34 @@ class SpecialOptAnd: public SpecialOptObj {
 
         ReprCons *get_repr_cons();
 };
+
+/** @class SpecialOptOr
+ * The implementation of `and` operator
+ */
+class SpecialOptOr: public SpecialOptObj {
+    public:
+        SpecialOptOr();
+        void prepare(Pair *pc);
+        Pair *call(ArgList *args, Environment * &envt,
+                    Continuation * &cont, FrameObj ** &top_ptr);
+
+        ReprCons *get_repr_cons();
+};
+
+/** @class SpecialOptApply
+ * The implementation of `apply` operator
+ */
+class SpecialOptApply: public SpecialOptObj {
+    public:
+        SpecialOptApply();
+        void prepare(Pair *pc);
+        Pair *call(ArgList *args, Environment * &envt,
+                    Continuation * &cont, FrameObj ** &top_ptr);
+
+        ReprCons *get_repr_cons();
+};
+
+
 
 #define BUILTIN_PROC_DEF(func)\
     EvalObj *(func)(ArgList *args, const string &name)
@@ -311,6 +337,11 @@ BUILTIN_PROC_DEF(is_equal);
 BUILTIN_PROC_DEF(display);
 BUILTIN_PROC_DEF(is_string);
 BUILTIN_PROC_DEF(is_symbol);
+BUILTIN_PROC_DEF(string_lt);
+BUILTIN_PROC_DEF(string_le);
+BUILTIN_PROC_DEF(string_gt);
+BUILTIN_PROC_DEF(string_ge);
+BUILTIN_PROC_DEF(string_eq);
 
 
 #endif

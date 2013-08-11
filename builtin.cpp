@@ -1022,6 +1022,102 @@ ReprCons *SpecialOptAnd::get_repr_cons() {
     return new ReprStr("#<Builtin Macro: and>");
 }
 
+SpecialOptOr::SpecialOptOr() : SpecialOptObj("or") {}
+
+void SpecialOptOr::prepare(Pair *pc) {
+    CHECK_COM(pc);
+    if (pc->cdr != empty_list)
+    {
+        pc->next = TO_PAIR(pc->cdr);
+        pc->next->next = NULL;
+    }
+}
+
+Pair *SpecialOptOr::call(ArgList *args, Environment * &envt,
+        Continuation * &cont, FrameObj ** &top_ptr) {
+    Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
+    Pair *pc = static_cast<Pair*>(ret_addr->car);
+    if (args->cdr == empty_list)
+    {
+        *top_ptr++ = new BoolObj(false);
+        return ret_addr->next;
+    }
+    EvalObj *ret = TO_PAIR(args->cdr)->car;
+    if (!ret->is_true())
+    {
+        if (pc->next->cdr == empty_list) // the last member
+        {
+            *top_ptr++ = ret;
+            return ret_addr->next;
+        }
+        else
+        {
+            top_ptr += 2;
+            pc->next = TO_PAIR(pc->next->cdr);
+            pc->next->next = NULL;
+            return pc->next;
+        }
+    }
+    else
+    {
+        *top_ptr++ = ret;
+        return ret_addr->next;
+    }
+    throw NormalError(INT_ERR);
+}
+
+ReprCons *SpecialOptOr::get_repr_cons() {
+    return new ReprStr("#<Builtin Macro: or>");
+}
+
+SpecialOptApply::SpecialOptApply() : SpecialOptObj("apply") {}
+
+void SpecialOptApply::prepare(Pair *pc) {}
+
+Pair *SpecialOptApply::call(ArgList *args, Environment * &envt,
+        Continuation * &cont, FrameObj ** &top_ptr) {
+    top_ptr++;          // Recover the return address
+    if (args->cdr == empty_list)
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+
+    args = TO_PAIR(args->cdr);
+    if (!args->car->is_opt_obj())
+        throw TokenError("an operator", RUN_ERR_WRONG_TYPE);
+
+    *top_ptr++ = args->car;
+    args = TO_PAIR(args->cdr);
+    if (args == empty_list)
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+
+    for (; args->cdr != empty_list; args = TO_PAIR(args->cdr))
+        *top_ptr++ = args->car;
+
+    if (args->car != empty_list)
+    {
+        if (!args->car->is_pair_obj())
+            throw TokenError("a list", RUN_ERR_WRONG_TYPE);
+
+        args = TO_PAIR(args->car);
+        EvalObj *nptr;
+        for (;;)
+        {
+            *top_ptr++ = args->car;
+            if ((nptr = args->cdr)->is_pair_obj())
+                args = TO_PAIR(nptr);
+            else break;
+        }
+        if (args->cdr != empty_list)
+            throw TokenError("a list", RUN_ERR_WRONG_TYPE);
+    }
+    return NULL; // force the invocation
+}
+
+ReprCons *SpecialOptApply::get_repr_cons() {
+    return new ReprStr("#<Builtin Macro: apply>");
+}
+
+
+
 BUILTIN_PROC_DEF(make_pair) {
     ARGS_EXACTLY_TWO;
     return new Pair(args->car, TO_PAIR(args->cdr)->car);
@@ -1704,6 +1800,51 @@ BUILTIN_PROC_DEF(is_string) {
 BUILTIN_PROC_DEF(is_symbol) {
     ARGS_AT_LEAST_ONE;
     return new BoolObj(args->car->is_sym_obj());
+}
+
+BUILTIN_PROC_DEF(string_lt) {
+    ARGS_EXACTLY_TWO;
+    EvalObj *obj1 = args->car;
+    EvalObj *obj2 = TO_PAIR(args->cdr)->car;
+    if (!obj1->is_str_obj() || !obj2->is_str_obj())
+        throw TokenError("a string", RUN_ERR_WRONG_TYPE);
+    return new BoolObj(static_cast<StrObj*>(obj1)->lt(static_cast<StrObj*>(obj2)));
+}
+
+BUILTIN_PROC_DEF(string_le) {
+    ARGS_EXACTLY_TWO;
+    EvalObj *obj1 = args->car;
+    EvalObj *obj2 = TO_PAIR(args->cdr)->car;
+    if (!obj1->is_str_obj() || !obj2->is_str_obj())
+        throw TokenError("a string", RUN_ERR_WRONG_TYPE);
+    return new BoolObj(static_cast<StrObj*>(obj1)->le(static_cast<StrObj*>(obj2)));
+}
+
+BUILTIN_PROC_DEF(string_gt) {
+    ARGS_EXACTLY_TWO;
+    EvalObj *obj1 = args->car;
+    EvalObj *obj2 = TO_PAIR(args->cdr)->car;
+    if (!obj1->is_str_obj() || !obj2->is_str_obj())
+        throw TokenError("a string", RUN_ERR_WRONG_TYPE);
+    return new BoolObj(static_cast<StrObj*>(obj1)->lt(static_cast<StrObj*>(obj2)));
+}
+
+BUILTIN_PROC_DEF(string_ge) {
+    ARGS_EXACTLY_TWO;
+    EvalObj *obj1 = args->car;
+    EvalObj *obj2 = TO_PAIR(args->cdr)->car;
+    if (!obj1->is_str_obj() || !obj2->is_str_obj())
+        throw TokenError("a string", RUN_ERR_WRONG_TYPE);
+    return new BoolObj(static_cast<StrObj*>(obj1)->le(static_cast<StrObj*>(obj2)));
+}
+
+BUILTIN_PROC_DEF(string_eq) {
+    ARGS_EXACTLY_TWO;
+    EvalObj *obj1 = args->car;
+    EvalObj *obj2 = TO_PAIR(args->cdr)->car;
+    if (!obj1->is_str_obj() || !obj2->is_str_obj())
+        throw TokenError("a string", RUN_ERR_WRONG_TYPE);
+    return new BoolObj(static_cast<StrObj*>(obj1)->eq(static_cast<StrObj*>(obj2)));
 }
 
 

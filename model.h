@@ -106,7 +106,9 @@ class EvalObj : public FrameObj {
         bool is_num_obj();
         /** Check if the object is a boolean */
         bool is_bool_obj();
+        /** Check if the object is a string */
         bool is_str_obj();
+        /** Check if the object is a operator */
         int get_otype();
         virtual void prepare(Pair *pc);
         /** Any EvalObj has its external representation */
@@ -352,6 +354,11 @@ class StrObj: public EvalObj {
          * @return NULL if failed
          */
         static StrObj *from_string(string repr);
+        bool lt(StrObj *r);
+        bool gt(StrObj *r);
+        bool le(StrObj *r);
+        bool ge(StrObj *r);
+        bool eq(StrObj *r);
         ReprCons *get_repr_cons();
 };
 

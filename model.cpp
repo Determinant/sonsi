@@ -258,6 +258,26 @@ StrObj *StrObj::from_string(string repr) {
     return NULL;
 }
 
+bool StrObj::lt(StrObj *r) {
+    return str < r->str;
+}
+
+bool StrObj::gt(StrObj *r) {
+    return str > r->str;
+}
+
+bool StrObj::le(StrObj *r) {
+    return str <= r->str;
+}
+
+bool StrObj::ge(StrObj *r) {
+    return str >= r->str;
+}
+
+bool StrObj::eq(StrObj *r) {
+    return str == r->str;
+}
+
 BuiltinProcObj::BuiltinProcObj(BuiltinProc f, string _name) :
     OptObj(), handler(f), name(_name) {}
 
