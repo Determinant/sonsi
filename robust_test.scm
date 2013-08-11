@@ -172,6 +172,8 @@ t
 src
 (eval src)
 (eval '(g 0))
+(eval (list * 2 3))
+(eval '(* 2 3))
 
 (define f (lambda (x) (+ x x))) ;; test comments
 ((lambda (x y) (f 3)) 1 2)      ;; first-class procedure

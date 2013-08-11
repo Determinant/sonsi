@@ -84,8 +84,13 @@ string EvalObj::ext_repr() {
             if (obj)
             {
                 *(++top_ptr) = obj->get_repr_cons();
-                if (hash.count((*top_ptr)->ori))
-                    *top_ptr = new ReprStr("#inf#");
+                EvalObj *ptr = (*top_ptr)->ori;
+                if (ptr)
+                {
+                    if (hash.count(ptr))
+                        *top_ptr = new ReprStr("#inf#");
+                    else hash.insert(ptr);
+                }
             }
             else
             {
@@ -100,8 +105,13 @@ string EvalObj::ext_repr() {
             if (obj)
             {
                 *(++top_ptr) = obj->get_repr_cons();
-                if (hash.count((*top_ptr)->ori))
-                    *top_ptr = new ReprStr("#inf#");
+                EvalObj *ptr = (*top_ptr)->ori;
+                if (ptr)
+                {
+                    if (hash.count(ptr))
+                        *top_ptr = new ReprStr("#inf#");
+                    else hash.insert(ptr);
+                }
             }
             else *top_ptr = new ReprStr((*top_ptr)->repr);
         }
@@ -401,13 +411,17 @@ EvalObj *PromObj::get_mem() { return mem; }
 void PromObj::feed_mem(EvalObj *res) { mem = res; }
 
 
-bool is_list(Pair *ptr) {
+bool make_exec(Pair *ptr) {
     if (ptr == empty_list) return true;
     EvalObj *nptr;
     for (;;)
         if ((nptr = ptr->cdr)->is_pair_obj())
-            ptr = TO_PAIR(nptr);
+        {
+            ptr->next = TO_PAIR(nptr);
+            ptr = ptr->next;
+        }
         else break;
+    ptr->next = NULL;
     return ptr->cdr == empty_list;
 }
 

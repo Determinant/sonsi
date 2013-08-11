@@ -102,7 +102,7 @@ void push(Pair * &pc, FrameObj ** &top_ptr, Environment *envt) {
             throw NormalError(SYN_ERR_EMPTY_COMB);
 
         *top_ptr++ = new RetAddr(pc);       // Push the return address
-        if (!is_list(TO_PAIR(pc->car)))
+        if (!make_exec(TO_PAIR(pc->car)))
             throw TokenError(pc->car->ext_repr(), RUN_ERR_WRONG_NUM_OF_ARGS);
         // static_cast because of is_simple_obj() is false
         pc = static_cast<Pair*>(pc->car);  // Go deeper to enter the call
@@ -121,7 +121,6 @@ EvalObj *Evaluator::run_expr(Pair *prog) {
     {
         if (top_ptr == eval_stack + EVAL_STACK_SIZE)
             throw TokenError("Evaluation", RUN_ERR_STACK_OVERFLOW);
-//        for (; pc && pc->skip; pc = pc->next);
         if (pc)
             push(pc, top_ptr, envt);
         else

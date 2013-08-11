@@ -464,6 +464,6 @@ class Continuation {
                 Pair *proc_body);
 };
 
-bool is_list(Pair *ptr);
+bool make_exec(Pair *ptr);
 
 #endif
