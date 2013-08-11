@@ -95,10 +95,8 @@ class EvalObj : public FrameObj {
         string ext_repr();
         /** Always true for all EvalObjs except BoolObj */
         virtual bool is_true();
+        /** External representation construction */
         virtual ReprCons *get_repr_cons() = 0;
 };
-
-
-bool make_exec(Pair *ptr);
 
 #endif

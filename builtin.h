@@ -12,161 +12,186 @@ const int EQUAL_QUEUE_SIZE = 262144;
 /** @class SpecialOptIf
  * The implementation of `if` operator
  */
-class SpecialOptIf: public SpecialOptObj {
+class SpecialOptIf: public SpecialOptObj {/*{{{*/
     private:
         unsigned char state; /**< 0 for prepared, 1 for pre_called */
         /**
          * The evaluator will call this after the <condition> exp is evaluated.
          * And this function tells the evaluator which of <consequence> and
          * <alternative> should be evaluted. */
-        void pre_call(Pair *args, Pair *pc,
-                Environment *envt);
+        void pre_call(Pair *args, Pair *pc, Environment *envt);
         /** The system will call this again after the desired result is
          * evaluated, so just return it to let the evaluator know the it's the
          * answer.
          */
-        EvalObj *post_call(Pair *args, Pair *pc,
-                Environment *envt);
+        EvalObj *post_call(Pair *args, Pair *pc, Environment *envt);
     public:
+        /** Construct a `if` operator */
         SpecialOptIf();
+        /** Prevent <condition> and <consequence> from being evaluated */
         void prepare(Pair *pc);
+        /** When it's invoked at the first time, it will determined which of
+         * <condition> and <consequence> should be evaluated.  Then when it's
+         * invoked again, it will tell the system the corresponding result.*/
         Pair *call(Pair *args, Environment * &envt,
-                    Continuation * &cont, FrameObj ** &top_ptr);
-        ReprCons *get_repr_cons();
-};
+                Continuation * &cont, FrameObj ** &top_ptr);
+};/*}}}*/
 
 /** @class SpecialOptLambda
  * The implementation of `lambda` operator
  */
-class SpecialOptLambda: public SpecialOptObj {
+class SpecialOptLambda: public SpecialOptObj {/*{{{*/
     public:
+        /** Construct a `lambda` operator */
         SpecialOptLambda();
+        /** Prevent all parts of the expression being evaluated */
         void prepare(Pair *pc);
+        /** Make up a ProcObj and push into the stack */
         Pair *call(Pair *args, Environment * &envt,
-                    Continuation * &cont, FrameObj ** &top_ptr);
+                Continuation * &cont, FrameObj ** &top_ptr);
 
-        ReprCons *get_repr_cons();
-};
+};/*}}}*/
 
 /** @class SpecialOptDefine
  * The implementation of `define` operator
  */
-class SpecialOptDefine: public SpecialOptObj {
+class SpecialOptDefine: public SpecialOptObj {/*{{{*/
     public:
+        /** Construct a `define` operator */
         SpecialOptDefine();
+        /** Prevent some parts from being evaluated */
         void prepare(Pair *pc);
+        /** See `SpecialOptLambda` */
         Pair *call(Pair *args, Environment * &envt,
-                    Continuation * &cont, FrameObj ** &top_ptr);
-        ReprCons *get_repr_cons();
-};
+                Continuation * &cont, FrameObj ** &top_ptr);
+};/*}}}*/
 
 /** @class SpecialOptSet
  * The implementation of `set!` operator
  */
-class SpecialOptSet: public SpecialOptObj {
+class SpecialOptSet: public SpecialOptObj {/*{{{*/
     public:
+        /** Construct a `set!` operator */
         SpecialOptSet();
+        /** See `SpecialOptDefine */
         void prepare(Pair *pc);
+        /** See `SpecialOptDefine */
         Pair *call(Pair *args, Environment * &envt,
-                    Continuation * &cont, FrameObj ** &top_ptr);
-        ReprCons *get_repr_cons();
-};
+                Continuation * &cont, FrameObj ** &top_ptr);
+};/*}}}*/
 
 /** @class SpecialOptLambda
  * The implementation of `lambda` operator
  */
-class SpecialOptQuote: public SpecialOptObj {
+class SpecialOptQuote: public SpecialOptObj {/*{{{*/
     public:
+        /** Construct a `quote` operator */
         SpecialOptQuote();
+        /** Prevent the literal part from being evaluated */
         void prepare(Pair *pc);
+        /** Return the literal */
         Pair *call(Pair *args, Environment * &envt,
-                    Continuation * &cont, FrameObj ** &top_ptr);
+                Continuation * &cont, FrameObj ** &top_ptr);
 
-        ReprCons *get_repr_cons();
-};
+};/*}}}*/
 
 /** @class SpecialOptEval
  * The implementation of `eval` operator
  */
-class SpecialOptEval: public SpecialOptObj {
+class SpecialOptEval: public SpecialOptObj {/*{{{*/
     private:
         unsigned char state; /**< 0 for prepared, 1 for pre_called */
     public:
+        /** Construct an `eval` operator */
         SpecialOptEval();
+        /** Set state to 0 */
         void prepare(Pair *pc);
+        /** Behaves like the one in `SpecialOptIf` */
         Pair *call(Pair *args, Environment * &envt,
-                    Continuation * &cont, FrameObj ** &top_ptr);
+                Continuation * &cont, FrameObj ** &top_ptr);
 
-        ReprCons *get_repr_cons();
-};
+};/*}}}*/
 
 /** @class SpecialOptAnd
  * The implementation of `and` operator
  */
-class SpecialOptAnd: public SpecialOptObj {
+class SpecialOptAnd: public SpecialOptObj {/*{{{*/
     public:
+        /** Construct an `and` operator */
         SpecialOptAnd();
+        /** Prevent all parts from being evaluated */
         void prepare(Pair *pc);
+        /** Acts like `SpecialOptIf` */
         Pair *call(Pair *args, Environment * &envt,
-                    Continuation * &cont, FrameObj ** &top_ptr);
+                Continuation * &cont, FrameObj ** &top_ptr);
 
-        ReprCons *get_repr_cons();
-};
+};/*}}}*/
 
 /** @class SpecialOptOr
  * The implementation of `and` operator
  */
-class SpecialOptOr: public SpecialOptObj {
+class SpecialOptOr: public SpecialOptObj {/*{{{*/
     public:
+        /** Construct an `or` operator */
         SpecialOptOr();
+        /** See `SpecialOptAnd` */
         void prepare(Pair *pc);
+        /** See `SpecialOptAnd` */
         Pair *call(Pair *args, Environment * &envt,
-                    Continuation * &cont, FrameObj ** &top_ptr);
+                Continuation * &cont, FrameObj ** &top_ptr);
 
-        ReprCons *get_repr_cons();
-};
+};/*}}}*/
 
 /** @class SpecialOptApply
  * The implementation of `apply` operator
  */
-class SpecialOptApply: public SpecialOptObj {
+class SpecialOptApply: public SpecialOptObj {/*{{{*/
     public:
+        /** Construct an `apply` operator */
         SpecialOptApply();
+        /** Do nothing */
         void prepare(Pair *pc);
+        /** Provoke the <proc> with args */
         Pair *call(Pair *args, Environment * &envt,
-                    Continuation * &cont, FrameObj ** &top_ptr);
+                Continuation * &cont, FrameObj ** &top_ptr);
 
-        ReprCons *get_repr_cons();
-};
+};/*}}}*/
 
 /** @class SpecialOptDelay
  * The implementation of `delay` operator
  */
-class SpecialOptDelay: public SpecialOptObj {
+class SpecialOptDelay: public SpecialOptObj {/*{{{*/
     public:
+        /** Construct a `delay` operator */
         SpecialOptDelay();
+        /** Do nothing */
         void prepare(Pair *pc);
+        /** Make up a PromObj and push into the stack */
         Pair *call(Pair *args, Environment * &envt,
-                    Continuation * &cont, FrameObj ** &top_ptr);
+                Continuation * &cont, FrameObj ** &top_ptr);
 
-        ReprCons *get_repr_cons();
-};
+};/*}}}*/
 
 /** @class SpecialOptForce
  * The implementation of `force` operator
  */
-class SpecialOptForce: public SpecialOptObj {
+class SpecialOptForce: public SpecialOptObj {/*{{{*/
     private:
-        bool state;
+        unsigned char state;
         PromObj* prom;
     public:
+        /** Construct a `force` operator */
         SpecialOptForce();
+        /** Set the state to 0 */
         void prepare(Pair *pc);
+        /** Force the evaluation of a promise. If the promise has not been
+         * evaluated yet, then evaluate and feed the result to its memory,
+         * while if it has already been evaluated, just push the result into
+         * the stack */
         Pair *call(Pair *args, Environment * &envt,
-                    Continuation * &cont, FrameObj ** &top_ptr);
+                Continuation * &cont, FrameObj ** &top_ptr);
 
-        ReprCons *get_repr_cons();
-};
+};/*}}}*/
 
 #define BUILTIN_PROC_DEF(func)\
     EvalObj *(func)(Pair *args, const string &name)

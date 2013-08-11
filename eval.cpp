@@ -89,7 +89,21 @@ Evaluator::Evaluator() {
     add_builtin_routines();
 }
 
-void push(Pair * &pc, FrameObj ** &top_ptr, Environment *envt) {
+inline bool make_exec(Pair *ptr) {
+    if (ptr == empty_list) return true;
+    EvalObj *nptr;
+    for (;;)
+        if ((nptr = ptr->cdr)->is_pair_obj())
+        {
+            ptr->next = TO_PAIR(nptr);
+            ptr = ptr->next;
+        }
+        else break;
+    ptr->next = NULL;
+    return ptr->cdr == empty_list;
+}
+
+inline void push(Pair * &pc, FrameObj ** &top_ptr, Environment *envt) {
     if (pc->car->is_simple_obj())           // Not an opt invocation
     {
         *top_ptr = envt->get_obj(pc->car);  // Objectify the symbol

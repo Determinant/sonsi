@@ -184,6 +184,7 @@ class SpecialOptObj: public OptObj {/*{{{*/
         string name;
     public:
         SpecialOptObj(string name);
+        ReprCons *get_repr_cons();
 };/*}}}*/
 
 /** @class BuiltinProcObj

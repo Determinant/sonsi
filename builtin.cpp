@@ -11,20 +11,6 @@
 using std::stringstream;
 extern EmptyList *empty_list;
 
-#define ARGS_EXACTLY_TWO \
-    if (args == empty_list ||  \
-        args->cdr == empty_list || \
-        TO_PAIR(args->cdr)->cdr != empty_list) \
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
-
-#define ARGS_EXACTLY_ONE \
-    if (args == empty_list || \
-        args->cdr != empty_list ) \
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
-
-#define ARGS_AT_LEAST_ONE \
-    if (args == empty_list) \
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
 
 SpecialOptIf::SpecialOptIf() : SpecialOptObj("if") {}
 
@@ -107,10 +93,6 @@ Pair *SpecialOptIf::call(Pair *args, Environment * &envt,
     }
 }
 
-ReprCons *SpecialOptIf::get_repr_cons() {
-    return new ReprStr("#<Builtin Macro: if>");
-}
-
 SpecialOptLambda::SpecialOptLambda() : SpecialOptObj("lambda") {}
 #define CHECK_COM(pc)  \
 do  \
@@ -191,10 +173,6 @@ Pair *SpecialOptLambda::call(Pair *args, Environment * &envt,
     return ret_addr->next;  // Move to the next instruction
 }
 
-ReprCons *SpecialOptLambda::get_repr_cons() {
-    return new ReprStr("#<Builtin Macro: lambda>");
-}
-
 SpecialOptDefine::SpecialOptDefine() : SpecialOptObj("define") {}
 
 void SpecialOptDefine::prepare(Pair *pc) {
@@ -266,10 +244,6 @@ Pair *SpecialOptDefine::call(Pair *args, Environment * &envt,
     return ret_addr->next;
 }
 
-ReprCons *SpecialOptDefine::get_repr_cons() {
-    return new ReprStr("#<Builtin Macro: define>");
-}
-
 void SpecialOptSet::prepare(Pair *pc) {
     if (!pc->cdr->is_pair_obj())
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
@@ -306,10 +280,6 @@ Pair *SpecialOptSet::call(Pair *args, Environment * &envt,
 
 SpecialOptSet::SpecialOptSet() : SpecialOptObj("set!") {}
 
-ReprCons *SpecialOptSet::get_repr_cons() {
-    return new ReprStr("#<Builtin Macro: set!>");
-}
-
 SpecialOptQuote::SpecialOptQuote() : SpecialOptObj("quote") {}
 
 void SpecialOptQuote::prepare(Pair *pc) {
@@ -326,10 +296,6 @@ Pair *SpecialOptQuote::call(Pair *args, Environment * &envt,
     pc->next = TO_PAIR(pc->cdr);
     *top_ptr++ = TO_PAIR(pc->cdr)->car;
     return ret_addr->next;
-}
-
-ReprCons *SpecialOptQuote::get_repr_cons() {
-    return new ReprStr("#<Builtin Macro: quote>");
 }
 
 SpecialOptEval::SpecialOptEval() : SpecialOptObj("eval") {}
@@ -355,10 +321,6 @@ Pair *SpecialOptEval::call(Pair *args, Environment * &envt,
         top_ptr += 2;
         return TO_PAIR(args->cdr);
     }
-}
-
-ReprCons *SpecialOptEval::get_repr_cons() {
-    return new ReprStr("#<Builtin Macro: eval>");
 }
 
 SpecialOptAnd::SpecialOptAnd() : SpecialOptObj("and") {}
@@ -405,10 +367,6 @@ Pair *SpecialOptAnd::call(Pair *args, Environment * &envt,
     throw NormalError(INT_ERR);
 }
 
-ReprCons *SpecialOptAnd::get_repr_cons() {
-    return new ReprStr("#<Builtin Macro: and>");
-}
-
 SpecialOptOr::SpecialOptOr() : SpecialOptObj("or") {}
 
 void SpecialOptOr::prepare(Pair *pc) {
@@ -453,10 +411,6 @@ Pair *SpecialOptOr::call(Pair *args, Environment * &envt,
     throw NormalError(INT_ERR);
 }
 
-ReprCons *SpecialOptOr::get_repr_cons() {
-    return new ReprStr("#<Builtin Macro: or>");
-}
-
 SpecialOptApply::SpecialOptApply() : SpecialOptObj("apply") {}
 
 void SpecialOptApply::prepare(Pair *pc) {}
@@ -497,10 +451,6 @@ Pair *SpecialOptApply::call(Pair *args, Environment * &envt,
             throw TokenError("a list", RUN_ERR_WRONG_TYPE);
     }
     return NULL; // force the invocation
-}
-
-ReprCons *SpecialOptApply::get_repr_cons() {
-    return new ReprStr("#<Builtin Macro: apply>");
 }
 
 SpecialOptForce::SpecialOptForce() : SpecialOptObj("force") {}
@@ -544,10 +494,6 @@ Pair *SpecialOptForce::call(Pair *args, Environment * &envt,
     }
 }
 
-ReprCons *SpecialOptForce::get_repr_cons() {
-    return new ReprStr("#<Builtin Macro: force>");
-}
-
 SpecialOptDelay::SpecialOptDelay() : SpecialOptObj("delay") {}
 
 void SpecialOptDelay::prepare(Pair *pc) {
@@ -565,10 +511,26 @@ Pair *SpecialOptDelay::call(Pair *args, Environment * &envt,
     return ret_addr->next;          // Move to the next instruction
 }
 
-ReprCons *SpecialOptDelay::get_repr_cons() {
-    return new ReprStr("#<Builtin Macro: delay>");
-}
+/*************************************************************************/
 
+/* The following lines are the implementation of various simple built-in
+ * procedures. Some library procdures are implemented here for the sake of
+ * efficiency. */
+
+#define ARGS_EXACTLY_TWO \
+    if (args == empty_list ||  \
+        args->cdr == empty_list || \
+        TO_PAIR(args->cdr)->cdr != empty_list) \
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
+
+#define ARGS_EXACTLY_ONE \
+    if (args == empty_list || \
+        args->cdr != empty_list ) \
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
+
+#define ARGS_AT_LEAST_ONE \
+    if (args == empty_list) \
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
 
 BUILTIN_PROC_DEF(make_pair) {
     ARGS_EXACTLY_TWO;

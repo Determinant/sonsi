@@ -82,6 +82,9 @@ ReprCons *ProcObj::get_repr_cons() {
 }
 
 SpecialOptObj::SpecialOptObj(string _name) : OptObj(), name(_name) {}
+ReprCons *SpecialOptObj::get_repr_cons() {
+    return new ReprStr("#<Built-in Opt: " + name + ">");
+}
 
 BoolObj::BoolObj(bool _val) : EvalObj(CLS_SIM_OBJ | CLS_BOOL_OBJ), val(_val) {}
 

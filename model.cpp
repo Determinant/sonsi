@@ -125,20 +125,3 @@ string EvalObj::ext_repr() {
         res = "(" + res + ")";
     return res;
 }
-
-
-
-bool make_exec(Pair *ptr) {
-    if (ptr == empty_list) return true;
-    EvalObj *nptr;
-    for (;;)
-        if ((nptr = ptr->cdr)->is_pair_obj())
-        {
-            ptr->next = TO_PAIR(nptr);
-            ptr = ptr->next;
-        }
-        else break;
-    ptr->next = NULL;
-    return ptr->cdr == empty_list;
-}
-
