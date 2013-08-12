@@ -1355,6 +1355,6 @@ BUILTIN_PROC_DEF(vector_length) {
 
 BUILTIN_PROC_DEF(display) {
     ARGS_EXACTLY_ONE;
-    printf("%s\n", args->car->ext_repr().c_str());
+    printf("%s", args->car->ext_repr().c_str());
     return new UnspecObj();
 }

@@ -229,3 +229,93 @@ src
 (list x)
 x
 (cons x  x)
+
+(display "Test the eight queen puzzle: \n")
+(define (shl bits)
+  (define len (vector-length bits))
+  (define res (make-vector len))
+  (define (copy i)
+    (if (= i (- len 1))
+      #t
+      (and
+        (vector-set! res i
+                     (vector-ref bits (+ i 1)))
+        (copy (+ i 1)))))
+  (copy 0)
+  (vector-set! res (- len 1) #f)
+  res)
+
+(define (shr bits)
+  (define len (vector-length bits))
+  (define res (make-vector len))
+  (define (copy i)
+    (if (= i (- len 1))
+      #t
+      (and
+        (vector-set! res (+ i 1)
+                     (vector-ref bits i))
+        (copy (+ i 1)))))
+  (copy 0)
+  (vector-set! res 0 #f)
+  res)
+
+(define (empty-bits len) (make-vector len #f))
+(define vs vector-set!)
+(define vr vector-ref)
+(define res 0)
+(define (queen n)
+
+  (define (search l m r step)
+    (define (col-iter c)
+      (if (= c n)
+        #f
+        (and
+          (if (and (eq? (vr l c) #f)
+                   (eq? (vr r c) #f)
+                   (eq? (vr m c) #f))
+            (and
+              (vs l c #t)
+              (vs m c #t)
+              (vs r c #t)
+              ((lambda () (search l m r (+ step 1)) #t))
+              (vs l c #f)
+              (vs m c #f)
+              (vs r c #f))
+            )
+          (col-iter (+ c 1))
+          )))
+    (set! l (shl l))
+    (set! r (shr r))
+    (if (= step n)
+      (set! res (+ res 1))
+      (col-iter 0)))
+
+  (search (empty-bits n)
+          (empty-bits n)
+          (empty-bits n)
+          0)
+  res)
+
+(display (queen 8))
+
+(display "Test Bibonacci numbers: \n")
+(define (f x)
+  (if (<= x 2) 1 (+ (f (- x 1)) (f (- x 2)))))
+(f 1)
+(f 2)
+(f 3)
+(f 4)
+(f 5)
+
+(define (g n)
+  (define (f p1 p2 n)
+    (if (<= n 2)
+      p2
+      (f p2 (+ p1 p2) (- n 1))))
+  (f 1 1 n))
+
+(define (all i n)
+  (if (= n i)
+    #f
+    (and (display (g i)) (display "\n") (all (+ i 1) n))))
+(all 1 100)

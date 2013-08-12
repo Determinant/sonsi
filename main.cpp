@@ -3,64 +3,91 @@
 #include "parser.h"
 #include "eval.h"
 #include "exc.h"
+
 #include <cstdio>
+#include <cstdlib>
 
-int main(int argc, char **argv) {
-    //freopen("in.scm", "r", stdin);
-    Tokenizor *tk = new Tokenizor();
-    ASTGenerator *ast = new ASTGenerator();
-    Evaluator *eval = new Evaluator();
+Tokenizor *tk = new Tokenizor();
+ASTGenerator *ast = new ASTGenerator();
+Evaluator *eval = new Evaluator();
 
-    bool interactive = false;
-    bool preload = false;
-    char *fname;
-
-    int rcnt = 0;
-    for (int i = 1; i < argc; i++)
-        if (strcmp(argv[i], "-i") == 0)
-            interactive = true;
-        else if (strcmp(argv[i], "-l") == 0 && i < argc - 1)
-        {
-            preload = true;
-            fname = argv[i + 1];
-        }
-
-    if (preload)
+void load_file(const char *fname) {
+    FILE *f = fopen(fname, "r");
+    if (!f)
     {
-        FILE *f = fopen(fname, "r");
-        if (!f)
-        {
-            printf("Can not open file: %s\n", fname);
-            return 0;
-        }
-        tk->set_stream(f);
-        while (1)
-        {
-            try
-            {
-                Pair *tree = ast->absorb(tk);
-                if (!tree) break;
-                eval->run_expr(tree)->ext_repr().c_str();
-            }
-            catch (GeneralError &e)
-            {
-                fprintf(stderr, "An error occured: %s\n", e.get_msg().c_str());
-            }
-        }
-        interactive = true;
+        printf("Can not open file: %s\n", fname);
+        exit(0);
     }
-    tk->set_stream(stdin); 
+    tk->set_stream(f);
     while (1)
     {
-        if (interactive)
+        try
+        {
+            Pair *tree = ast->absorb(tk);
+            if (!tree) break;
+            eval->run_expr(tree);
+        }
+        catch (GeneralError &e)
+        {
+            fprintf(stderr, "An error occured: %s\n", e.get_msg().c_str());
+        }
+    }
+}
+
+void print_help(const char *cmd) {
+    fprintf(stderr, 
+            "Sonsi: Stupid and Obvious Scheme Interpreter\n"
+            "Usage: %s OPTION ...\n"
+            "Evaluate Scheme code, interactively or from a script.\n\n"
+            "  FILE \t\tload Scheme source code from FILE, and exit\n"
+            "The above switches stop argument processing\n\n"
+            "  -l FILE \tload Scheme source code from FILE\n"
+            "  -h display \tthis help and exit\n", cmd);
+    exit(0);
+}
+
+int main(int argc, char **argv) {
+
+    for (int i = 1; i < argc; i++)
+    {
+        if (*argv[i] == '-')    // parsing options
+        {
+            if (strcmp(argv[i], "-l") == 0)
+            {
+                if (i + 1 < argc)
+                    load_file(argv[++i]);
+                else 
+                {
+                    puts("missing argument to `-l` switch");
+                    print_help(*argv);
+                }
+            }
+            else if (strcmp(argv[i], "-h") == 0)
+                print_help(*argv);
+            else
+            {
+                printf("unrecognized switch `%s`\n", argv[i]);
+                print_help(*argv);
+            }
+        }
+        else
+        {
+            load_file(argv[i]); 
+            exit(0);
+        }
+    }
+
+    int rcnt = 0;
+    tk->set_stream(stdin);  // interactive mode
+    while (1)
+    {
         fprintf(stderr, "Sonsi> ");
         try
         {
             Pair *tree = ast->absorb(tk);
             if (!tree) break;
             string output = eval->run_expr(tree)->ext_repr();
-            if (interactive)
-                fprintf(stderr, "Ret> $%d = %s\n", rcnt++, output.c_str());
+            fprintf(stderr, "Ret> $%d = %s\n", rcnt++, output.c_str());
         }
         catch (GeneralError &e)
         {
