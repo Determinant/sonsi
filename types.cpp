@@ -2,6 +2,7 @@
 #include "model.h"
 #include "exc.h"
 #include "consts.h"
+#include "hash.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -12,6 +13,7 @@ const double EPS = 1e-16;
 const int PREC = 16;
 
 EmptyList *empty_list = new EmptyList();
+static VariableHash var_hash;
 
 Pair::Pair(EvalObj *_car, EvalObj *_cdr) :
     EvalObj(CLS_PAIR_OBJ), car(_car), cdr(_cdr),
@@ -219,20 +221,16 @@ bool Environment::add_binding(SymObj *sym_obj, EvalObj *eval_obj, bool def) {
     if (!def)
     {
         for (Environment *ptr = this; ptr; ptr = ptr->prev_envt)
-        {
-            bool has_key = ptr->binding.count(name);
-            if (has_key) 
+            if (var_hash.insert(ptr, name, eval_obj, false))
             {
-                ptr->binding[name] = eval_obj;
                 found = true;
                 break;
             }
-        }
         return found;
     }
     else 
     {
-        binding[name] = eval_obj;
+        var_hash.insert(this, name, eval_obj);
         return true;
     }
 }
@@ -244,8 +242,8 @@ EvalObj *Environment::get_obj(EvalObj *obj) {
     string name(sym_obj->val);
     for (Environment *ptr = this; ptr; ptr = ptr->prev_envt)
     {
-        bool has_key = ptr->binding.count(name);
-        if (has_key) return ptr->binding[name];
+        EvalObj *obj = var_hash.get(ptr, name);
+        if (obj) return obj;
     }
     // Object not found
     throw TokenError(name, RUN_ERR_UNBOUND_VAR);

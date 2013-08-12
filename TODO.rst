@@ -1,7 +1,6 @@
-- OPT:Special Opt Repr 
-- OPT:Special Arg Checking
-- Garbage Collection
+- OPT:Special Arg Checking (Again)
 - Testing
+- Garbage Collection
 - Rounding support
 - ext_repr optimization 
 - Add macro support

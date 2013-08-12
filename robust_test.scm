@@ -229,3 +229,24 @@ src
 (list x)
 x
 (cons x  x)
+
+(define (f x)
+  (if (<= x 2) 1 (+ (f (- x 1)) (f (- x 2)))))
+(f 1)
+(f 2)
+(f 3)
+(f 4)
+(f 5)
+
+(define (g n)
+  (define (f p1 p2 n)
+    (if (<= n 2)
+      p2
+      (f p2 (+ p1 p2) (- n 1))))
+  (f 1 1 n))
+
+(define (all i n)
+  (if (= n i)
+    #f
+    (and (display (g i)) (all (+ i 1) n))))
+(all 1 100)

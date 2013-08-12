@@ -32,7 +32,7 @@ static const int NUM_LVL_INT = 3;
 
 typedef set<EvalObj*> EvalObjAddrHash;
 typedef vector<EvalObj*> EvalObjVec;
-typedef map<string, EvalObj*> Str2EvalObj;
+//typedef map<string, EvalObj*> Str2EvalObj;
 typedef EvalObj* (*BuiltinProc)(Pair *, const string &);
 
 class PairReprCons;
@@ -326,8 +326,8 @@ class PromObj: public EvalObj {/*{{{*/
 class Environment {/*{{{*/
     private:
         Environment *prev_envt; /**< Pointer to the upper-level environment */
-        Str2EvalObj binding;    /**< Store all pairs of identifier and its
-                                  corresponding obj */
+//        Str2EvalObj binding;    /**< Store all pairs of identifier and its
+//                                  corresponding obj */
     public:
         /** Create an runtime environment
          * @param prev_envt the outer environment
