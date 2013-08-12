@@ -62,7 +62,7 @@ Pair *SpecialOptIf::call(Pair *args, Environment * &envt,
             {
                 second->next = NULL;
                 // Undo pop and invoke again
-                gc.attach(*(++top_ptr));
+                gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
                 top_ptr++;
                 ret_info->state = empty_list;
                 gc.expose(args);
@@ -72,7 +72,7 @@ Pair *SpecialOptIf::call(Pair *args, Environment * &envt,
             {
                 third->next = NULL;
                 // Undo pop and invoke again
-                gc.attach(*(++top_ptr));
+                gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
                 top_ptr++;
                 ret_info->state = empty_list;
                 gc.expose(args);
@@ -89,7 +89,7 @@ Pair *SpecialOptIf::call(Pair *args, Environment * &envt,
     }
     else
     {
-        gc.attach(*(++top_ptr));
+        gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
         top_ptr++;
         ret_info->state = TO_PAIR(TO_PAIR(ret_addr->car)->cdr);
         ret_info->state->next = NULL;
@@ -208,7 +208,7 @@ Pair *SpecialOptDefine::call(Pair *args, Environment * &envt,
     {
         if (!ret_info->state)
         {
-            gc.attach(*(++top_ptr));
+            gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
             top_ptr++;
             ret_info->state = TO_PAIR(TO_PAIR(pc->cdr)->cdr);
             ret_info->state->next = NULL;
@@ -281,7 +281,7 @@ Pair *SpecialOptSet::call(Pair *args, Environment * &envt,
 
     if (!ret_info->state)
     {
-        gc.attach(*(++top_ptr));
+        gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
         top_ptr++;
         ret_info->state = TO_PAIR(TO_PAIR(pc->cdr)->cdr);
         ret_info->state->next = NULL;
@@ -340,7 +340,7 @@ Pair *SpecialOptEval::call(Pair *args, Environment * &envt,
     }
     else
     {
-        gc.attach(*(++top_ptr));
+        gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
         top_ptr++;
         ret_info->state = TO_PAIR(args->cdr);
         ret_info->state->next = NULL;
@@ -370,7 +370,7 @@ Pair *SpecialOptAnd::call(Pair *args, Environment * &envt,
     }
     if (!ret_info->state)
     {
-        gc.attach(*(++top_ptr));
+        gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
         top_ptr++;
         ret_info->state = TO_PAIR(pc->cdr);
         ret_info->state->next = NULL;
@@ -389,7 +389,7 @@ Pair *SpecialOptAnd::call(Pair *args, Environment * &envt,
         }
         else
         {
-            gc.attach(*(++top_ptr));
+            gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
             top_ptr++;
             ret_info->state = TO_PAIR(ret_info->state->cdr);
             ret_info->state->next = NULL;
@@ -427,7 +427,7 @@ Pair *SpecialOptOr::call(Pair *args, Environment * &envt,
     }
     if (!ret_info->state)
     {
-        gc.attach(*(++top_ptr));
+        gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
         top_ptr++;
         ret_info->state = TO_PAIR(pc->cdr);
         ret_info->state->next = NULL;
@@ -446,7 +446,7 @@ Pair *SpecialOptOr::call(Pair *args, Environment * &envt,
         }
         else
         {
-            gc.attach(*(++top_ptr));
+            gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
             top_ptr++;
             ret_info->state = TO_PAIR(ret_info->state->cdr);
             ret_info->state->next = NULL;
@@ -547,7 +547,7 @@ Pair *SpecialOptForce::call(Pair *_args, Environment * &envt,
         }
         else                            // force
         {
-            gc.attach(*(++top_ptr));
+            gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
             top_ptr++;
             ret_info->state = prom->get_entry();
             ret_info->state->next = NULL;
