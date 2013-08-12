@@ -1248,7 +1248,7 @@ BUILTIN_PROC_DEF(string_gt) {
     EvalObj *obj2 = TO_PAIR(args->cdr)->car;
     if (!obj1->is_str_obj() || !obj2->is_str_obj())
         throw TokenError("a string", RUN_ERR_WRONG_TYPE);
-    return new BoolObj(static_cast<StrObj*>(obj1)->lt(static_cast<StrObj*>(obj2)));
+    return new BoolObj(static_cast<StrObj*>(obj1)->gt(static_cast<StrObj*>(obj2)));
 }
 
 BUILTIN_PROC_DEF(string_ge) {
@@ -1257,7 +1257,7 @@ BUILTIN_PROC_DEF(string_ge) {
     EvalObj *obj2 = TO_PAIR(args->cdr)->car;
     if (!obj1->is_str_obj() || !obj2->is_str_obj())
         throw TokenError("a string", RUN_ERR_WRONG_TYPE);
-    return new BoolObj(static_cast<StrObj*>(obj1)->le(static_cast<StrObj*>(obj2)));
+    return new BoolObj(static_cast<StrObj*>(obj1)->ge(static_cast<StrObj*>(obj2)));
 }
 
 BUILTIN_PROC_DEF(string_eq) {
