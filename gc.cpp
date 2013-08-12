@@ -26,7 +26,7 @@ void GarbageCollector::expose(EvalObj *ptr) {
     {
 #ifdef GC_DEBUG
         fprintf(stderr, "GC: 0x%llx exposed. count = %lu \"%s\"\n", 
-            (ull)ptr, mapping[ptr], ptr->ext_repr().c_str());
+            (ull)ptr, mapping[ptr] - 1, ptr->ext_repr().c_str());
 #endif
         if (!--mapping[ptr] && collecting)
         {
