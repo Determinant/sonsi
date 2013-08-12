@@ -90,9 +90,13 @@ Pair *ProcObj::call(Pair *args, Environment * &genvt,
 
     genvt = _envt;
     cont = _cont;
-    *top_ptr++ = new RetAddr(NULL);   // Mark the entrance of a cont
+
+    gc.expose(static_cast<EvalObj*>(*(top_ptr + 1)));          // release opt obj
+    delete *top_ptr;                    // release ret addr
+
+    *top_ptr++ = new RetAddr(NULL);     // Mark the entrance of a cont
     gc.expose(args);
-    return body;                    // Move pc to the proc entry point
+    return body;                        // Move pc to the proc entry point
 }
 
 ReprCons *ProcObj::get_repr_cons() {
@@ -222,6 +226,8 @@ BuiltinProcObj::BuiltinProcObj(BuiltinProc f, string _name) :
             Continuation * &cont, FrameObj ** &top_ptr) {
 
         Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
+        gc.expose(static_cast<EvalObj*>(*(top_ptr + 1)));
+        delete *top_ptr;
         *top_ptr++ = handler(TO_PAIR(args->cdr), name);
         gc.expose(args);
         return ret_addr->next;          // Move to the next instruction

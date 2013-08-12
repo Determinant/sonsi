@@ -13,39 +13,46 @@ GarbageCollector::GarbageCollector() {
     mapping.clear();
     pend_cnt = 0;
     pending_list = NULL;
+    collecting = false;
 }
 
 GarbageCollector::PendingEntry::PendingEntry(
         EvalObj *_obj, PendingEntry *_next) : obj(_obj), next(_next) {}
 
 
-void GarbageCollector::expose(EvalObj *ptr, bool delay) {
+void GarbageCollector::expose(EvalObj *ptr) {
     bool flag = mapping.count(ptr);
     if (flag)
     {
-        if (!--mapping[ptr] && !delay)
+#ifdef GC_DEBUG
+        fprintf(stderr, "GC: 0x%llx exposed. count = %lu \"%s\"\n", 
+            (ull)ptr, mapping[ptr], ptr->ext_repr().c_str());
+#endif
+        if (!--mapping[ptr] && collecting)
         {
 #ifdef GC_DEBUG
             fprintf(stderr, "GC: 0x%llx pending. \n", (ull)ptr);
 #endif
             pending_list = new PendingEntry(ptr, pending_list);
-            if (++pend_cnt == GC_QUEUE_SIZE >> 1)
-                force();    // the gc queue may overflow
-        }
+        } 
     }
 }
 
 void GarbageCollector::force() {
     EvalObj **l = gcq, **r = l;
-    for (PendingEntry *p = pending_list, *np; p; p = np)
+/*    for (PendingEntry *p = pending_list, *np; p; p = np)
     {
         np = p->next;
         *r++ = p->obj;
         delete p;
     }   // fetch the pending pointers in the list
     // clear the list
-    pending_list = NULL;
+    pending_list = NULL; */
+    for (EvalObj2Int::iterator it = mapping.begin(); 
+            it != mapping.end(); it++)
+        if (it->second == 0) *r++ = it->first;
 
+    collecting = true;
 #ifdef GC_DEBUG
     size_t cnt = 0;
     fprintf(stderr, "GC: Forcing the clear process...\n");
@@ -57,6 +64,7 @@ void GarbageCollector::force() {
         cnt++;
 #endif
         delete *l;
+        mapping.erase(*l);
         // maybe it's a complex structure, 
         // so that more pointers are reported
         for (PendingEntry *p = pending_list, *np; p; p = np)
@@ -70,8 +78,14 @@ void GarbageCollector::force() {
         pending_list = NULL;
     }
 #ifdef GC_DEBUG
-    fprintf(stderr, "GC: Forced clear, %lu objects are freed\n", cnt);
+    fprintf(stderr, "GC: Forced clear, %lu objects are freed, "
+            "%lu remains\n", cnt, mapping.size());
+/*    for (EvalObj2Int::iterator it = mapping.begin();
+            it != mapping.end(); it++)
+        fprintf(stderr, "%llx => %lu\n", (ull)it->first, it->second);
+        */
 #endif
+    collecting = false;
 }
 
 EvalObj *GarbageCollector::attach(EvalObj *ptr) {

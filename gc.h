@@ -19,11 +19,12 @@ class GarbageCollector {
     EvalObj2Int mapping;
     size_t pend_cnt;
     PendingEntry *pending_list;
+    bool collecting;
 
     public:
     GarbageCollector();
     void force();
-    void expose(EvalObj *ptr, bool delay = false);
+    void expose(EvalObj *ptr);
     EvalObj *attach(EvalObj *ptr);
 };
 

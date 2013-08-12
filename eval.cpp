@@ -110,13 +110,11 @@ inline bool make_exec(Pair *ptr) {
 }
 
 inline void push(Pair * &pc, FrameObj ** &top_ptr, Environment *envt) {
-    gc.attach(pc);
 //    if (pc->car == NULL)
  //       puts("oops");
     if (pc->car->is_simple_obj())           // Not an opt invocation
     {
-        *top_ptr = envt->get_obj(pc->car);  // Objectify the symbol
-        top_ptr++;
+        *top_ptr++ = gc.attach(envt->get_obj(pc->car));  // Objectify the symbol
         pc = pc->next;                      // Move to the next instruction
 //        if (pc == empty_list)
 //        puts("oops");
@@ -152,6 +150,7 @@ EvalObj *Evaluator::run_expr(Pair *prog) {
     Continuation *cont = NULL;
     // envt is this->envt
     push(pc, top_ptr, envt);
+    gc.attach(prog);
 
     while((*eval_stack)->is_ret_addr())
     {
@@ -163,7 +162,11 @@ EvalObj *Evaluator::run_expr(Pair *prog) {
         {
             Pair *args = empty_list;
             while (!(*(--top_ptr))->is_ret_addr())
-                args = new Pair(static_cast<EvalObj*>(*top_ptr), args);
+            {
+                EvalObj* obj = static_cast<EvalObj*>(*top_ptr);
+                gc.expose(obj);
+                args = new Pair(obj, args);
+            }
             //< static_cast because the while condition
             RetAddr *ret_addr = static_cast<RetAddr*>(*top_ptr);
             if (!ret_addr->addr)
