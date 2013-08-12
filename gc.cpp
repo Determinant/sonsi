@@ -2,7 +2,7 @@
 #include "exc.h"
 #include "consts.h"
 
-#ifdef GC_DEBUG
+#if defined(GC_DEBUG) || defined (GC_INFO)
 #include <cstdio>
 typedef unsigned long long ull;
 #endif
@@ -48,19 +48,24 @@ void GarbageCollector::force() {
     }   // fetch the pending pointers in the list
     // clear the list
     pending_list = NULL; */
+    fprintf(stderr, "%d\n", mapping.size());
     for (EvalObj2Int::iterator it = mapping.begin(); 
             it != mapping.end(); it++)
         if (it->second == 0) *r++ = it->first;
 
     collecting = true;
-#ifdef GC_DEBUG
+#ifdef GC_INFO
     size_t cnt = 0;
-    fprintf(stderr, "GC: Forcing the clear process...\n");
+#endif
+#ifdef GC_DEBUG
+    fprintf(stderr, 
+            "================================\n"
+            "GC: Forcing the clear process...\n");
 #endif
     for (; l != r; l++)
     {
 #ifdef GC_DEBUG
-        fprintf(stderr, "GC: destroying space 0x%llx. \n", (ull)*l);
+        fprintf(stderr, "GC: !!! destroying space 0x%llx. \n", (ull)*l);
         cnt++;
 #endif
         delete *l;
@@ -77,9 +82,10 @@ void GarbageCollector::force() {
         }   
         pending_list = NULL;
     }
-#ifdef GC_DEBUG
+#ifdef GC_INFO
     fprintf(stderr, "GC: Forced clear, %lu objects are freed, "
-            "%lu remains\n", cnt, mapping.size());
+            "%lu remains\n"
+            "=============================\n", cnt, mapping.size());
 /*    for (EvalObj2Int::iterator it = mapping.begin();
             it != mapping.end(); it++)
         fprintf(stderr, "%llx => %lu\n", (ull)it->first, it->second);
@@ -97,6 +103,8 @@ EvalObj *GarbageCollector::attach(EvalObj *ptr) {
     fprintf(stderr, "GC: 0x%llx attached. count = %lu \"%s\"\n", 
             (ull)ptr, mapping[ptr], ptr->ext_repr().c_str());
 #endif
+    if (mapping.size() > GC_QUEUE_SIZE >> 1)
+        force();
     return ptr; // passing through
 }
 

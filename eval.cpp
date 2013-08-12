@@ -92,6 +92,7 @@ void Evaluator::add_builtin_routines() {
 
 Evaluator::Evaluator() {
     envt = new Environment(NULL);       // Top-level Environment
+    gc.attach(envt);
     add_builtin_routines();
 }
 
@@ -175,10 +176,17 @@ EvalObj *Evaluator::run_expr(Pair *prog) {
                 cont->proc_body = nexp;
                 if (nexp == empty_list)
                 {
-                    *top_ptr = args->car;
+                    *top_ptr = gc.attach(args->car);
+
+                    gc.expose(envt);
                     envt = cont->envt;
+                    gc.attach(envt);
+
                     pc = cont->pc->next;
+
+                    gc.expose(cont);
                     cont = cont->prev_cont;
+                    gc.attach(cont);
                 }
                 else pc = nexp;
                 top_ptr++;

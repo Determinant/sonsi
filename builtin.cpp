@@ -249,7 +249,7 @@ Pair *SpecialOptDefine::call(Pair *args, Environment * &envt,
     }
     envt->add_binding(id, obj);
     delete *top_ptr;
-    *top_ptr++ = unspec_obj;
+    *top_ptr++ = gc.attach(unspec_obj);
     gc.expose(args);
     return ret_addr->next;
 }
@@ -297,7 +297,7 @@ Pair *SpecialOptSet::call(Pair *args, Environment * &envt,
     bool flag = envt->add_binding(id, TO_PAIR(args->cdr)->car, false);
     if (!flag) throw TokenError(id->ext_repr(), RUN_ERR_UNBOUND_VAR);
     delete *top_ptr;
-    *top_ptr++ = unspec_obj;
+    *top_ptr++ = gc.attach(unspec_obj);
     gc.expose(args);
     return ret_addr->next;
 }
@@ -314,7 +314,7 @@ Pair *SpecialOptQuote::call(Pair *args, Environment * &envt,
     Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     Pair *pc = static_cast<Pair*>(ret_addr->car);
     delete *top_ptr;
-    *top_ptr++ = TO_PAIR(pc->cdr)->car;
+    *top_ptr++ = gc.attach(TO_PAIR(pc->cdr)->car);
     gc.expose(args);
     return ret_addr->next;
 }
@@ -334,7 +334,7 @@ Pair *SpecialOptEval::call(Pair *args, Environment * &envt,
     if (ret_info->state)
     {
         delete *top_ptr;
-        *top_ptr++ = TO_PAIR(args->cdr)->car;
+        *top_ptr++ = gc.attach(TO_PAIR(args->cdr)->car);
         gc.expose(args);
         return ret_addr->next;          // Move to the next instruction
     }
@@ -364,7 +364,7 @@ Pair *SpecialOptAnd::call(Pair *args, Environment * &envt,
     if (pc->cdr == empty_list)
     {
         delete *top_ptr;
-        *top_ptr++ = new BoolObj(true);
+        *top_ptr++ = gc.attach(new BoolObj(true));
         gc.expose(args);
         return ret_addr->next;
     }
@@ -383,7 +383,7 @@ Pair *SpecialOptAnd::call(Pair *args, Environment * &envt,
         if (ret_info->state->cdr == empty_list) // the last member
         {
             delete *top_ptr;
-            *top_ptr++ = ret;
+            *top_ptr++ = gc.attach(ret);
             gc.expose(args);
             return ret_addr->next;
         }
@@ -400,7 +400,7 @@ Pair *SpecialOptAnd::call(Pair *args, Environment * &envt,
     else
     {
         delete *top_ptr;
-        *top_ptr++ = ret;
+        *top_ptr++ = gc.attach(ret);
         gc.expose(args);
         return ret_addr->next;
     }
@@ -421,7 +421,7 @@ Pair *SpecialOptOr::call(Pair *args, Environment * &envt,
     if (pc->cdr == empty_list)
     {
         delete *top_ptr;
-        *top_ptr++ = new BoolObj(false);
+        *top_ptr++ = gc.attach(new BoolObj(false));
         gc.expose(args);
         return ret_addr->next;
     }
@@ -440,7 +440,7 @@ Pair *SpecialOptOr::call(Pair *args, Environment * &envt,
         if (ret_info->state->cdr == empty_list) // the last member
         {
             delete *top_ptr;
-            *top_ptr++ = ret;
+            *top_ptr++ = gc.attach(ret);
             gc.expose(args);
             return ret_addr->next;
         }
@@ -457,7 +457,7 @@ Pair *SpecialOptOr::call(Pair *args, Environment * &envt,
     else
     {
         delete *top_ptr;
-        *top_ptr++ = ret;
+        *top_ptr++ = gc.attach(ret);
         gc.expose(args);
         return ret_addr->next;
     }
@@ -479,13 +479,13 @@ Pair *SpecialOptApply::call(Pair *_args, Environment * &envt,
     if (!args->car->is_opt_obj())
         throw TokenError("an operator", RUN_ERR_WRONG_TYPE);
 
-    *top_ptr++ = args->car;         // Push the operator into the stack
-    args = TO_PAIR(args->cdr);      // Examine arguments
+    *top_ptr++ = gc.attach(args->car);          // Push the operator into the stack
+    args = TO_PAIR(args->cdr);                  // Examine arguments
     if (args == empty_list)
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
 
     for (; args->cdr != empty_list; args = TO_PAIR(args->cdr))
-        *top_ptr++ = args->car;     // Add leading arguments: arg_1 ...
+        *top_ptr++ = gc.attach(args->car);      // Add leading arguments: arg_1 ...
 
     if (args->car != empty_list)    // args->car is the trailing args
     {
@@ -496,7 +496,7 @@ Pair *SpecialOptApply::call(Pair *_args, Environment * &envt,
         EvalObj *nptr;
         for (;;)
         {
-            *top_ptr++ = args->car;
+            *top_ptr++ = gc.attach(args->car);
             if ((nptr = args->cdr)->is_pair_obj())
                 args = TO_PAIR(nptr);
             else break;
@@ -528,7 +528,7 @@ Pair *SpecialOptForce::call(Pair *_args, Environment * &envt,
         EvalObj *mem = args->car;
         prom->feed_mem(mem);
         delete *top_ptr;
-        *top_ptr++ = mem;
+        *top_ptr++ = gc.attach(mem);
         gc.expose(_args);
         return ret_addr->next;          // Move to the next instruction
     }
@@ -541,7 +541,7 @@ Pair *SpecialOptForce::call(Pair *_args, Environment * &envt,
         if (mem)                        // fetch from memorized result
         {
             delete *top_ptr;
-            *top_ptr++ = mem;
+            *top_ptr++ = gc.attach(mem);
             gc.expose(_args);
             return ret_addr->next;      
         }
@@ -571,7 +571,7 @@ Pair *SpecialOptDelay::call(Pair *args, Environment * &envt,
     Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     Pair *pc = static_cast<Pair*>(ret_addr->car);
     delete *top_ptr;
-    *top_ptr++ = new PromObj(TO_PAIR(pc->cdr)->car);
+    *top_ptr++ = gc.attach(new PromObj(TO_PAIR(pc->cdr)->car));
     gc.expose(args);
     return ret_addr->next;          // Move to the next instruction
 }

@@ -63,7 +63,7 @@ ProcObj::~ProcObj() {
     gc.expose(envt);
 }
 
-Pair *ProcObj::call(Pair *args, Environment * &genvt,
+Pair *ProcObj::call(Pair *_args, Environment * &genvt,
         Continuation * &cont, FrameObj ** &top_ptr) {
     // Create a new continuation
     // static_cast see `call` invocation in eval.cpp
@@ -73,6 +73,7 @@ Pair *ProcObj::call(Pair *args, Environment * &genvt,
     Environment *_envt = new Environment(envt);
     // static_cast<SymObj*> because the params is already checked
     EvalObj *ppar, *nptr;
+    Pair *args = _args;
     for (ppar = params;
             ppar->is_pair_obj();
             ppar = TO_PAIR(ppar)->cdr)
@@ -88,14 +89,17 @@ Pair *ProcObj::call(Pair *args, Environment * &genvt,
     else if (args->cdr != empty_list || ppar != empty_list)
         throw TokenError("", RUN_ERR_WRONG_NUM_OF_ARGS);
 
+    gc.expose(genvt);
     genvt = _envt;
+    gc.attach(genvt);
+
+    gc.expose(cont);
     cont = _cont;
+    gc.attach(cont);
 
-    gc.expose(static_cast<EvalObj*>(*(top_ptr + 1)));          // release opt obj
     delete *top_ptr;                    // release ret addr
-
     *top_ptr++ = new RetAddr(NULL);     // Mark the entrance of a cont
-    gc.expose(args);
+    gc.expose(_args);
     return body;                        // Move pc to the proc entry point
 }
 
@@ -226,9 +230,8 @@ BuiltinProcObj::BuiltinProcObj(BuiltinProc f, string _name) :
             Continuation * &cont, FrameObj ** &top_ptr) {
 
         Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
-        gc.expose(static_cast<EvalObj*>(*(top_ptr + 1)));
         delete *top_ptr;
-        *top_ptr++ = handler(TO_PAIR(args->cdr), name);
+        *top_ptr++ = gc.attach(handler(TO_PAIR(args->cdr), name));
         gc.expose(args);
         return ret_addr->next;          // Move to the next instruction
     }
@@ -242,6 +245,9 @@ Environment::Environment(Environment *_prev_envt) : prev_envt(_prev_envt) {
 }
 
 Environment::~Environment() {
+    for (Str2EvalObj::iterator it = binding.begin(); 
+            it != binding.end(); it++)
+        gc.expose(it->second);
     gc.expose(prev_envt);
 }
 

@@ -27,12 +27,14 @@ void load_file(const char *fname) {
         {
             Pair *tree = ast.absorb(&tk);
             if (!tree) break;
-            eval.run_expr(tree);
+            EvalObj *ret = eval.run_expr(tree);
+            gc.expose(ret);
         }
         catch (GeneralError &e)
         {
             fprintf(stderr, "An error occured: %s\n", e.get_msg().c_str());
         }
+        gc.force();
     }
 }
 
@@ -53,7 +55,7 @@ UnspecObj *unspec_obj = new UnspecObj();
 
 int main(int argc, char **argv) {
 
-    freopen("in.scm", "r", stdin);
+    //freopen("in.scm", "r", stdin);
     gc.attach(empty_list);
     gc.attach(unspec_obj);
 
@@ -96,7 +98,9 @@ int main(int argc, char **argv) {
         {
             Pair *tree = ast.absorb(&tk);
             if (!tree) break;
-            string output = eval.run_expr(tree)->ext_repr();
+            EvalObj *ret = eval.run_expr(tree);
+            string output = ret->ext_repr();
+            gc.expose(ret);
             fprintf(stderr, "Ret> $%d = %s\n", rcnt++, output.c_str());
         }
         catch (GeneralError &e)
