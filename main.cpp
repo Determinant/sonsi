@@ -48,7 +48,14 @@ void print_help(const char *cmd) {
     exit(0);
 }
 
+EmptyList *empty_list = new EmptyList();
+UnspecObj *unspec_obj = new UnspecObj();
+
 int main(int argc, char **argv) {
+
+    freopen("in.scm", "r", stdin);
+    gc.attach(empty_list);
+    gc.attach(unspec_obj);
 
     for (int i = 1; i < argc; i++)
     {
@@ -96,5 +103,6 @@ int main(int argc, char **argv) {
         {
             fprintf(stderr, "An error occured: %s\n", e.get_msg().c_str());
         }
+        gc.force();
     }
 }

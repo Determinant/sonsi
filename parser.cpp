@@ -5,6 +5,7 @@
 #include "exc.h"
 #include "consts.h"
 #include "builtin.h"
+#include "gc.h"
 
 using std::stringstream;
 

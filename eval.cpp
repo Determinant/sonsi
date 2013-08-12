@@ -2,6 +2,7 @@
 #include "builtin.h"
 #include "exc.h"
 #include "consts.h"
+#include "gc.h"
 #include <cstdio>
 
 extern Pair *empty_list;
@@ -109,6 +110,7 @@ inline bool make_exec(Pair *ptr) {
 }
 
 inline void push(Pair * &pc, FrameObj ** &top_ptr, Environment *envt) {
+    gc.attach(pc);
 //    if (pc->car == NULL)
  //       puts("oops");
     if (pc->car->is_simple_obj())           // Not an opt invocation
@@ -180,6 +182,7 @@ EvalObj *Evaluator::run_expr(Pair *prog) {
             }
             else
             {
+                gc.attach(args);
                 EvalObj *opt = args->car;
                 if (opt->is_opt_obj())
                     pc = static_cast<OptObj*>(opt)->
@@ -189,6 +192,7 @@ EvalObj *Evaluator::run_expr(Pair *prog) {
             }
         }
     }
+    gc.expose(prog);
     // static_cast because the previous while condition
     return static_cast<EvalObj*>(*(eval_stack));
 }

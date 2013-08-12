@@ -47,6 +47,7 @@ Pair *SpecialOptIf::call(Pair *args, Environment * &envt,
         if (ret_info->state == empty_list)
         {
             *top_ptr++ = gc.attach(TO_PAIR(args->cdr)->car);
+            gc.expose(args);
             return ret_addr->next;          // Move to the next instruction
         }
         else 
@@ -62,6 +63,7 @@ Pair *SpecialOptIf::call(Pair *args, Environment * &envt,
                 // Undo pop and invoke again
                 top_ptr += 2;
                 ret_info->state = empty_list;
+                gc.expose(args);
                 return second;
             }
             else if (third != empty_list)
@@ -70,11 +72,13 @@ Pair *SpecialOptIf::call(Pair *args, Environment * &envt,
                 // Undo pop and invoke again
                 top_ptr += 2;
                 ret_info->state = empty_list;
+                gc.expose(args);
                 return third;
             }
             else
             {
                 *top_ptr++ = gc.attach(unspec_obj);
+                gc.expose(args);
                 return ret_addr->next;
             }
         }
@@ -84,6 +88,7 @@ Pair *SpecialOptIf::call(Pair *args, Environment * &envt,
         top_ptr += 2;
         ret_info->state = TO_PAIR(TO_PAIR(ret_addr->car)->cdr);
         ret_info->state->next = NULL;
+        gc.expose(args);
         return ret_info->state;
     }
     throw NormalError(INT_ERR);
@@ -162,6 +167,7 @@ Pair *SpecialOptLambda::call(Pair *args, Environment * &envt,
         ptr->next = NULL;    // Make each expression isolated
 
     *top_ptr++ = gc.attach(new ProcObj(body, envt, params));
+    gc.expose(args);
     return ret_addr->next;  // Move to the next instruction
 }
 
@@ -199,6 +205,7 @@ Pair *SpecialOptDefine::call(Pair *args, Environment * &envt,
             top_ptr += 2;
             ret_info->state = TO_PAIR(TO_PAIR(pc->cdr)->cdr);
             ret_info->state->next = NULL;
+            gc.expose(args);
             return ret_info->state;
         }
         if (!first->is_sym_obj())
@@ -235,6 +242,7 @@ Pair *SpecialOptDefine::call(Pair *args, Environment * &envt,
     }
     envt->add_binding(id, obj);
     *top_ptr++ = unspec_obj;
+    gc.expose(args);
     return ret_addr->next;
 }
 
@@ -268,6 +276,7 @@ Pair *SpecialOptSet::call(Pair *args, Environment * &envt,
         top_ptr += 2;
         ret_info->state = TO_PAIR(TO_PAIR(pc->cdr)->cdr);
         ret_info->state->next = NULL;
+        gc.expose(args);
         return ret_info->state;
     }
 
@@ -279,6 +288,7 @@ Pair *SpecialOptSet::call(Pair *args, Environment * &envt,
     bool flag = envt->add_binding(id, TO_PAIR(args->cdr)->car, false);
     if (!flag) throw TokenError(id->ext_repr(), RUN_ERR_UNBOUND_VAR);
     *top_ptr++ = unspec_obj;
+    gc.expose(args);
     return ret_addr->next;
 }
 
@@ -294,6 +304,7 @@ Pair *SpecialOptQuote::call(Pair *args, Environment * &envt,
     Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     Pair *pc = static_cast<Pair*>(ret_addr->car);
     *top_ptr++ = TO_PAIR(pc->cdr)->car;
+    gc.expose(args);
     return ret_addr->next;
 }
 
@@ -312,6 +323,7 @@ Pair *SpecialOptEval::call(Pair *args, Environment * &envt,
     if (ret_info->state)
     {
         *top_ptr++ = TO_PAIR(args->cdr)->car;
+        gc.expose(args);
         return ret_addr->next;          // Move to the next instruction
     }
     else
@@ -319,6 +331,7 @@ Pair *SpecialOptEval::call(Pair *args, Environment * &envt,
         top_ptr += 2;
         ret_info->state = TO_PAIR(args->cdr);
         ret_info->state->next = NULL;
+        gc.expose(args);
         return ret_info->state;
     }
     throw NormalError(INT_ERR);
@@ -338,6 +351,7 @@ Pair *SpecialOptAnd::call(Pair *args, Environment * &envt,
     if (pc->cdr == empty_list)
     {
         *top_ptr++ = new BoolObj(true);
+        gc.expose(args);
         return ret_addr->next;
     }
     if (!ret_info->state)
@@ -345,6 +359,7 @@ Pair *SpecialOptAnd::call(Pair *args, Environment * &envt,
         top_ptr += 2;
         ret_info->state = TO_PAIR(pc->cdr);
         ret_info->state->next = NULL;
+        gc.expose(args);
         return ret_info->state;
     }
     EvalObj *ret = TO_PAIR(args->cdr)->car;
@@ -353,6 +368,7 @@ Pair *SpecialOptAnd::call(Pair *args, Environment * &envt,
         if (ret_info->state->cdr == empty_list) // the last member
         {
             *top_ptr++ = ret;
+            gc.expose(args);
             return ret_addr->next;
         }
         else
@@ -360,12 +376,14 @@ Pair *SpecialOptAnd::call(Pair *args, Environment * &envt,
             top_ptr += 2;
             ret_info->state = TO_PAIR(ret_info->state->cdr);
             ret_info->state->next = NULL;
+            gc.expose(args);
             return ret_info->state;
         }
     }
     else
     {
         *top_ptr++ = ret;
+        gc.expose(args);
         return ret_addr->next;
     }
     throw NormalError(INT_ERR);
@@ -385,6 +403,7 @@ Pair *SpecialOptOr::call(Pair *args, Environment * &envt,
     if (pc->cdr == empty_list)
     {
         *top_ptr++ = new BoolObj(false);
+        gc.expose(args);
         return ret_addr->next;
     }
     if (!ret_info->state)
@@ -392,6 +411,7 @@ Pair *SpecialOptOr::call(Pair *args, Environment * &envt,
         top_ptr += 2;
         ret_info->state = TO_PAIR(pc->cdr);
         ret_info->state->next = NULL;
+        gc.expose(args);
         return ret_info->state;
     }
     EvalObj *ret = TO_PAIR(args->cdr)->car;
@@ -400,6 +420,7 @@ Pair *SpecialOptOr::call(Pair *args, Environment * &envt,
         if (ret_info->state->cdr == empty_list) // the last member
         {
             *top_ptr++ = ret;
+            gc.expose(args);
             return ret_addr->next;
         }
         else
@@ -407,12 +428,14 @@ Pair *SpecialOptOr::call(Pair *args, Environment * &envt,
             top_ptr += 2;
             ret_info->state = TO_PAIR(ret_info->state->cdr);
             ret_info->state->next = NULL;
+            gc.expose(args);
             return ret_info->state;
         }
     }
     else
     {
         *top_ptr++ = ret;
+        gc.expose(args);
         return ret_addr->next;
     }
     throw NormalError(INT_ERR);
@@ -422,8 +445,9 @@ SpecialOptApply::SpecialOptApply() : SpecialOptObj("apply") {}
 
 void SpecialOptApply::prepare(Pair *pc) {}
 
-Pair *SpecialOptApply::call(Pair *args, Environment * &envt,
+Pair *SpecialOptApply::call(Pair *_args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
+    Pair *args = _args;
     top_ptr++;          // Recover the return address
     if (args->cdr == empty_list)
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
@@ -458,6 +482,7 @@ Pair *SpecialOptApply::call(Pair *args, Environment * &envt,
             throw TokenError("a list", RUN_ERR_WRONG_TYPE);
     }
     // force the invocation, so that the desired operator will take over
+    gc.expose(_args);
     return NULL;
 }
 
@@ -469,8 +494,9 @@ void SpecialOptForce::prepare(Pair *pc) {
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
 }
 
-Pair *SpecialOptForce::call(Pair *args, Environment * &envt,
+Pair *SpecialOptForce::call(Pair *_args, Environment * &envt,
         Continuation * &cont, FrameObj ** &top_ptr) {
+    Pair *args = _args;
     args = TO_PAIR(args->cdr);
     RetAddr *ret_info = static_cast<RetAddr*>(*top_ptr);
     Pair *ret_addr = ret_info->addr;
@@ -479,6 +505,7 @@ Pair *SpecialOptForce::call(Pair *args, Environment * &envt,
         EvalObj *mem = args->car;
         prom->feed_mem(mem);
         *top_ptr++ = mem;
+        gc.expose(_args);
         return ret_addr->next;          // Move to the next instruction
     }
     else
@@ -490,6 +517,7 @@ Pair *SpecialOptForce::call(Pair *args, Environment * &envt,
         if (mem)                        // fetch from memorized result
         {
             *top_ptr++ = mem;
+            gc.expose(_args);
             return ret_addr->next;      
         }
         else                            // force
@@ -497,6 +525,7 @@ Pair *SpecialOptForce::call(Pair *args, Environment * &envt,
             top_ptr += 2;
             ret_info->state = prom->get_entry();
             ret_info->state->next = NULL;
+            gc.expose(_args);
             return ret_info->state;
         }
     }
@@ -516,6 +545,7 @@ Pair *SpecialOptDelay::call(Pair *args, Environment * &envt,
     Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
     Pair *pc = static_cast<Pair*>(ret_addr->car);
     *top_ptr++ = new PromObj(TO_PAIR(pc->cdr)->car);
+    gc.expose(args);
     return ret_addr->next;          // Move to the next instruction
 }
 

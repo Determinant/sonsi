@@ -51,6 +51,7 @@ class Pair : public EvalObj {/*{{{*/
         Pair* next;                     /**< The next branch in effect */
 
         Pair(EvalObj *car, EvalObj *cdr);  /**< Create a Pair (car . cdr) */
+        ~Pair();
         ReprCons *get_repr_cons();
 };/*}}}*/
 
@@ -163,6 +164,7 @@ class ProcObj: public OptObj {/*{{{*/
 
         /** Conctructs a ProcObj */
         ProcObj(Pair *body, Environment *envt, EvalObj *params);
+        ~ProcObj();
         Pair *call(Pair *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
         ReprCons *get_repr_cons();

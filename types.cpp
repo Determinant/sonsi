@@ -12,16 +12,24 @@
 const double EPS = 1e-16;
 const int PREC = 16;
 
-EmptyList *empty_list = new EmptyList();
-UnspecObj *unspec_obj = new UnspecObj();
+extern EmptyList *empty_list;
+extern UnspecObj *unspec_obj;
 
-Pair::Pair(EvalObj *_car, EvalObj *_cdr) :
-    EvalObj(CLS_PAIR_OBJ), car(_car), cdr(_cdr),
-    next(NULL) {}
+Pair::Pair(EvalObj *_car, EvalObj *_cdr) : EvalObj(CLS_PAIR_OBJ), 
+    car(_car), cdr(_cdr), next(NULL) {
 
-    ReprCons *Pair::get_repr_cons() {
-        return new PairReprCons(this, this);
-    }
+    gc.attach(car);
+    gc.attach(cdr);
+}
+
+Pair::~Pair() {
+    gc.expose(car);
+    gc.expose(cdr);
+}
+
+ReprCons *Pair::get_repr_cons() {
+    return new PairReprCons(this, this);
+}
 
 
 ParseBracket::ParseBracket(unsigned char _btype) :
@@ -47,6 +55,12 @@ ProcObj::ProcObj(Pair *_body, Environment *_envt, EvalObj *_params) :
     gc.attach(body); 
     gc.attach(params);
     gc.attach(envt);
+}
+
+ProcObj::~ProcObj() {
+    gc.expose(body);
+    gc.expose(params);
+    gc.expose(envt);
 }
 
 Pair *ProcObj::call(Pair *args, Environment * &genvt,
@@ -77,6 +91,7 @@ Pair *ProcObj::call(Pair *args, Environment * &genvt,
     genvt = _envt;
     cont = _cont;
     *top_ptr++ = new RetAddr(NULL);   // Mark the entrance of a cont
+    gc.expose(args);
     return body;                    // Move pc to the proc entry point
 }
 
@@ -208,6 +223,7 @@ BuiltinProcObj::BuiltinProcObj(BuiltinProc f, string _name) :
 
         Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
         *top_ptr++ = handler(TO_PAIR(args->cdr), name);
+        gc.expose(args);
         return ret_addr->next;          // Move to the next instruction
     }
 
