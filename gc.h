@@ -21,8 +21,9 @@ class GarbageCollector {
     PendingEntry *pending_list;
 
     public:
+    GarbageCollector();
     void force();
-    void expose(EvalObj *ptr);
+    void expose(EvalObj *ptr, bool delay = false);
     EvalObj *attach(EvalObj *ptr);
 };
 

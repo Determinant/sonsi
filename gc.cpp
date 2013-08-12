@@ -9,15 +9,21 @@ typedef unsigned long long ull;
 
 static EvalObj *gcq[GC_QUEUE_SIZE];
 
+GarbageCollector::GarbageCollector() {
+    mapping.clear();
+    pend_cnt = 0;
+    pending_list = NULL;
+}
+
 GarbageCollector::PendingEntry::PendingEntry(
         EvalObj *_obj, PendingEntry *_next) : obj(_obj), next(_next) {}
 
 
-void GarbageCollector::expose(EvalObj *ptr) {
+void GarbageCollector::expose(EvalObj *ptr, bool delay) {
     bool flag = mapping.count(ptr);
     if (flag)
     {
-        if (!--mapping[ptr])
+        if (!--mapping[ptr] && !delay)
         {
 #ifdef GC_DEBUG
             fprintf(stderr, "GC: 0x%llx pending. \n", (ull)ptr);
@@ -80,4 +86,3 @@ EvalObj *GarbageCollector::attach(EvalObj *ptr) {
     return ptr; // passing through
 }
 
-GarbageCollector gc;

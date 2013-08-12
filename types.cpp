@@ -2,6 +2,7 @@
 #include "model.h"
 #include "exc.h"
 #include "consts.h"
+#include "gc.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -41,41 +42,43 @@ SymObj::SymObj(const string &str) :
 
 OptObj::OptObj() : EvalObj(CLS_SIM_OBJ | CLS_OPT_OBJ) {}
 
-ProcObj::ProcObj(Pair *_body,
-        Environment *_envt,
-        EvalObj *_params) :
-    OptObj(), body(_body), params(_params), envt(_envt) {}
+ProcObj::ProcObj(Pair *_body, Environment *_envt, EvalObj *_params) : 
+    OptObj(), body(_body), params(_params), envt(_envt) {
+    gc.attach(body); 
+    gc.attach(params);
+    gc.attach(envt);
+}
 
-    Pair *ProcObj::call(Pair *args, Environment * &genvt,
-            Continuation * &cont, FrameObj ** &top_ptr) {
-        // Create a new continuation
-        // static_cast see `call` invocation in eval.cpp
-        Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
-        Continuation *_cont = new Continuation(genvt, ret_addr, cont, body);
-        // Create local env and recall the closure
-        Environment *_envt = new Environment(envt);
-        // static_cast<SymObj*> because the params is already checked
-        EvalObj *ppar, *nptr;
-        for (ppar = params;
-                ppar->is_pair_obj();
-                ppar = TO_PAIR(ppar)->cdr)
-        {
-            if ((nptr = args->cdr) != empty_list)
-                args = TO_PAIR(nptr);
-            else break;
-            _envt->add_binding(static_cast<SymObj*>(TO_PAIR(ppar)->car), args->car);
-        }
-
-        if (ppar->is_sym_obj())
-            _envt->add_binding(static_cast<SymObj*>(ppar), args->cdr); // (... . var_n)
-        else if (args->cdr != empty_list || ppar != empty_list)
-            throw TokenError("", RUN_ERR_WRONG_NUM_OF_ARGS);
-
-        genvt = _envt;
-        cont = _cont;
-        *top_ptr++ = new RetAddr(NULL);   // Mark the entrance of a cont
-        return body;                    // Move pc to the proc entry point
+Pair *ProcObj::call(Pair *args, Environment * &genvt,
+        Continuation * &cont, FrameObj ** &top_ptr) {
+    // Create a new continuation
+    // static_cast see `call` invocation in eval.cpp
+    Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
+    Continuation *_cont = new Continuation(genvt, ret_addr, cont, body);
+    // Create local env and recall the closure
+    Environment *_envt = new Environment(envt);
+    // static_cast<SymObj*> because the params is already checked
+    EvalObj *ppar, *nptr;
+    for (ppar = params;
+            ppar->is_pair_obj();
+            ppar = TO_PAIR(ppar)->cdr)
+    {
+        if ((nptr = args->cdr) != empty_list)
+            args = TO_PAIR(nptr);
+        else break;
+        _envt->add_binding(static_cast<SymObj*>(TO_PAIR(ppar)->car), args->car);
     }
+
+    if (ppar->is_sym_obj())
+        _envt->add_binding(static_cast<SymObj*>(ppar), args->cdr); // (... . var_n)
+    else if (args->cdr != empty_list || ppar != empty_list)
+        throw TokenError("", RUN_ERR_WRONG_NUM_OF_ARGS);
+
+    genvt = _envt;
+    cont = _cont;
+    *top_ptr++ = new RetAddr(NULL);   // Mark the entrance of a cont
+    return body;                    // Move pc to the proc entry point
+}
 
 ReprCons *ProcObj::get_repr_cons() {
     return new ReprStr("#<Procedure>");
@@ -212,7 +215,17 @@ ReprCons *BuiltinProcObj::get_repr_cons() {
     return new ReprStr("#<Builtin Procedure: " + name + ">");
 }
 
-Environment::Environment(Environment *_prev_envt) : prev_envt(_prev_envt) {}
+Environment::Environment(Environment *_prev_envt) : prev_envt(_prev_envt) {
+    gc.attach(prev_envt);
+}
+
+Environment::~Environment() {
+    gc.expose(prev_envt);
+}
+
+ReprCons *Environment::get_repr_cons() {
+    return new ReprStr("#<Environment>");
+}
 
 bool Environment::add_binding(SymObj *sym_obj, EvalObj *eval_obj, bool def) {
     bool found = false;
@@ -224,7 +237,10 @@ bool Environment::add_binding(SymObj *sym_obj, EvalObj *eval_obj, bool def) {
             bool has_key = ptr->binding.count(name);
             if (has_key) 
             {
-                ptr->binding[name] = eval_obj;
+                EvalObj * &ref = ptr->binding[name];
+                gc.expose(ref);
+                ref = eval_obj;
+                gc.attach(ref);
                 found = true;
                 break;
             }
@@ -233,7 +249,18 @@ bool Environment::add_binding(SymObj *sym_obj, EvalObj *eval_obj, bool def) {
     }
     else 
     {
-        binding[name] = eval_obj;
+        if (!binding.count(name))
+        {
+            binding[name] = eval_obj;
+            gc.attach(eval_obj);
+        }
+        else
+        {
+            EvalObj * &ref = binding[name];
+            gc.expose(ref);
+            ref = eval_obj;
+            gc.attach(ref);
+        }
         return true;
     }
 }
@@ -253,16 +280,26 @@ EvalObj *Environment::get_obj(EvalObj *obj) {
 }
 
 Continuation::Continuation(Environment *_envt, Pair *_pc,
-        Continuation *_prev_cont,
-        Pair *_proc_body) :
-    prev_cont(_prev_cont), envt(_envt), pc(_pc),
-    proc_body(_proc_body) {}
-
-    ReprCons::ReprCons(bool _done, EvalObj *_ori) : ori(_ori), done(_done) {}
-    ReprStr::ReprStr(string _repr) : ReprCons(true) { repr = _repr; }
-    EvalObj *ReprStr::next(const string &prev) {
-        throw NormalError(INT_ERR);
+        Continuation *_prev_cont, Pair *_proc_body) :
+    prev_cont(_prev_cont), envt(_envt), pc(_pc), proc_body(_proc_body) {
+        gc.attach(prev_cont);
+        gc.attach(envt);
     }
+
+Continuation::~Continuation() {
+    gc.expose(prev_cont);
+    gc.expose(envt);
+}
+
+ReprCons *Continuation::get_repr_cons() {
+    return new ReprStr("#<Continuation>");
+}
+
+ReprCons::ReprCons(bool _done, EvalObj *_ori) : ori(_ori), done(_done) {}
+ReprStr::ReprStr(string _repr) : ReprCons(true) { repr = _repr; }
+EvalObj *ReprStr::next(const string &prev) {
+    throw NormalError(INT_ERR);
+}
 
 PairReprCons::PairReprCons(Pair *_ptr, EvalObj *_ori) :
     ReprCons(false, _ori), state(0), ptr(_ptr) {}
@@ -324,8 +361,8 @@ VectReprCons::VectReprCons(VecObj *_ptr, EvalObj *_ori) :
 PromObj::PromObj(EvalObj *exp) : 
     EvalObj(CLS_SIM_OBJ | CLS_PROM_OBJ), 
     entry(new Pair(exp, empty_list)), mem(NULL) {
-    entry->next = NULL;
-}
+        entry->next = NULL;
+    }
 
 Pair *PromObj::get_entry() { return entry; }
 
@@ -421,13 +458,13 @@ CompNumObj::CompNumObj(double _real, double _imag) :
 #ifndef GMP_SUPPORT
                 real = int_ptr->val;
 #else
-                real = int_ptr->val.get_d();
+            real = int_ptr->val.get_d();
 #endif
             else if ((rat_ptr = RatNumObj::from_string(real_str)))
 #ifndef GMP_SUPPORT
                 real = rat_ptr->a / double(rat_ptr->b);
 #else
-                real = rat_ptr->val.get_d();
+            real = rat_ptr->val.get_d();
 #endif
             else if ((real_ptr = RealNumObj::from_string(real_str)))
                 real = real_ptr->real;
@@ -440,13 +477,13 @@ CompNumObj::CompNumObj(double _real, double _imag) :
 #ifndef GMP_SUPPORT
                 imag = int_ptr->val;
 #else
-                imag = int_ptr->val.get_d();
+            imag = int_ptr->val.get_d();
 #endif
             else if ((rat_ptr = RatNumObj::from_string(imag_str)))
 #ifndef GMP_SUPPORT
                 imag = rat_ptr->a / double(rat_ptr->b);
 #else
-                imag = rat_ptr->val.get_d();
+            imag = rat_ptr->val.get_d();
 #endif
             else if ((real_ptr = RealNumObj::from_string(imag_str)))
                 imag = real_ptr->real;
@@ -661,8 +698,8 @@ RatNumObj *RatNumObj::from_string(string repr) {
 #else
 RatNumObj::RatNumObj(mpq_class _val) :
     ExactNumObj(NUM_LVL_RAT), val(_val) {
-    val.canonicalize();
-}
+        val.canonicalize();
+    }
 
 RatNumObj *RatNumObj::from_string(string repr) {
     try

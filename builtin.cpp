@@ -7,6 +7,7 @@
 #include "model.h"
 #include "exc.h"
 #include "types.h"
+#include "gc.h"
 
 using std::stringstream;
 
@@ -45,7 +46,7 @@ Pair *SpecialOptIf::call(Pair *args, Environment * &envt,
     {
         if (ret_info->state == empty_list)
         {
-            *top_ptr++ = TO_PAIR(args->cdr)->car;
+            *top_ptr++ = gc.attach(TO_PAIR(args->cdr)->car);
             return ret_addr->next;          // Move to the next instruction
         }
         else 
@@ -73,7 +74,7 @@ Pair *SpecialOptIf::call(Pair *args, Environment * &envt,
             }
             else
             {
-                *top_ptr++ = unspec_obj;
+                *top_ptr++ = gc.attach(unspec_obj);
                 return ret_addr->next;
             }
         }
@@ -160,7 +161,7 @@ Pair *SpecialOptLambda::call(Pair *args, Environment * &envt,
     for (Pair *ptr = body; ptr != empty_list; ptr = TO_PAIR(ptr->cdr))
         ptr->next = NULL;    // Make each expression isolated
 
-    *top_ptr++ = new ProcObj(body, envt, params);
+    *top_ptr++ = gc.attach(new ProcObj(body, envt, params));
     return ret_addr->next;  // Move to the next instruction
 }
 

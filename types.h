@@ -25,6 +25,9 @@ const int CLS_CHAR_OBJ = 1 << 6;
 const int CLS_STR_OBJ = 1 << 7;
 const int CLS_VECT_OBJ = 1 << 8;
 
+const int CLS_CONT_OBJ = 1 << 9;
+const int CLS_ENVT_OBJ = 1 << 10;
+
 static const int NUM_LVL_COMP = 0;
 static const int NUM_LVL_REAL = 1;
 static const int NUM_LVL_RAT = 2;
@@ -323,7 +326,7 @@ class PromObj: public EvalObj {/*{{{*/
 /** @class Environment
  * The environment of current evaluation, i.e. the local variable binding
  */
-class Environment {/*{{{*/
+class Environment : public EvalObj{/*{{{*/
     private:
         Environment *prev_envt; /**< Pointer to the upper-level environment */
         Str2EvalObj binding;    /**< Store all pairs of identifier and its
@@ -333,6 +336,7 @@ class Environment {/*{{{*/
          * @param prev_envt the outer environment
          */
         Environment(Environment *prev_envt);
+        ~Environment();
         /** Add a binding entry which binds sym_obj to eval_obj
          * @param def true to force the assignment
          * @return when def is set to false, this return value is true iff. the
@@ -344,6 +348,7 @@ class Environment {/*{{{*/
          * @param obj the object as request
          * */
         EvalObj *get_obj(EvalObj *obj);
+        ReprCons *get_repr_cons();
 };/*}}}*/
 
 /** @class Continuation
@@ -351,7 +356,7 @@ class Environment {/*{{{*/
  * being made (Behave like a stack frame in C). When the call has accomplished,
  * the system will restore all the registers according to the continuation.
  */
-class Continuation {/*{{{*/
+class Continuation : public EvalObj {/*{{{*/
     public:
         /** Linking the previous continuation on the chain */
         Continuation *prev_cont;
@@ -365,6 +370,8 @@ class Continuation {/*{{{*/
         /** Create a continuation */
         Continuation(Environment *envt, Pair *pc, Continuation *prev_cont,
                 Pair *proc_body);
+        ~Continuation();
+        ReprCons *get_repr_cons();
 };/*}}}*/
 
 /** @class InexactNumObj

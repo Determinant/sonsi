@@ -3,13 +3,15 @@
 #include "parser.h"
 #include "eval.h"
 #include "exc.h"
+#include "gc.h"
 
 #include <cstdio>
 #include <cstdlib>
 
-Tokenizor *tk = new Tokenizor();
-ASTGenerator *ast = new ASTGenerator();
-Evaluator *eval = new Evaluator();
+GarbageCollector gc;
+Tokenizor tk;
+ASTGenerator ast;
+Evaluator eval;
 
 void load_file(const char *fname) {
     FILE *f = fopen(fname, "r");
@@ -18,14 +20,14 @@ void load_file(const char *fname) {
         printf("Can not open file: %s\n", fname);
         exit(0);
     }
-    tk->set_stream(f);
+    tk.set_stream(f);
     while (1)
     {
         try
         {
-            Pair *tree = ast->absorb(tk);
+            Pair *tree = ast.absorb(&tk);
             if (!tree) break;
-            eval->run_expr(tree);
+            eval.run_expr(tree);
         }
         catch (GeneralError &e)
         {
@@ -79,15 +81,15 @@ int main(int argc, char **argv) {
     }
 
     int rcnt = 0;
-    tk->set_stream(stdin);  // interactive mode
+    tk.set_stream(stdin);  // interactive mode
     while (1)
     {
         fprintf(stderr, "Sonsi> ");
         try
         {
-            Pair *tree = ast->absorb(tk);
+            Pair *tree = ast.absorb(&tk);
             if (!tree) break;
-            string output = eval->run_expr(tree)->ext_repr();
+            string output = eval.run_expr(tree)->ext_repr();
             fprintf(stderr, "Ret> $%d = %s\n", rcnt++, output.c_str());
         }
         catch (GeneralError &e)

@@ -80,7 +80,7 @@ void Evaluator::add_builtin_routines() {
     ADD_BUILTIN_PROC("string<?", string_lt);
     ADD_BUILTIN_PROC("string<=?", string_le);
     ADD_BUILTIN_PROC("string>?", string_gt);
-    ADD_BUILTIN_PROC("string<=?", string_ge);
+    ADD_BUILTIN_PROC("string>=?", string_ge);
     ADD_BUILTIN_PROC("string=?", string_eq);
 
     ADD_BUILTIN_PROC("make-vector", make_vector);
