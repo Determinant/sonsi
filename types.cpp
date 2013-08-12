@@ -805,7 +805,7 @@ NumObj *RatNumObj::abs() {
 #ifndef GMP_SUPPORT
     return new RatNumObj((a > 0 ? a : -a), b);
 #else
-    return new RatNumObj(std::abs(val));
+    return new RatNumObj(::abs(val));
 #endif
 }
 
@@ -880,7 +880,7 @@ NumObj *IntNumObj::div(NumObj *_r) {
 }
 
 NumObj *IntNumObj::abs() {
-    return new IntNumObj(std::abs(val));
+    return new IntNumObj(::abs(val));
 }
 
 NumObj *IntNumObj::rem(NumObj *_r) {
