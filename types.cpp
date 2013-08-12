@@ -892,7 +892,7 @@ NumObj *IntNumObj::mod(NumObj *_r) {
     const mpz_class &rval = static_cast<IntNumObj*>(_r)->val;
     if (rval == 0) throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
     mpz_class ret = val % rval;
-    if (sgn(ret) != sgn(rval))
+    if (ret != 0 && sgn(ret) != sgn(rval))
         ret = ret + rval;
     return new IntNumObj(ret);
 }
