@@ -42,7 +42,7 @@ void print_help(const char *cmd) {
             "  FILE \t\tload Scheme source code from FILE, and exit\n"
             "The above switches stop argument processing\n\n"
             "  -l FILE \tload Scheme source code from FILE\n"
-            "  -h display \tthis help and exit\n", cmd);
+            "  -h, --help \tdisplay this help and exit\n", cmd);
     exit(0);
 }
 
@@ -62,7 +62,8 @@ int main(int argc, char **argv) {
                     print_help(*argv);
                 }
             }
-            else if (strcmp(argv[i], "-h") == 0)
+            else if (strcmp(argv[i], "-h") == 0 ||
+                     strcmp(argv[i], "--help") == 0)
                 print_help(*argv);
             else
             {

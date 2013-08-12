@@ -9,8 +9,9 @@
 #include "types.h"
 
 using std::stringstream;
-extern EmptyList *empty_list;
 
+extern EmptyList *empty_list;
+extern UnspecObj *unspec_obj;
 
 SpecialOptIf::SpecialOptIf() : SpecialOptObj("if") {}
 
@@ -72,7 +73,7 @@ Pair *SpecialOptIf::call(Pair *args, Environment * &envt,
             }
             else
             {
-                *top_ptr++ = new UnspecObj();
+                *top_ptr++ = unspec_obj;
                 return ret_addr->next;
             }
         }
@@ -232,7 +233,7 @@ Pair *SpecialOptDefine::call(Pair *args, Environment * &envt,
         obj = new ProcObj(body, envt, params);
     }
     envt->add_binding(id, obj);
-    *top_ptr++ = new UnspecObj();
+    *top_ptr++ = unspec_obj;
     return ret_addr->next;
 }
 
@@ -276,7 +277,7 @@ Pair *SpecialOptSet::call(Pair *args, Environment * &envt,
 
     bool flag = envt->add_binding(id, TO_PAIR(args->cdr)->car, false);
     if (!flag) throw TokenError(id->ext_repr(), RUN_ERR_UNBOUND_VAR);
-    *top_ptr++ = new UnspecObj();
+    *top_ptr++ = unspec_obj;
     return ret_addr->next;
 }
 
@@ -804,7 +805,7 @@ BUILTIN_PROC_DEF(pair_set_car) {
     if (!args->car->is_pair_obj())
         throw TokenError("pair", RUN_ERR_WRONG_TYPE);
     TO_PAIR(args->car)->car = TO_PAIR(args->cdr)->car;
-    return new UnspecObj();
+    return unspec_obj;
 }
 
 BUILTIN_PROC_DEF(pair_set_cdr) {
@@ -812,7 +813,7 @@ BUILTIN_PROC_DEF(pair_set_cdr) {
     if (!args->car->is_pair_obj())
         throw TokenError("pair", RUN_ERR_WRONG_TYPE);
     TO_PAIR(args->car)->cdr = TO_PAIR(args->cdr)->car;
-    return new UnspecObj();
+    return unspec_obj;
 }
 
 BUILTIN_PROC_DEF(is_null) {
@@ -1282,7 +1283,7 @@ BUILTIN_PROC_DEF(make_vector) {
 
     args = TO_PAIR(args->cdr);
     if (args == empty_list)
-        fill = new UnspecObj();
+        fill = unspec_obj;
     else if (args->cdr == empty_list)
         fill = args->car;
     else 
@@ -1317,7 +1318,7 @@ BUILTIN_PROC_DEF(vector_set) {
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
 
     vect->set(k, args->car);
-    return new UnspecObj();
+    return unspec_obj;
 }
 
 BUILTIN_PROC_DEF(vector_ref) {
@@ -1356,5 +1357,5 @@ BUILTIN_PROC_DEF(vector_length) {
 BUILTIN_PROC_DEF(display) {
     ARGS_EXACTLY_ONE;
     printf("%s", args->car->ext_repr().c_str());
-    return new UnspecObj();
+    return unspec_obj;
 }

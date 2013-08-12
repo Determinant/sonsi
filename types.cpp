@@ -12,6 +12,7 @@ const double EPS = 1e-16;
 const int PREC = 16;
 
 EmptyList *empty_list = new EmptyList();
+UnspecObj *unspec_obj = new UnspecObj();
 
 Pair::Pair(EvalObj *_car, EvalObj *_cdr) :
     EvalObj(CLS_PAIR_OBJ), car(_car), cdr(_cdr),
