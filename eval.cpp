@@ -2,6 +2,7 @@
 #include "builtin.h"
 #include "exc.h"
 #include "consts.h"
+#include "gc.h"
 #include <cstdio>
 
 extern Pair *empty_list;
@@ -91,6 +92,7 @@ void Evaluator::add_builtin_routines() {
 
 Evaluator::Evaluator() {
     envt = new Environment(NULL);       // Top-level Environment
+    gc.attach(envt);
     add_builtin_routines();
 }
 
@@ -113,8 +115,7 @@ inline void push(Pair * &pc, FrameObj ** &top_ptr, Environment *envt) {
  //       puts("oops");
     if (pc->car->is_simple_obj())           // Not an opt invocation
     {
-        *top_ptr = envt->get_obj(pc->car);  // Objectify the symbol
-        top_ptr++;
+        *top_ptr++ = gc.attach(envt->get_obj(pc->car));  // Objectify the symbol
         pc = pc->next;                      // Move to the next instruction
 //        if (pc == empty_list)
 //        puts("oops");
@@ -148,8 +149,12 @@ EvalObj *Evaluator::run_expr(Pair *prog) {
     FrameObj **top_ptr = eval_stack;
     Pair *pc = prog;
     Continuation *cont = NULL;
+#ifdef GC_DEBUG
+    fprintf(stderr, "Start the evaluation...\n");
+#endif
     // envt is this->envt
     push(pc, top_ptr, envt);
+    gc.attach(prog);
 
     while((*eval_stack)->is_ret_addr())
     {
@@ -161,21 +166,34 @@ EvalObj *Evaluator::run_expr(Pair *prog) {
         {
             Pair *args = empty_list;
             while (!(*(--top_ptr))->is_ret_addr())
-                args = new Pair(static_cast<EvalObj*>(*top_ptr), args);
+            {
+                EvalObj* obj = static_cast<EvalObj*>(*top_ptr);
+                gc.expose(obj);
+                args = new Pair(obj, args);
+            }
             //< static_cast because the while condition
             RetAddr *ret_addr = static_cast<RetAddr*>(*top_ptr);
+            gc.attach(args);
             if (!ret_addr->addr)
             {
                 Pair *nexp = TO_PAIR(cont->proc_body->cdr);
                 cont->proc_body = nexp;
                 if (nexp == empty_list)
                 {
-                    *top_ptr = args->car;
+                    *top_ptr = gc.attach(args->car);
+
+                    gc.expose(envt);
                     envt = cont->envt;
+                    gc.attach(envt);
+
                     pc = cont->pc->next;
+
+                    gc.expose(cont);
                     cont = cont->prev_cont;
+                    gc.attach(cont);
                 }
                 else pc = nexp;
+                gc.expose(args);
                 top_ptr++;
             }
             else
@@ -186,9 +204,11 @@ EvalObj *Evaluator::run_expr(Pair *prog) {
                         call(args, envt, cont, top_ptr);
                 else
                     throw TokenError(opt->ext_repr(), SYN_ERR_CAN_NOT_APPLY);
+                gc.force();
             }
         }
     }
+    gc.expose(prog);
     // static_cast because the previous while condition
     return static_cast<EvalObj*>(*(eval_stack));
 }

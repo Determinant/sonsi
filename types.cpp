@@ -2,6 +2,7 @@
 #include "model.h"
 #include "exc.h"
 #include "consts.h"
+#include "gc.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -11,16 +12,24 @@
 const double EPS = 1e-16;
 const int PREC = 16;
 
-EmptyList *empty_list = new EmptyList();
-UnspecObj *unspec_obj = new UnspecObj();
+extern EmptyList *empty_list;
+extern UnspecObj *unspec_obj;
 
-Pair::Pair(EvalObj *_car, EvalObj *_cdr) :
-    EvalObj(CLS_PAIR_OBJ), car(_car), cdr(_cdr),
-    next(NULL) {}
+Pair::Pair(EvalObj *_car, EvalObj *_cdr) : EvalObj(CLS_PAIR_OBJ), 
+    car(_car), cdr(_cdr), next(NULL) {
 
-    ReprCons *Pair::get_repr_cons() {
-        return new PairReprCons(this, this);
-    }
+    gc.attach(car);
+    gc.attach(cdr);
+}
+
+Pair::~Pair() {
+    gc.expose(car);
+    gc.expose(cdr);
+}
+
+ReprCons *Pair::get_repr_cons() {
+    return new PairReprCons(this, this);
+}
 
 
 ParseBracket::ParseBracket(unsigned char _btype) :
@@ -41,41 +50,58 @@ SymObj::SymObj(const string &str) :
 
 OptObj::OptObj() : EvalObj(CLS_SIM_OBJ | CLS_OPT_OBJ) {}
 
-ProcObj::ProcObj(Pair *_body,
-        Environment *_envt,
-        EvalObj *_params) :
-    OptObj(), body(_body), params(_params), envt(_envt) {}
+ProcObj::ProcObj(Pair *_body, Environment *_envt, EvalObj *_params) : 
+    OptObj(), body(_body), params(_params), envt(_envt) {
+    gc.attach(body); 
+    gc.attach(params);
+    gc.attach(envt);
+}
 
-    Pair *ProcObj::call(Pair *args, Environment * &genvt,
-            Continuation * &cont, FrameObj ** &top_ptr) {
-        // Create a new continuation
-        // static_cast see `call` invocation in eval.cpp
-        Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
-        Continuation *_cont = new Continuation(genvt, ret_addr, cont, body);
-        // Create local env and recall the closure
-        Environment *_envt = new Environment(envt);
-        // static_cast<SymObj*> because the params is already checked
-        EvalObj *ppar, *nptr;
-        for (ppar = params;
-                ppar->is_pair_obj();
-                ppar = TO_PAIR(ppar)->cdr)
-        {
-            if ((nptr = args->cdr) != empty_list)
-                args = TO_PAIR(nptr);
-            else break;
-            _envt->add_binding(static_cast<SymObj*>(TO_PAIR(ppar)->car), args->car);
-        }
+ProcObj::~ProcObj() {
+    gc.expose(body);
+    gc.expose(params);
+    gc.expose(envt);
+}
 
-        if (ppar->is_sym_obj())
-            _envt->add_binding(static_cast<SymObj*>(ppar), args->cdr); // (... . var_n)
-        else if (args->cdr != empty_list || ppar != empty_list)
-            throw TokenError("", RUN_ERR_WRONG_NUM_OF_ARGS);
-
-        genvt = _envt;
-        cont = _cont;
-        *top_ptr++ = new RetAddr(NULL);   // Mark the entrance of a cont
-        return body;                    // Move pc to the proc entry point
+Pair *ProcObj::call(Pair *_args, Environment * &genvt,
+        Continuation * &cont, FrameObj ** &top_ptr) {
+    // Create a new continuation
+    // static_cast see `call` invocation in eval.cpp
+    Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
+    Continuation *_cont = new Continuation(genvt, ret_addr, cont, body);
+    // Create local env and recall the closure
+    Environment *_envt = new Environment(envt);
+    // static_cast<SymObj*> because the params is already checked
+    EvalObj *ppar, *nptr;
+    Pair *args = _args;
+    for (ppar = params;
+            ppar->is_pair_obj();
+            ppar = TO_PAIR(ppar)->cdr)
+    {
+        if ((nptr = args->cdr) != empty_list)
+            args = TO_PAIR(nptr);
+        else break;
+        _envt->add_binding(static_cast<SymObj*>(TO_PAIR(ppar)->car), args->car);
     }
+
+    if (ppar->is_sym_obj())
+        _envt->add_binding(static_cast<SymObj*>(ppar), args->cdr); // (... . var_n)
+    else if (args->cdr != empty_list || ppar != empty_list)
+        throw TokenError("", RUN_ERR_WRONG_NUM_OF_ARGS);
+
+    gc.expose(genvt);
+    genvt = _envt;
+    gc.attach(genvt);
+
+    gc.expose(cont);
+    cont = _cont;
+    gc.attach(cont);
+
+    delete *top_ptr;                    // release ret addr
+    *top_ptr++ = new RetAddr(NULL);     // Mark the entrance of a cont
+    gc.expose(_args);
+    return body;                        // Move pc to the proc entry point
+}
 
 ReprCons *ProcObj::get_repr_cons() {
     return new ReprStr("#<Procedure>");
@@ -204,7 +230,9 @@ BuiltinProcObj::BuiltinProcObj(BuiltinProc f, string _name) :
             Continuation * &cont, FrameObj ** &top_ptr) {
 
         Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
-        *top_ptr++ = handler(TO_PAIR(args->cdr), name);
+        delete *top_ptr;
+        *top_ptr++ = gc.attach(handler(TO_PAIR(args->cdr), name));
+        gc.expose(args);
         return ret_addr->next;          // Move to the next instruction
     }
 
@@ -212,7 +240,20 @@ ReprCons *BuiltinProcObj::get_repr_cons() {
     return new ReprStr("#<Builtin Procedure: " + name + ">");
 }
 
-Environment::Environment(Environment *_prev_envt) : prev_envt(_prev_envt) {}
+Environment::Environment(Environment *_prev_envt) : prev_envt(_prev_envt) {
+    gc.attach(prev_envt);
+}
+
+Environment::~Environment() {
+    for (Str2EvalObj::iterator it = binding.begin(); 
+            it != binding.end(); it++)
+        gc.expose(it->second);
+    gc.expose(prev_envt);
+}
+
+ReprCons *Environment::get_repr_cons() {
+    return new ReprStr("#<Environment>");
+}
 
 bool Environment::add_binding(SymObj *sym_obj, EvalObj *eval_obj, bool def) {
     bool found = false;
@@ -224,7 +265,10 @@ bool Environment::add_binding(SymObj *sym_obj, EvalObj *eval_obj, bool def) {
             bool has_key = ptr->binding.count(name);
             if (has_key) 
             {
-                ptr->binding[name] = eval_obj;
+                EvalObj * &ref = ptr->binding[name];
+                gc.expose(ref);
+                ref = eval_obj;
+                gc.attach(ref);
                 found = true;
                 break;
             }
@@ -233,7 +277,18 @@ bool Environment::add_binding(SymObj *sym_obj, EvalObj *eval_obj, bool def) {
     }
     else 
     {
-        binding[name] = eval_obj;
+        if (!binding.count(name))
+        {
+            binding[name] = eval_obj;
+            gc.attach(eval_obj);
+        }
+        else
+        {
+            EvalObj * &ref = binding[name];
+            gc.expose(ref);
+            ref = eval_obj;
+            gc.attach(ref);
+        }
         return true;
     }
 }
@@ -253,16 +308,26 @@ EvalObj *Environment::get_obj(EvalObj *obj) {
 }
 
 Continuation::Continuation(Environment *_envt, Pair *_pc,
-        Continuation *_prev_cont,
-        Pair *_proc_body) :
-    prev_cont(_prev_cont), envt(_envt), pc(_pc),
-    proc_body(_proc_body) {}
-
-    ReprCons::ReprCons(bool _done, EvalObj *_ori) : ori(_ori), done(_done) {}
-    ReprStr::ReprStr(string _repr) : ReprCons(true) { repr = _repr; }
-    EvalObj *ReprStr::next(const string &prev) {
-        throw NormalError(INT_ERR);
+        Continuation *_prev_cont, Pair *_proc_body) :
+    prev_cont(_prev_cont), envt(_envt), pc(_pc), proc_body(_proc_body) {
+        gc.attach(prev_cont);
+        gc.attach(envt);
     }
+
+Continuation::~Continuation() {
+    gc.expose(prev_cont);
+    gc.expose(envt);
+}
+
+ReprCons *Continuation::get_repr_cons() {
+    return new ReprStr("#<Continuation>");
+}
+
+ReprCons::ReprCons(bool _done, EvalObj *_ori) : ori(_ori), done(_done) {}
+ReprStr::ReprStr(string _repr) : ReprCons(true) { repr = _repr; }
+EvalObj *ReprStr::next(const string &prev) {
+    throw NormalError(INT_ERR);
+}
 
 PairReprCons::PairReprCons(Pair *_ptr, EvalObj *_ori) :
     ReprCons(false, _ori), state(0), ptr(_ptr) {}
@@ -324,8 +389,8 @@ VectReprCons::VectReprCons(VecObj *_ptr, EvalObj *_ori) :
 PromObj::PromObj(EvalObj *exp) : 
     EvalObj(CLS_SIM_OBJ | CLS_PROM_OBJ), 
     entry(new Pair(exp, empty_list)), mem(NULL) {
-    entry->next = NULL;
-}
+        entry->next = NULL;
+    }
 
 Pair *PromObj::get_entry() { return entry; }
 
@@ -421,13 +486,13 @@ CompNumObj::CompNumObj(double _real, double _imag) :
 #ifndef GMP_SUPPORT
                 real = int_ptr->val;
 #else
-                real = int_ptr->val.get_d();
+            real = int_ptr->val.get_d();
 #endif
             else if ((rat_ptr = RatNumObj::from_string(real_str)))
 #ifndef GMP_SUPPORT
                 real = rat_ptr->a / double(rat_ptr->b);
 #else
-                real = rat_ptr->val.get_d();
+            real = rat_ptr->val.get_d();
 #endif
             else if ((real_ptr = RealNumObj::from_string(real_str)))
                 real = real_ptr->real;
@@ -440,13 +505,13 @@ CompNumObj::CompNumObj(double _real, double _imag) :
 #ifndef GMP_SUPPORT
                 imag = int_ptr->val;
 #else
-                imag = int_ptr->val.get_d();
+            imag = int_ptr->val.get_d();
 #endif
             else if ((rat_ptr = RatNumObj::from_string(imag_str)))
 #ifndef GMP_SUPPORT
                 imag = rat_ptr->a / double(rat_ptr->b);
 #else
-                imag = rat_ptr->val.get_d();
+            imag = rat_ptr->val.get_d();
 #endif
             else if ((real_ptr = RealNumObj::from_string(imag_str)))
                 imag = real_ptr->real;
@@ -456,11 +521,16 @@ CompNumObj::CompNumObj(double _real, double _imag) :
         return new CompNumObj(real, imag);
     }
 
+NumObj *CompNumObj::clone() const {
+    return new CompNumObj(*this);
+}
+
 CompNumObj *CompNumObj::convert(NumObj *obj) {
     switch (obj->level)
     {
         case NUM_LVL_COMP :
-            return static_cast<CompNumObj*>(obj); break;
+            return new CompNumObj(*static_cast<CompNumObj*>(obj));
+            break;
         case NUM_LVL_REAL :
             return new CompNumObj(static_cast<RealNumObj*>(obj)->real, 0);
             break;
@@ -489,30 +559,32 @@ CompNumObj *CompNumObj::convert(NumObj *obj) {
 #define C (r->real)
 #define D (r->imag)
 
-NumObj *CompNumObj::add(NumObj *_r) {
+void CompNumObj::add(NumObj *_r) {
     CompNumObj *r = static_cast<CompNumObj*>(_r);
-    return new CompNumObj(A + C, B + D);
+    real += C;
+    imag += D;
 }
 
-NumObj *CompNumObj::sub(NumObj *_r) {
+void CompNumObj::sub(NumObj *_r) {
     CompNumObj *r = static_cast<CompNumObj*>(_r);
-    return new CompNumObj(A - C, B - D);
+    real -= C;
+    imag -= D;
 }
 
-NumObj *CompNumObj::mul(NumObj *_r) {
+void CompNumObj::mul(NumObj *_r) {
     CompNumObj *r = static_cast<CompNumObj*>(_r);
-    return new CompNumObj(A * C - B * D,
-            B * C + A * D);
+    A = A * C - B * D;
+    B = B * C + A * D;
 }
 
-NumObj *CompNumObj::div(NumObj *_r) {
+void CompNumObj::div(NumObj *_r) {
     CompNumObj *r = static_cast<CompNumObj*>(_r);
     double f = C * C + D * D;
     if (f == 0)
         throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
     f = 1 / f;
-    return new CompNumObj((A * C + B * D) * f,
-            (B * C - A * D) * f);
+    A = (A * C + B * D) * f,
+    B = (B * C - A * D) * f;
 }
 
 bool NumObj::lt(NumObj *_r) {
@@ -531,7 +603,7 @@ bool NumObj::ge(NumObj *_r) {
     throw TokenError("a comparable number", RUN_ERR_WRONG_TYPE);
 }
 
-NumObj *NumObj::abs() {
+void NumObj::abs() {
     throw TokenError("a real number", RUN_ERR_WRONG_TYPE);
 }
 
@@ -553,6 +625,10 @@ ReprCons *CompNumObj::get_repr_cons() {
 
 RealNumObj::RealNumObj(double _real) : InexactNumObj(NUM_LVL_REAL), real(_real) {}
 
+NumObj *RealNumObj::clone() const {
+    return new RealNumObj(*this);
+}
+
 RealNumObj *RealNumObj::from_string(string repr) {
     bool flag;
     double real = str_to_double(repr, flag);
@@ -564,7 +640,8 @@ RealNumObj *RealNumObj::convert(NumObj *obj) {
     switch (obj->level)
     {
         case NUM_LVL_REAL:
-            return static_cast<RealNumObj*>(obj); break;
+            return new RealNumObj(*static_cast<RealNumObj*>(obj)); 
+            break;
         case NUM_LVL_RAT:
             {
                 RatNumObj *rat = static_cast<RatNumObj*>(obj);
@@ -586,24 +663,24 @@ RealNumObj *RealNumObj::convert(NumObj *obj) {
     throw NormalError(INT_ERR);
 }
 
-NumObj *RealNumObj::add(NumObj *_r) {
-    return new RealNumObj(real + static_cast<RealNumObj*>(_r)->real);
+void RealNumObj::add(NumObj *_r) {
+    real += static_cast<RealNumObj*>(_r)->real;
 }
 
-NumObj *RealNumObj::sub(NumObj *_r) {
-    return new RealNumObj(real - static_cast<RealNumObj*>(_r)->real);
+void RealNumObj::sub(NumObj *_r) {
+    real -= static_cast<RealNumObj*>(_r)->real;
 }
 
-NumObj *RealNumObj::mul(NumObj *_r) {
-    return new RealNumObj(real * static_cast<RealNumObj*>(_r)->real);
+void RealNumObj::mul(NumObj *_r) {
+    real *= static_cast<RealNumObj*>(_r)->real;
 }
 
-NumObj *RealNumObj::div(NumObj *_r) {
-    return new RealNumObj(real / static_cast<RealNumObj*>(_r)->real);
+void RealNumObj::div(NumObj *_r) {
+    real /= static_cast<RealNumObj*>(_r)->real;
 }
 
-NumObj *RealNumObj::abs() {
-    return new RealNumObj(fabs(real));
+void RealNumObj::abs() {
+    real = fabs(real);
 }
 
 bool RealNumObj::eq(NumObj *_r) {
@@ -659,9 +736,12 @@ RatNumObj *RatNumObj::from_string(string repr) {
     return new RatNumObj(a, b);
 }
 #else
-RatNumObj::RatNumObj(mpq_class _val) :
-    ExactNumObj(NUM_LVL_RAT), val(_val) {
-    val.canonicalize();
+RatNumObj::RatNumObj(mpq_class _val) : ExactNumObj(NUM_LVL_RAT), val(_val) {
+        val.canonicalize();
+}
+
+NumObj *RatNumObj::clone() const {
+    return new RatNumObj(*this);
 }
 
 RatNumObj *RatNumObj::from_string(string repr) {
@@ -678,6 +758,9 @@ RatNumObj *RatNumObj::from_string(string repr) {
         return NULL;
     }
 }
+
+RatNumObj::RatNumObj(const RatNumObj &ori) : 
+    ExactNumObj(NUM_LVL_RAT), val(ori.val.get_mpq_t()) {}
 #endif
 
 
@@ -685,7 +768,8 @@ RatNumObj *RatNumObj::convert(NumObj *obj) {
     switch (obj->level)
     {
         case NUM_LVL_RAT:
-            return static_cast<RatNumObj*>(obj); break;
+            return new RatNumObj(*static_cast<RatNumObj*>(obj));
+            break;
         case NUM_LVL_INT:
 #ifndef GMP_SUPPORT
             return new RatNumObj(static_cast<IntNumObj*>(obj)->val, 1);
@@ -703,55 +787,57 @@ RatNumObj *RatNumObj::convert(NumObj *obj) {
 #define C (r->a)
 #define D (r->b)
 
-NumObj *RatNumObj::add(NumObj *_r) {
+void RatNumObj::add(NumObj *_r) {
     RatNumObj *r = static_cast<RatNumObj*>(_r);
 #ifndef GMP_SUPPORT
-    int na = A * D + B * C, nb = B * D;
+    A = A * D + B * C;
+    B = B * D;
     int g = gcd(na, nb);
-    na /= g;
-    nb /= g;
-    return new RatNumObj(na, nb);
+    A /= g;
+    B /= g;
 #else
-    return new RatNumObj(val + r->val);
+    val += r->val;
 #endif
 }
 
-NumObj *RatNumObj::sub(NumObj *_r) {
+void RatNumObj::sub(NumObj *_r) {
     RatNumObj *r = static_cast<RatNumObj*>(_r);
 #ifndef GMP_SUPPORT
-    int na = A * D - B * C, nb = B * D;
+    A = A * D - B * C;
+    B = B * D;
     int g = gcd(na, nb);
-    na /= g;
-    nb /= g;
-    return new RatNumObj(na, nb);
+    A /= g;
+    B /= g;
 #else
-    return new RatNumObj(val - r->val);
+    val -= r->val;
 #endif
 }
 
-NumObj *RatNumObj::mul(NumObj *_r) {
+void RatNumObj::mul(NumObj *_r) {
     RatNumObj *r = static_cast<RatNumObj*>(_r);
 #ifndef GMP_SUPPORT
-    int na = A * C, nb = B * D;
+    A = A * C;
+    B = B * D;
     int g = gcd(na, nb);
-    na /= g;
-    nb /= g;
-    return new RatNumObj(na, nb);
+    A /= g;
+    B /= g;
 #else
-    return new RatNumObj(val * r->val);
+    val *= r->val;
 #endif
 }
 
-NumObj *RatNumObj::div(NumObj *_r) {
+void RatNumObj::div(NumObj *_r) {
     RatNumObj *r = static_cast<RatNumObj*>(_r);
 #ifndef GMP_SUPPORT
-    int na = A * D, nb = B * C;
+    A = A * D;
+    B = B * C;
     int g = gcd(na, nb);
-    na /= g;
-    nb /= g;
-    return new RatNumObj(na, nb);
+    A /= g;
+    B /= g;
 #else
-    return new RatNumObj(val / r->val);
+    if (r->val == 0)
+        throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
+    val /= r->val;
 #endif
 }
 
@@ -801,11 +887,11 @@ bool RatNumObj::eq(NumObj *_r) {
 #endif
 }
 
-NumObj *RatNumObj::abs() {
+void RatNumObj::abs() {
 #ifndef GMP_SUPPORT
-    return new RatNumObj((a > 0 ? a : -a), b);
+    if (a < 0) a = -a;
 #else
-    return new RatNumObj(::abs(val));
+    val = ::abs(val);
 #endif
 }
 
@@ -820,6 +906,7 @@ ReprCons *RatNumObj::get_repr_cons() {
 
 #ifndef GMP_SUPPORT
 IntNumObj::IntNumObj(int _val) : ExactNumObj(NUM_LVL_INT), val(_val) {}
+
 IntNumObj *IntNumObj::from_string(string repr) {
     int val = 0;
     for (size_t i = 0; i < repr.length(); i++)
@@ -845,75 +932,71 @@ IntNumObj *IntNumObj::from_string(string repr) {
     }
 }
 int IntNumObj::get_i() { return val.get_si(); }
+IntNumObj::IntNumObj(const IntNumObj &ori) : 
+    ExactNumObj(NUM_LVL_INT), val(ori.val.get_mpz_t()) {}
 #endif
+
+
+NumObj *IntNumObj::clone() const {
+    return new IntNumObj(*this);
+}
 
 IntNumObj *IntNumObj::convert(NumObj *obj) {
     switch (obj->level)
     {
         case NUM_LVL_INT :
-            return static_cast<IntNumObj*>(obj);
+            return new IntNumObj(*static_cast<IntNumObj*>(obj));
         default:
             throw NormalError(INT_ERR);
     }
 }
 
-NumObj *IntNumObj::add(NumObj *_r) {
-    return new IntNumObj(val + static_cast<IntNumObj*>(_r)->val);
+void IntNumObj::add(NumObj *_r) {
+    val += static_cast<IntNumObj*>(_r)->val;
 }
 
-NumObj *IntNumObj::sub(NumObj *_r) {
-    return new IntNumObj(val - static_cast<IntNumObj*>(_r)->val);
+void IntNumObj::sub(NumObj *_r) {
+    val -= static_cast<IntNumObj*>(_r)->val;
 }
 
-NumObj *IntNumObj::mul(NumObj *_r) {
-    return new IntNumObj(val * static_cast<IntNumObj*>(_r)->val);
+void IntNumObj::mul(NumObj *_r) {
+    val *= static_cast<IntNumObj*>(_r)->val;
 }
 
-NumObj *IntNumObj::div(NumObj *_r) {
-#ifndef GMP_SUPPORT
-    return new RatNumObj(val, static_cast<IntNumObj*>(_r)->val);
-#else
-    mpz_class d(static_cast<IntNumObj*>(_r)->val);
-    if (d == 0) throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
-    return new RatNumObj(mpq_class(val, d));
-#endif
+void IntNumObj::abs() {
+    val = ::abs(val);
 }
 
-NumObj *IntNumObj::abs() {
-    return new IntNumObj(::abs(val));
-}
-
-NumObj *IntNumObj::rem(NumObj *_r) {
+void IntNumObj::rem(NumObj *_r) {
     const mpz_class &rval(static_cast<IntNumObj*>(_r)->val);
     if (rval == 0) throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
-    return new IntNumObj(val % rval);
+    val %= rval;
 }
 
-NumObj *IntNumObj::mod(NumObj *_r) {
+void IntNumObj::mod(NumObj *_r) {
     const mpz_class &rval = static_cast<IntNumObj*>(_r)->val;
     if (rval == 0) throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
-    mpz_class ret = val % rval;
-    if (ret != 0 && sgn(ret) != sgn(rval))
-        ret = ret + rval;
-    return new IntNumObj(ret);
+    val %= rval;
+    if (val != 0 && sgn(val) != sgn(rval))
+        val += rval;
 }
 
-NumObj *IntNumObj::quo(NumObj *_r) {
+void IntNumObj::div(NumObj *_r) {
     const mpz_class &rval = static_cast<IntNumObj*>(_r)->val;
     if (rval == 0) throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
-    return new IntNumObj(val / rval);
+    val /= rval;
 }
 
-NumObj *IntNumObj::gcd(NumObj *_r) {
+void IntNumObj::gcd(NumObj *_r) {
     mpz_t g;
     mpz_gcd(g, val.get_mpz_t(), static_cast<IntNumObj*>(_r)->val.get_mpz_t());
-    return new IntNumObj(mpz_class(g));
+    val = mpz_class(g);
 }
 
-NumObj *IntNumObj::lcm(NumObj *_r) {
+void IntNumObj::lcm(NumObj *_r) {
     mpz_t l;
     mpz_lcm(l, val.get_mpz_t(), static_cast<IntNumObj*>(_r)->val.get_mpz_t());
-    return new IntNumObj(mpz_class(l));
+    val = mpz_class(l);
 }
 
 bool IntNumObj::lt(NumObj *_r) {
