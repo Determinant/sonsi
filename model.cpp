@@ -27,6 +27,10 @@ bool FrameObj::is_parse_bracket() {
 
 EvalObj::EvalObj(int _otype) : FrameObj(CLS_EVAL_OBJ), otype(_otype) {}
 
+bool EvalObj::is_container() {
+    return otype & CLS_CONTAINER;
+}
+
 void EvalObj::prepare(Pair *pc) {}
 
 bool EvalObj::is_simple_obj() {

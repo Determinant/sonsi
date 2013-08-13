@@ -53,6 +53,8 @@ class Pair : public Container {/*{{{*/
         Pair(EvalObj *car, EvalObj *cdr);  /**< Create a Pair (car . cdr) */
         ~Pair();
         ReprCons *get_repr_cons();
+        void gc_decrement();
+        void gc_trigger(EvalObj ** &tail);
 };/*}}}*/
 
 /** @class EmptyList

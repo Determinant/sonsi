@@ -27,10 +27,21 @@ Pair::~Pair() {
     gc.expose(cdr);
 }
 
+void Pair::gc_decrement() {
+    if (car->is_container())
+        static_cast<Container*>(car)->gc_refs--;
+    if (cdr->is_container())
+        static_cast<Container*>(cdr)->gc_refs--;
+}
+
+void Pair::gc_trigger(EvalObj ** &tail) {
+    *tail++ = car;
+    *tail++ = cdr;
+}
+
 ReprCons *Pair::get_repr_cons() {
     return new PairReprCons(this, this);
 }
-
 
 ParseBracket::ParseBracket(unsigned char _btype) :
     FrameObj(CLS_SIM_OBJ | CLS_PAR_BRA), btype(_btype) {}

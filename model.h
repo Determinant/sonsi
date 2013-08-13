@@ -92,6 +92,7 @@ class EvalObj : public FrameObj {
         bool is_prom_obj();
         /** Check if the object is a vector */
         bool is_vect_obj();
+        bool is_container();
         int get_otype();
         virtual void prepare(Pair *pc);
         /** Any EvalObj has its external representation */
@@ -106,6 +107,8 @@ class Container: public EvalObj {
     public:
     size_t gc_refs;
     Container(int otype);
+    virtual void gc_decrement() = 0;
+    virtual void gc_trigger(EvalObj ** &tail) = 0;
 };
 
 /** @class RetAddr

@@ -190,7 +190,9 @@ Pair *ASTGenerator::absorb(Tokenizor *tk) {
                         TO_PAIR(lst)->cdr != empty_list)
                         throw NormalError(PAR_ERR_IMPROPER_PAIR);
                     improper = true;
-                    lst = TO_PAIR(lst)->car;
+                    Pair *_lst = TO_PAIR(lst);
+                    lst = _lst->car;
+                    delete _lst;
                 }
                 else
                 {

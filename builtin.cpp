@@ -954,7 +954,10 @@ BUILTIN_PROC_DEF(pair_set_car) {
     ARGS_EXACTLY_TWO;
     if (!args->car->is_pair_obj())
         throw TokenError("pair", RUN_ERR_WRONG_TYPE);
-    TO_PAIR(args->car)->car = TO_PAIR(args->cdr)->car;
+    Pair *p = TO_PAIR(args->car);
+    gc.expose(p->car);
+    p->car = TO_PAIR(args->cdr)->car;
+    gc.attach(p->car);
     return unspec_obj;
 }
 
@@ -962,7 +965,10 @@ BUILTIN_PROC_DEF(pair_set_cdr) {
     ARGS_EXACTLY_TWO;
     if (!args->car->is_pair_obj())
         throw TokenError("pair", RUN_ERR_WRONG_TYPE);
-    TO_PAIR(args->car)->cdr = TO_PAIR(args->cdr)->car;
+    Pair *p = TO_PAIR(args->car);
+    gc.expose(p->cdr);
+    p->cdr = TO_PAIR(args->cdr)->car;
+    gc.attach(p->cdr);
     return unspec_obj;
 }
 
