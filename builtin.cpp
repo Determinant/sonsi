@@ -1447,9 +1447,7 @@ BUILTIN_PROC_DEF(make_vector) {
     else 
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
 
-    VecObj *res = new VecObj();
-    res->resize(size_t(len));
-    res->fill(fill);
+    VecObj *res = new VecObj(size_t(len), fill);
     return res;
 }
 
@@ -1497,7 +1495,7 @@ BUILTIN_PROC_DEF(vector_ref) {
     ssize_t k = static_cast<IntNumObj*>(args->car)->get_i();
     if (k < 0)
         throw TokenError("a non-negative integer", RUN_ERR_WRONG_TYPE);
-    return vect->get_obj(k);
+    return vect->get(k);
 }
 
 BUILTIN_PROC_DEF(vector_length) {

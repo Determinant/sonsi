@@ -15,7 +15,7 @@ const int PREC = 16;
 extern EmptyList *empty_list;
 extern UnspecObj *unspec_obj;
 
-Pair::Pair(EvalObj *_car, EvalObj *_cdr) : EvalObj(CLS_PAIR_OBJ), 
+Pair::Pair(EvalObj *_car, EvalObj *_cdr) : EvalObj(CLS_PAIR_OBJ),
     car(_car), cdr(_cdr), next(NULL) {
 
     gc.attach(car);
@@ -50,9 +50,9 @@ SymObj::SymObj(const string &str) :
 
 OptObj::OptObj() : EvalObj(CLS_SIM_OBJ | CLS_OPT_OBJ) {}
 
-ProcObj::ProcObj(Pair *_body, Environment *_envt, EvalObj *_params) : 
+ProcObj::ProcObj(Pair *_body, Environment *_envt, EvalObj *_params) :
     OptObj(), body(_body), params(_params), envt(_envt) {
-    gc.attach(body); 
+    gc.attach(body);
     gc.attach(params);
     gc.attach(envt);
 }
@@ -162,34 +162,51 @@ ReprCons *CharObj::get_repr_cons() {
     return new ReprStr("#\\" + val);
 }
 
-VecObj::VecObj() : EvalObj(CLS_SIM_OBJ | CLS_VECT_OBJ) {}
+VecObj::VecObj(size_t size, EvalObj *fill) :
+    EvalObj(CLS_SIM_OBJ | CLS_VECT_OBJ) {
+    vec.resize(size);
+    for (size_t i = 0; i < size; i++)
+    {
+        vec[i] = fill;
+        gc.attach(fill);
+    }
+}
 
-EvalObj *VecObj::get_obj(size_t idx) {
+VecObj::~VecObj() {
+    for (EvalObjVec::iterator it = vec.begin();
+            it != vec.end(); it++)
+        gc.expose(*it);
+}
+
+EvalObj *VecObj::get(size_t idx) {
     return vec[idx];
 }
 
 void VecObj::set(size_t idx, EvalObj *obj) {
     if (idx >= get_size())
         throw NormalError(RUN_ERR_VALUE_OUT_OF_RANGE);
+    gc.expose(vec[idx]);
     vec[idx] = obj;
+    gc.attach(obj);
 }
 
 size_t VecObj::get_size() {
     return vec.end() - vec.begin();
 }
 
-void VecObj::resize(size_t new_size) {
-    vec.resize(new_size);
-}
-
 void VecObj::push_back(EvalObj *new_elem) {
+    gc.attach(new_elem);
     vec.push_back(new_elem);
 }
 
 void VecObj::fill(EvalObj *obj) {
     for (EvalObjVec::iterator it = vec.begin();
             it != vec.end(); it++)
+    {
+        gc.expose(*it);
         *it = obj;
+        gc.attach(obj);
+    }
 }
 
 ReprCons *VecObj::get_repr_cons() {
@@ -245,7 +262,7 @@ Environment::Environment(Environment *_prev_envt) : prev_envt(_prev_envt) {
 }
 
 Environment::~Environment() {
-    for (Str2EvalObj::iterator it = binding.begin(); 
+    for (Str2EvalObj::iterator it = binding.begin();
             it != binding.end(); it++)
         gc.expose(it->second);
     gc.expose(prev_envt);
@@ -263,7 +280,7 @@ bool Environment::add_binding(SymObj *sym_obj, EvalObj *eval_obj, bool def) {
         for (Environment *ptr = this; ptr; ptr = ptr->prev_envt)
         {
             bool has_key = ptr->binding.count(name);
-            if (has_key) 
+            if (has_key)
             {
                 EvalObj * &ref = ptr->binding[name];
                 gc.expose(ref);
@@ -275,7 +292,7 @@ bool Environment::add_binding(SymObj *sym_obj, EvalObj *eval_obj, bool def) {
         }
         return found;
     }
-    else 
+    else
     {
         if (!binding.count(name))
         {
@@ -368,7 +385,7 @@ VectReprCons::VectReprCons(VecObj *_ptr, EvalObj *_ori) :
     EvalObj *VectReprCons::next(const string &prev) {
         repr += prev;
 
-        if (idx && ptr->get_obj(idx - 1)->is_pair_obj())
+        if (idx && ptr->get(idx - 1)->is_pair_obj())
             repr += ")";
 
         if (idx == ptr->get_size())
@@ -379,15 +396,15 @@ VectReprCons::VectReprCons(VecObj *_ptr, EvalObj *_ori) :
         else
         {
             if (idx) repr += " ";
-            EvalObj *res = ptr->get_obj(idx++);
+            EvalObj *res = ptr->get(idx++);
             if (res->is_pair_obj())
                 repr += "(";
             return res;
         }
     }
 
-PromObj::PromObj(EvalObj *exp) : 
-    EvalObj(CLS_SIM_OBJ | CLS_PROM_OBJ), 
+PromObj::PromObj(EvalObj *exp) :
+    EvalObj(CLS_SIM_OBJ | CLS_PROM_OBJ),
     entry(new Pair(exp, empty_list)), mem(NULL) {
         gc.attach(entry);
         entry->next = NULL;
@@ -404,7 +421,7 @@ ReprCons *PromObj::get_repr_cons() { return new ReprStr("#<Promise>"); }
 
 EvalObj *PromObj::get_mem() { return mem; }
 
-void PromObj::feed_mem(EvalObj *res) { 
+void PromObj::feed_mem(EvalObj *res) {
     gc.attach(mem = res);
 }
 
@@ -652,7 +669,7 @@ RealNumObj *RealNumObj::convert(NumObj *obj) {
     switch (obj->level)
     {
         case NUM_LVL_REAL:
-            return new RealNumObj(*static_cast<RealNumObj*>(obj)); 
+            return new RealNumObj(*static_cast<RealNumObj*>(obj));
             break;
         case NUM_LVL_RAT:
             {
@@ -771,7 +788,7 @@ RatNumObj *RatNumObj::from_string(string repr) {
     }
 }
 
-RatNumObj::RatNumObj(const RatNumObj &ori) : 
+RatNumObj::RatNumObj(const RatNumObj &ori) :
     ExactNumObj(NUM_LVL_RAT), val(ori.val.get_mpq_t()) {}
 #endif
 
@@ -944,7 +961,7 @@ IntNumObj *IntNumObj::from_string(string repr) {
     }
 }
 int IntNumObj::get_i() { return val.get_si(); }
-IntNumObj::IntNumObj(const IntNumObj &ori) : 
+IntNumObj::IntNumObj(const IntNumObj &ori) :
     ExactNumObj(NUM_LVL_INT), val(ori.val.get_mpz_t()) {}
 #endif
 

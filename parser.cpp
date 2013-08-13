@@ -209,6 +209,7 @@ Pair *ASTGenerator::absorb(Tokenizor *tk) {
                 for (Pair *ptr = TO_PAIR(lst); ptr != empty_list; ptr = TO_PAIR(ptr->cdr))
                     vec->push_back(ptr->car);
                 *top_ptr++ = vec;
+                if (lst != empty_list) delete lst;
             }
         }
         else

@@ -296,17 +296,16 @@ class VecObj: public EvalObj {/*{{{*/
     public:
         EvalObjVec vec;
         /** Construct a vector object */
-        VecObj();
+        VecObj(size_t size = 0, EvalObj *fill = NULL);
+        ~VecObj();
         size_t get_size();
-        EvalObj *get_obj(size_t idx);
-        /** Resize the vector */
-        void resize(size_t new_size);
         /** Add a new element to the rear */
         void push_back(EvalObj *new_elem);
         /** Fill the vector with obj */
         void fill(EvalObj *obj);
         /** Replace an existing element in the vector */
         void set(size_t idx, EvalObj *obj);
+        EvalObj *get(size_t idx);
         ReprCons *get_repr_cons();
 };/*}}}*/
 
