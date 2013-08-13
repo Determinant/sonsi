@@ -48,13 +48,13 @@ void GarbageCollector::force() {
     }   // fetch the pending pointers in the list
     // clear the list
     pending_list = NULL; */
-    fprintf(stderr, "%ld\n", mapping.size());
     for (EvalObj2Int::iterator it = mapping.begin(); 
             it != mapping.end(); it++)
         if (it->second == 0) *r++ = it->first;
 
     collecting = true;
 #ifdef GC_INFO
+    fprintf(stderr, "%ld\n", mapping.size());
     size_t cnt = 0;
 #endif
 #ifdef GC_DEBUG
@@ -91,9 +91,10 @@ void GarbageCollector::force() {
         
 #endif
 #ifdef GC_DEBUG
-    for (EvalObj2Int::iterator it = mapping.begin();
+/*    for (EvalObj2Int::iterator it = mapping.begin();
             it != mapping.end(); it++)
         fprintf(stderr, "%llx => %s\n", (ull)it->first, it->first->ext_repr().c_str());
+        */
 #endif
     collecting = false;
 }
@@ -107,7 +108,7 @@ EvalObj *GarbageCollector::attach(EvalObj *ptr) {
     fprintf(stderr, "GC: 0x%llx attached. count = %lu \"%s\"\n", 
             (ull)ptr, mapping[ptr], ptr->ext_repr().c_str());
 #endif
-    if (mapping.size() > GC_QUEUE_SIZE >> 1)
+    if (mapping.size() > GC_QUEUE_SIZE >> 2)
         force();
     return ptr; // passing through
 }

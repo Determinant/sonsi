@@ -234,13 +234,14 @@ class NumObj: public EvalObj {/*{{{*/
          * Construct a general Numeric object
          */
         NumObj(NumLvl level, bool _exactness);
+        virtual NumObj *clone() const = 0;
         bool is_exact();
         virtual NumObj *convert(NumObj *r) = 0;
-        virtual NumObj *add(NumObj *r) = 0;
-        virtual NumObj *sub(NumObj *r) = 0;
-        virtual NumObj *mul(NumObj *r) = 0;
-        virtual NumObj *div(NumObj *r) = 0;
-        virtual NumObj *abs();
+        virtual void add(NumObj *r) = 0;
+        virtual void sub(NumObj *r) = 0;
+        virtual void mul(NumObj *r) = 0;
+        virtual void div(NumObj *r) = 0;
+        virtual void abs();
 
         virtual bool lt(NumObj *r);
         virtual bool gt(NumObj *r);
@@ -393,6 +394,7 @@ class CompNumObj: public InexactNumObj {/*{{{*/
 
         /** Construct a complex number */
         CompNumObj(double _real, double _imag);
+        NumObj *clone() const;
         /** Try to construct an CompNumObj object
          * @return NULL if failed
          */
@@ -400,10 +402,10 @@ class CompNumObj: public InexactNumObj {/*{{{*/
         /** Convert to a complex number from other numeric types */
         CompNumObj *convert(NumObj* obj);
 
-        NumObj *add(NumObj *r);
-        NumObj *sub(NumObj *r);
-        NumObj *mul(NumObj *r);
-        NumObj *div(NumObj *r);
+        void add(NumObj *r);
+        void sub(NumObj *r);
+        void mul(NumObj *r);
+        void div(NumObj *r);
         bool eq(NumObj *r);
         ReprCons *get_repr_cons();
 };/*}}}*/
@@ -416,6 +418,7 @@ class RealNumObj: public InexactNumObj {/*{{{*/
         double real;
         /** Construct a real number */
         RealNumObj(double _real);
+        NumObj *clone() const;
         /** Try to construct an RealNumObj object
          * @return NULL if failed
          */
@@ -423,11 +426,11 @@ class RealNumObj: public InexactNumObj {/*{{{*/
         /** Convert to a real number from other numeric types */
         RealNumObj *convert(NumObj* obj);
 
-        NumObj *add(NumObj *r);
-        NumObj *sub(NumObj *r);
-        NumObj *mul(NumObj *r);
-        NumObj *div(NumObj *r);
-        NumObj *abs();
+        void add(NumObj *r);
+        void sub(NumObj *r);
+        void mul(NumObj *r);
+        void div(NumObj *r);
+        void abs();
         bool lt(NumObj *r);
         bool gt(NumObj *r);
         bool le(NumObj *r);
@@ -458,7 +461,9 @@ class RatNumObj: public ExactNumObj {/*{{{*/
 #else
         mpq_class val;
         RatNumObj(mpq_class val);
+        RatNumObj(const RatNumObj &ori);
 #endif
+        NumObj *clone() const;
         /** Try to construct an RatNumObj object
          * @return NULL if failed
          */
@@ -466,11 +471,11 @@ class RatNumObj: public ExactNumObj {/*{{{*/
         /** Convert to a Rational number from other numeric types */
         RatNumObj *convert(NumObj* obj);
 
-        NumObj *add(NumObj *r);
-        NumObj *sub(NumObj *r);
-        NumObj *mul(NumObj *r);
-        NumObj *div(NumObj *r);
-        NumObj *abs();
+        void add(NumObj *r);
+        void sub(NumObj *r);
+        void mul(NumObj *r);
+        void div(NumObj *r);
+        void abs();
         bool lt(NumObj *r);
         bool gt(NumObj *r);
         bool le(NumObj *r);
@@ -494,7 +499,10 @@ class IntNumObj: public ExactNumObj {/*{{{*/
         /** Construct a integer */
         IntNumObj(mpz_class val);
         int get_i();
+        /** Copy constructor */
+        IntNumObj(const IntNumObj &ori);
 #endif
+        NumObj *clone() const;
         /** Try to construct an IntNumObj object
          * @return NULL if failed
          */
@@ -502,16 +510,17 @@ class IntNumObj: public ExactNumObj {/*{{{*/
         /** Convert to a integer from other numeric types */
         IntNumObj *convert(NumObj* obj);
 
-        NumObj *add(NumObj *r);
-        NumObj *sub(NumObj *r);
-        NumObj *mul(NumObj *r);
-        NumObj *div(NumObj *r);
-        NumObj *abs();
-        NumObj *mod(NumObj *r);
-        NumObj *rem(NumObj *r);
-        NumObj *quo(NumObj *r);
-        NumObj *gcd(NumObj *r);
-        NumObj *lcm(NumObj *r);
+        void add(NumObj *r);
+        void sub(NumObj *r);
+        void mul(NumObj *r);
+        void div(NumObj *r);
+        void abs();
+        void mod(NumObj *r);
+        void rem(NumObj *r);
+        void quo(NumObj *r);
+        void gcd(NumObj *r);
+        void lcm(NumObj *r);
+
         bool lt(NumObj *r);
         bool gt(NumObj *r);
         bool le(NumObj *r);

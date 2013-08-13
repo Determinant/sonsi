@@ -333,6 +333,7 @@ Pair *SpecialOptEval::call(Pair *args, Environment * &envt,
     Pair *ret_addr = ret_info->addr;
     if (ret_info->state)
     {
+        gc.expose(ret_info->state);     // Exec done
         delete *top_ptr;
         *top_ptr++ = gc.attach(TO_PAIR(args->cdr)->car);
         gc.expose(args);
@@ -343,6 +344,7 @@ Pair *SpecialOptEval::call(Pair *args, Environment * &envt,
         gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
         top_ptr++;
         ret_info->state = TO_PAIR(args->cdr);
+        gc.attach(ret_info->state);     // Or it will be released
         ret_info->state->next = NULL;
         gc.expose(args);
         return ret_info->state;
@@ -620,7 +622,7 @@ BUILTIN_PROC_DEF(pair_cdr) {
 
 
 BUILTIN_PROC_DEF(make_list) {
-    return args;
+    return gc.attach(args);     // Or it will be GCed
 }
 
 BUILTIN_PROC_DEF(num_add) {
@@ -632,11 +634,16 @@ BUILTIN_PROC_DEF(num_add) {
             throw TokenError("a number", RUN_ERR_WRONG_TYPE);
         opr = static_cast<NumObj*>(args->car);
         NumObj *_res = res;
-        if (_res->level < opr->level)
-            opr = _res->convert(opr);
+        if (res->level < opr->level)
+        {
+            res->add(opr = res->convert(opr));
+            delete opr;
+        }
         else
-            _res =  opr->convert(_res);
-        res = _res->add(opr);
+        {
+            (res = opr->convert(res))->add(opr);
+            delete _res;
+        }
     }
     return res;
 }
@@ -647,12 +654,15 @@ BUILTIN_PROC_DEF(num_sub) {
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
 
     NumObj *res = static_cast<NumObj*>(args->car), *opr;
+    res = res->clone();
     args = TO_PAIR(args->cdr);
     if (args == empty_list)
     {
-        IntNumObj _zero(0);
-        NumObj *zero = res->convert(&_zero);
-        return zero->sub(res);
+        IntNumObj *_zero = new IntNumObj(0);
+        NumObj *zero = res->convert(_zero);
+        if (zero != _zero) delete _zero;
+        zero->sub(res);
+        return zero;
     }
     for (; args != empty_list; args = TO_PAIR(args->cdr))
     {
@@ -661,15 +671,19 @@ BUILTIN_PROC_DEF(num_sub) {
         opr = static_cast<NumObj*>(args->car);
         // upper type conversion
         NumObj *_res = res;
-        if (_res->level < opr->level)
-            opr = _res->convert(opr);
+        if (res->level < opr->level)
+        {
+            res->sub(opr = res->convert(opr));
+            delete opr;
+        }
         else
-            _res =  opr->convert(_res);
-        res = _res->sub(opr);
+        {
+            (res = opr->convert(res))->sub(opr);
+            delete _res;
+        }
     }
     return res;
 }
-
 
 BUILTIN_PROC_DEF(num_mul) {
 //    ARGS_AT_LEAST_ONE;
@@ -680,11 +694,16 @@ BUILTIN_PROC_DEF(num_mul) {
             throw TokenError("a number", RUN_ERR_WRONG_TYPE);
         opr = static_cast<NumObj*>(args->car);
         NumObj *_res = res;
-        if (_res->level < opr->level)
-            opr = _res->convert(opr);
+        if (res->level < opr->level)
+        {
+            res->mul(opr = res->convert(opr));
+            delete opr;
+        }
         else
-            _res =  opr->convert(_res);
-        res = _res->mul(opr);
+        {
+            (res = opr->convert(res))->mul(opr);
+            delete _res;
+        }
     }
     return res;
 }
@@ -693,13 +712,20 @@ BUILTIN_PROC_DEF(num_div) {
     ARGS_AT_LEAST_ONE;
     if (!args->car->is_num_obj())
         throw TokenError("a number", RUN_ERR_WRONG_TYPE);
+
     NumObj *res = static_cast<NumObj*>(args->car), *opr;
+    if (res->level > NUM_LVL_RAT)
+        res = new RatNumObj(static_cast<IntNumObj*>(res)->val);
+    else res = res->clone();
+
     args = TO_PAIR(args->cdr);
     if (args == empty_list)
     {
-        IntNumObj _one(1);
-        NumObj *one = res->convert(&_one);
-        return one->div(res);
+        IntNumObj *_one = new IntNumObj(1);
+        NumObj *one = res->convert(_one);
+        if (one != _one) delete _one;
+        one->div(res);
+        return one;
     }
     for (; args != empty_list; args = TO_PAIR(args->cdr))
     {
@@ -708,14 +734,20 @@ BUILTIN_PROC_DEF(num_div) {
         opr = static_cast<NumObj*>(args->car);
         // upper type conversion
         NumObj *_res = res;
-        if (_res->level < opr->level)
-            opr = _res->convert(opr);
+        if (res->level < opr->level)
+        {
+            res->div(opr = res->convert(opr));
+            delete opr;
+        }
         else
-            _res =  opr->convert(_res);
-        res = _res->div(opr);
+        {
+            (res = opr->convert(res))->div(opr);
+            delete _res;
+        }
     }
     return res;
 }
+
 
 BUILTIN_PROC_DEF(num_le) {
     if (args == empty_list)
@@ -733,11 +765,60 @@ BUILTIN_PROC_DEF(num_le) {
         opr = static_cast<NumObj*>(args->car);
         // upper type conversion
         if (last->level < opr->level)
-            opr = last->convert(opr);
+        {
+            if (!last->le(opr = last->convert(opr)))
+            {
+                delete opr;
+                return new BoolObj(false);
+            }
+            else delete opr;
+        }
         else
-            last = opr->convert(last);
-        if (!last->le(opr))
-            return new BoolObj(false);
+        {
+            if (!(last = opr->convert(last))->le(opr))
+            {
+                delete last;
+                return new BoolObj(false);
+            }
+            else delete last;
+        }
+    }
+    return new BoolObj(true);
+}
+
+BUILTIN_PROC_DEF(num_lt) {
+    if (args == empty_list)
+        return new BoolObj(true);
+    // zero arguments
+    if (!args->car->is_num_obj())
+        throw TokenError("a number", RUN_ERR_WRONG_TYPE);
+
+    NumObj *last = static_cast<NumObj*>(args->car), *opr;
+    args = TO_PAIR(args->cdr);
+    for (; args != empty_list; args = TO_PAIR(args->cdr), last = opr)
+    {
+        if (!args->car->is_num_obj())        // not a number
+            throw TokenError("a number", RUN_ERR_WRONG_TYPE);
+        opr = static_cast<NumObj*>(args->car);
+        // upper type conversion
+        if (last->level < opr->level)
+        {
+            if (!last->lt(opr = last->convert(opr)))
+            {
+                delete opr;
+                return new BoolObj(false);
+            }
+            else delete opr;
+        }
+        else
+        {
+            if (!(last = opr->convert(last))->lt(opr))
+            {
+                delete last;
+                return new BoolObj(false);
+            }
+            else delete last;
+        }
     }
     return new BoolObj(true);
 }
@@ -758,37 +839,23 @@ BUILTIN_PROC_DEF(num_ge) {
         opr = static_cast<NumObj*>(args->car);
         // upper type conversion
         if (last->level < opr->level)
-            opr = last->convert(opr);
+        {
+            if (!last->ge(opr = last->convert(opr)))
+            {
+                delete opr;
+                return new BoolObj(false);
+            }
+            else delete opr;
+        }
         else
-            last = opr->convert(last);
-        if (!last->ge(opr))
-            return new BoolObj(false);
-    }
-    return new BoolObj(true);
-}
-
-
-BUILTIN_PROC_DEF(num_lt) {
-    if (args == empty_list)
-        return new BoolObj(true);
-    // zero arguments
-    if (!args->car->is_num_obj())
-        throw TokenError("a number", RUN_ERR_WRONG_TYPE);
-
-    NumObj *last = static_cast<NumObj*>(args->car), *opr;
-    args = TO_PAIR(args->cdr);
-    for (; args != empty_list; args = TO_PAIR(args->cdr), last = opr)
-    {
-        if (!args->car->is_num_obj())        // not a number
-            throw TokenError("a number", RUN_ERR_WRONG_TYPE);
-        opr = static_cast<NumObj*>(args->car);
-        // upper type conversion
-        if (last->level < opr->level)
-            opr = last->convert(opr);
-        else
-            last = opr->convert(last);
-        if (!last->lt(opr))
-            return new BoolObj(false);
+        {
+            if (!(last = opr->convert(last))->ge(opr))
+            {
+                delete last;
+                return new BoolObj(false);
+            }
+            else delete last;
+        }
     }
     return new BoolObj(true);
 }
@@ -809,11 +876,23 @@ BUILTIN_PROC_DEF(num_gt) {
         opr = static_cast<NumObj*>(args->car);
         // upper type conversion
         if (last->level < opr->level)
-            opr = last->convert(opr);
+        {
+            if (!last->gt(opr = last->convert(opr)))
+            {
+                delete opr;
+                return new BoolObj(false);
+            }
+            else delete opr;
+        }
         else
-            last = opr->convert(last);
-        if (!last->gt(opr))
-            return new BoolObj(false);
+        {
+            if (!(last = opr->convert(last))->gt(opr))
+            {
+                delete last;
+                return new BoolObj(false);
+            }
+            else delete last;
+        }
     }
     return new BoolObj(true);
 }
@@ -834,14 +913,27 @@ BUILTIN_PROC_DEF(num_eq) {
         opr = static_cast<NumObj*>(args->car);
         // upper type conversion
         if (last->level < opr->level)
-            opr = last->convert(opr);
+        {
+            if (!last->eq(opr = last->convert(opr)))
+            {
+                delete opr;
+                return new BoolObj(false);
+            }
+            else delete opr;
+        }
         else
-            last = opr->convert(last);
-        if (!last->eq(opr))
-            return new BoolObj(false);
+        {
+            if (!(last = opr->convert(last))->eq(opr))
+            {
+                delete last;
+                return new BoolObj(false);
+            }
+            else delete last;
+        }
     }
     return new BoolObj(true);
 }
+
 
 BUILTIN_PROC_DEF(bool_not) {
     ARGS_EXACTLY_ONE;
@@ -1206,7 +1298,9 @@ BUILTIN_PROC_DEF(is_integer) {
 BUILTIN_PROC_DEF(num_abs) {
     ARGS_EXACTLY_ONE;
     CHECK_NUMBER(args->car);
-    return static_cast<NumObj*>(args->car)->abs();
+    NumObj* num = static_cast<NumObj*>(args->car)->clone();
+    num->abs();
+    return num;
 }
 
 BUILTIN_PROC_DEF(num_mod) {
@@ -1217,7 +1311,9 @@ BUILTIN_PROC_DEF(num_mod) {
     NumObj* b = static_cast<NumObj*>(TO_PAIR(args->cdr)->car);
     CHECK_INT(a);
     CHECK_INT(b);
-    return static_cast<IntNumObj*>(a)->mod(b);
+    NumObj* res = a->clone();
+    static_cast<IntNumObj*>(res)->mod(b);
+    return res;
 }
 
 BUILTIN_PROC_DEF(num_rem) {
@@ -1228,7 +1324,9 @@ BUILTIN_PROC_DEF(num_rem) {
     NumObj* b = static_cast<NumObj*>(TO_PAIR(args->cdr)->car);
     CHECK_INT(a);
     CHECK_INT(b);
-    return static_cast<IntNumObj*>(a)->rem(b);
+    NumObj* res = a->clone();
+    static_cast<IntNumObj*>(res)->rem(b);
+    return res;
 }
 
 BUILTIN_PROC_DEF(num_quo) {
@@ -1239,12 +1337,14 @@ BUILTIN_PROC_DEF(num_quo) {
     NumObj* b = static_cast<NumObj*>(TO_PAIR(args->cdr)->car);
     CHECK_INT(a);
     CHECK_INT(b);
-    return static_cast<IntNumObj*>(a)->quo(b);
+    NumObj* res = a->clone();
+    static_cast<IntNumObj*>(res)->div(b);
+    return res;
 }
 
 BUILTIN_PROC_DEF(num_gcd) {
 //    ARGS_AT_LEAST_ONE;
-    NumObj *res = new IntNumObj(0);
+    IntNumObj *res = new IntNumObj(0);
     IntNumObj *opr; 
     for (;args != empty_list; args = TO_PAIR(args->cdr))
     {
@@ -1252,14 +1352,14 @@ BUILTIN_PROC_DEF(num_gcd) {
         CHECK_INT(static_cast<NumObj*>(args->car));
 
         opr = static_cast<IntNumObj*>(args->car);
-        res = opr->gcd(res);
+        res->gcd(opr);
     }
     return res;
 }
 
 BUILTIN_PROC_DEF(num_lcm) {
 //    ARGS_AT_LEAST_ONE;
-    NumObj *res = new IntNumObj(1);
+    IntNumObj *res = new IntNumObj(1);
     IntNumObj *opr; 
     for (;args != empty_list; args = TO_PAIR(args->cdr))
     {
@@ -1267,7 +1367,7 @@ BUILTIN_PROC_DEF(num_lcm) {
         CHECK_INT(static_cast<NumObj*>(args->car));
 
         opr = static_cast<IntNumObj*>(args->car);
-        res = opr->lcm(res);
+        res->lcm(opr);
     }
     return res;
 }

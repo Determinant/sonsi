@@ -521,11 +521,16 @@ CompNumObj::CompNumObj(double _real, double _imag) :
         return new CompNumObj(real, imag);
     }
 
+NumObj *CompNumObj::clone() const {
+    return new CompNumObj(*this);
+}
+
 CompNumObj *CompNumObj::convert(NumObj *obj) {
     switch (obj->level)
     {
         case NUM_LVL_COMP :
-            return static_cast<CompNumObj*>(obj); break;
+            return new CompNumObj(*static_cast<CompNumObj*>(obj));
+            break;
         case NUM_LVL_REAL :
             return new CompNumObj(static_cast<RealNumObj*>(obj)->real, 0);
             break;
@@ -554,30 +559,32 @@ CompNumObj *CompNumObj::convert(NumObj *obj) {
 #define C (r->real)
 #define D (r->imag)
 
-NumObj *CompNumObj::add(NumObj *_r) {
+void CompNumObj::add(NumObj *_r) {
     CompNumObj *r = static_cast<CompNumObj*>(_r);
-    return new CompNumObj(A + C, B + D);
+    real += C;
+    imag += D;
 }
 
-NumObj *CompNumObj::sub(NumObj *_r) {
+void CompNumObj::sub(NumObj *_r) {
     CompNumObj *r = static_cast<CompNumObj*>(_r);
-    return new CompNumObj(A - C, B - D);
+    real -= C;
+    imag -= D;
 }
 
-NumObj *CompNumObj::mul(NumObj *_r) {
+void CompNumObj::mul(NumObj *_r) {
     CompNumObj *r = static_cast<CompNumObj*>(_r);
-    return new CompNumObj(A * C - B * D,
-            B * C + A * D);
+    A = A * C - B * D;
+    B = B * C + A * D;
 }
 
-NumObj *CompNumObj::div(NumObj *_r) {
+void CompNumObj::div(NumObj *_r) {
     CompNumObj *r = static_cast<CompNumObj*>(_r);
     double f = C * C + D * D;
     if (f == 0)
         throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
     f = 1 / f;
-    return new CompNumObj((A * C + B * D) * f,
-            (B * C - A * D) * f);
+    A = (A * C + B * D) * f,
+    B = (B * C - A * D) * f;
 }
 
 bool NumObj::lt(NumObj *_r) {
@@ -596,7 +603,7 @@ bool NumObj::ge(NumObj *_r) {
     throw TokenError("a comparable number", RUN_ERR_WRONG_TYPE);
 }
 
-NumObj *NumObj::abs() {
+void NumObj::abs() {
     throw TokenError("a real number", RUN_ERR_WRONG_TYPE);
 }
 
@@ -618,6 +625,10 @@ ReprCons *CompNumObj::get_repr_cons() {
 
 RealNumObj::RealNumObj(double _real) : InexactNumObj(NUM_LVL_REAL), real(_real) {}
 
+NumObj *RealNumObj::clone() const {
+    return new RealNumObj(*this);
+}
+
 RealNumObj *RealNumObj::from_string(string repr) {
     bool flag;
     double real = str_to_double(repr, flag);
@@ -629,7 +640,8 @@ RealNumObj *RealNumObj::convert(NumObj *obj) {
     switch (obj->level)
     {
         case NUM_LVL_REAL:
-            return static_cast<RealNumObj*>(obj); break;
+            return new RealNumObj(*static_cast<RealNumObj*>(obj)); 
+            break;
         case NUM_LVL_RAT:
             {
                 RatNumObj *rat = static_cast<RatNumObj*>(obj);
@@ -651,24 +663,24 @@ RealNumObj *RealNumObj::convert(NumObj *obj) {
     throw NormalError(INT_ERR);
 }
 
-NumObj *RealNumObj::add(NumObj *_r) {
-    return new RealNumObj(real + static_cast<RealNumObj*>(_r)->real);
+void RealNumObj::add(NumObj *_r) {
+    real += static_cast<RealNumObj*>(_r)->real;
 }
 
-NumObj *RealNumObj::sub(NumObj *_r) {
-    return new RealNumObj(real - static_cast<RealNumObj*>(_r)->real);
+void RealNumObj::sub(NumObj *_r) {
+    real -= static_cast<RealNumObj*>(_r)->real;
 }
 
-NumObj *RealNumObj::mul(NumObj *_r) {
-    return new RealNumObj(real * static_cast<RealNumObj*>(_r)->real);
+void RealNumObj::mul(NumObj *_r) {
+    real *= static_cast<RealNumObj*>(_r)->real;
 }
 
-NumObj *RealNumObj::div(NumObj *_r) {
-    return new RealNumObj(real / static_cast<RealNumObj*>(_r)->real);
+void RealNumObj::div(NumObj *_r) {
+    real /= static_cast<RealNumObj*>(_r)->real;
 }
 
-NumObj *RealNumObj::abs() {
-    return new RealNumObj(fabs(real));
+void RealNumObj::abs() {
+    real = fabs(real);
 }
 
 bool RealNumObj::eq(NumObj *_r) {
@@ -724,10 +736,13 @@ RatNumObj *RatNumObj::from_string(string repr) {
     return new RatNumObj(a, b);
 }
 #else
-RatNumObj::RatNumObj(mpq_class _val) :
-    ExactNumObj(NUM_LVL_RAT), val(_val) {
+RatNumObj::RatNumObj(mpq_class _val) : ExactNumObj(NUM_LVL_RAT), val(_val) {
         val.canonicalize();
-    }
+}
+
+NumObj *RatNumObj::clone() const {
+    return new RatNumObj(*this);
+}
 
 RatNumObj *RatNumObj::from_string(string repr) {
     try
@@ -743,6 +758,9 @@ RatNumObj *RatNumObj::from_string(string repr) {
         return NULL;
     }
 }
+
+RatNumObj::RatNumObj(const RatNumObj &ori) : 
+    ExactNumObj(NUM_LVL_RAT), val(ori.val.get_mpq_t()) {}
 #endif
 
 
@@ -750,7 +768,8 @@ RatNumObj *RatNumObj::convert(NumObj *obj) {
     switch (obj->level)
     {
         case NUM_LVL_RAT:
-            return static_cast<RatNumObj*>(obj); break;
+            return new RatNumObj(*static_cast<RatNumObj*>(obj));
+            break;
         case NUM_LVL_INT:
 #ifndef GMP_SUPPORT
             return new RatNumObj(static_cast<IntNumObj*>(obj)->val, 1);
@@ -768,55 +787,57 @@ RatNumObj *RatNumObj::convert(NumObj *obj) {
 #define C (r->a)
 #define D (r->b)
 
-NumObj *RatNumObj::add(NumObj *_r) {
+void RatNumObj::add(NumObj *_r) {
     RatNumObj *r = static_cast<RatNumObj*>(_r);
 #ifndef GMP_SUPPORT
-    int na = A * D + B * C, nb = B * D;
+    A = A * D + B * C;
+    B = B * D;
     int g = gcd(na, nb);
-    na /= g;
-    nb /= g;
-    return new RatNumObj(na, nb);
+    A /= g;
+    B /= g;
 #else
-    return new RatNumObj(val + r->val);
+    val += r->val;
 #endif
 }
 
-NumObj *RatNumObj::sub(NumObj *_r) {
+void RatNumObj::sub(NumObj *_r) {
     RatNumObj *r = static_cast<RatNumObj*>(_r);
 #ifndef GMP_SUPPORT
-    int na = A * D - B * C, nb = B * D;
+    A = A * D - B * C;
+    B = B * D;
     int g = gcd(na, nb);
-    na /= g;
-    nb /= g;
-    return new RatNumObj(na, nb);
+    A /= g;
+    B /= g;
 #else
-    return new RatNumObj(val - r->val);
+    val -= r->val;
 #endif
 }
 
-NumObj *RatNumObj::mul(NumObj *_r) {
+void RatNumObj::mul(NumObj *_r) {
     RatNumObj *r = static_cast<RatNumObj*>(_r);
 #ifndef GMP_SUPPORT
-    int na = A * C, nb = B * D;
+    A = A * C;
+    B = B * D;
     int g = gcd(na, nb);
-    na /= g;
-    nb /= g;
-    return new RatNumObj(na, nb);
+    A /= g;
+    B /= g;
 #else
-    return new RatNumObj(val * r->val);
+    val *= r->val;
 #endif
 }
 
-NumObj *RatNumObj::div(NumObj *_r) {
+void RatNumObj::div(NumObj *_r) {
     RatNumObj *r = static_cast<RatNumObj*>(_r);
 #ifndef GMP_SUPPORT
-    int na = A * D, nb = B * C;
+    A = A * D;
+    B = B * C;
     int g = gcd(na, nb);
-    na /= g;
-    nb /= g;
-    return new RatNumObj(na, nb);
+    A /= g;
+    B /= g;
 #else
-    return new RatNumObj(val / r->val);
+    if (r->val == 0)
+        throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
+    val /= r->val;
 #endif
 }
 
@@ -866,11 +887,11 @@ bool RatNumObj::eq(NumObj *_r) {
 #endif
 }
 
-NumObj *RatNumObj::abs() {
+void RatNumObj::abs() {
 #ifndef GMP_SUPPORT
-    return new RatNumObj((a > 0 ? a : -a), b);
+    if (a < 0) a = -a;
 #else
-    return new RatNumObj(std::abs(val));
+    val = ::abs(val);
 #endif
 }
 
@@ -885,6 +906,7 @@ ReprCons *RatNumObj::get_repr_cons() {
 
 #ifndef GMP_SUPPORT
 IntNumObj::IntNumObj(int _val) : ExactNumObj(NUM_LVL_INT), val(_val) {}
+
 IntNumObj *IntNumObj::from_string(string repr) {
     int val = 0;
     for (size_t i = 0; i < repr.length(); i++)
@@ -910,75 +932,71 @@ IntNumObj *IntNumObj::from_string(string repr) {
     }
 }
 int IntNumObj::get_i() { return val.get_si(); }
+IntNumObj::IntNumObj(const IntNumObj &ori) : 
+    ExactNumObj(NUM_LVL_INT), val(ori.val.get_mpz_t()) {}
 #endif
+
+
+NumObj *IntNumObj::clone() const {
+    return new IntNumObj(*this);
+}
 
 IntNumObj *IntNumObj::convert(NumObj *obj) {
     switch (obj->level)
     {
         case NUM_LVL_INT :
-            return static_cast<IntNumObj*>(obj);
+            return new IntNumObj(*static_cast<IntNumObj*>(obj));
         default:
             throw NormalError(INT_ERR);
     }
 }
 
-NumObj *IntNumObj::add(NumObj *_r) {
-    return new IntNumObj(val + static_cast<IntNumObj*>(_r)->val);
+void IntNumObj::add(NumObj *_r) {
+    val += static_cast<IntNumObj*>(_r)->val;
 }
 
-NumObj *IntNumObj::sub(NumObj *_r) {
-    return new IntNumObj(val - static_cast<IntNumObj*>(_r)->val);
+void IntNumObj::sub(NumObj *_r) {
+    val -= static_cast<IntNumObj*>(_r)->val;
 }
 
-NumObj *IntNumObj::mul(NumObj *_r) {
-    return new IntNumObj(val * static_cast<IntNumObj*>(_r)->val);
+void IntNumObj::mul(NumObj *_r) {
+    val *= static_cast<IntNumObj*>(_r)->val;
 }
 
-NumObj *IntNumObj::div(NumObj *_r) {
-#ifndef GMP_SUPPORT
-    return new RatNumObj(val, static_cast<IntNumObj*>(_r)->val);
-#else
-    mpz_class d(static_cast<IntNumObj*>(_r)->val);
-    if (d == 0) throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
-    return new RatNumObj(mpq_class(val, d));
-#endif
+void IntNumObj::abs() {
+    val = ::abs(val);
 }
 
-NumObj *IntNumObj::abs() {
-    return new IntNumObj(std::abs(val));
-}
-
-NumObj *IntNumObj::rem(NumObj *_r) {
+void IntNumObj::rem(NumObj *_r) {
     const mpz_class &rval(static_cast<IntNumObj*>(_r)->val);
     if (rval == 0) throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
-    return new IntNumObj(val % rval);
+    val %= rval;
 }
 
-NumObj *IntNumObj::mod(NumObj *_r) {
+void IntNumObj::mod(NumObj *_r) {
     const mpz_class &rval = static_cast<IntNumObj*>(_r)->val;
     if (rval == 0) throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
-    mpz_class ret = val % rval;
-    if (ret != 0 && sgn(ret) != sgn(rval))
-        ret = ret + rval;
-    return new IntNumObj(ret);
+    val %= rval;
+    if (val != 0 && sgn(val) != sgn(rval))
+        val += rval;
 }
 
-NumObj *IntNumObj::quo(NumObj *_r) {
+void IntNumObj::div(NumObj *_r) {
     const mpz_class &rval = static_cast<IntNumObj*>(_r)->val;
     if (rval == 0) throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
-    return new IntNumObj(val / rval);
+    val /= rval;
 }
 
-NumObj *IntNumObj::gcd(NumObj *_r) {
+void IntNumObj::gcd(NumObj *_r) {
     mpz_t g;
     mpz_gcd(g, val.get_mpz_t(), static_cast<IntNumObj*>(_r)->val.get_mpz_t());
-    return new IntNumObj(mpz_class(g));
+    val = mpz_class(g);
 }
 
-NumObj *IntNumObj::lcm(NumObj *_r) {
+void IntNumObj::lcm(NumObj *_r) {
     mpz_t l;
     mpz_lcm(l, val.get_mpz_t(), static_cast<IntNumObj*>(_r)->val.get_mpz_t());
-    return new IntNumObj(mpz_class(l));
+    val = mpz_class(l);
 }
 
 bool IntNumObj::lt(NumObj *_r) {
