@@ -320,6 +320,7 @@ class PromObj: public EvalObj {/*{{{*/
         EvalObj *mem;
     public:
         PromObj(EvalObj *exp);
+        ~PromObj();
         Pair *get_entry();
         EvalObj *get_mem();
         void feed_mem(EvalObj *res);

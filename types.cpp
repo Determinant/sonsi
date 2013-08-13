@@ -389,8 +389,14 @@ VectReprCons::VectReprCons(VecObj *_ptr, EvalObj *_ori) :
 PromObj::PromObj(EvalObj *exp) : 
     EvalObj(CLS_SIM_OBJ | CLS_PROM_OBJ), 
     entry(new Pair(exp, empty_list)), mem(NULL) {
+        gc.attach(entry);
         entry->next = NULL;
     }
+
+PromObj::~PromObj() {
+    gc.expose(entry);
+    gc.expose(mem);
+}
 
 Pair *PromObj::get_entry() { return entry; }
 
@@ -398,7 +404,9 @@ ReprCons *PromObj::get_repr_cons() { return new ReprStr("#<Promise>"); }
 
 EvalObj *PromObj::get_mem() { return mem; }
 
-void PromObj::feed_mem(EvalObj *res) { mem = res; }
+void PromObj::feed_mem(EvalObj *res) { 
+    gc.attach(mem = res);
+}
 
 
 string double_to_str(double val, bool force_sign = false) {
@@ -573,8 +581,10 @@ void CompNumObj::sub(NumObj *_r) {
 
 void CompNumObj::mul(NumObj *_r) {
     CompNumObj *r = static_cast<CompNumObj*>(_r);
-    A = A * C - B * D;
-    B = B * C + A * D;
+    double ra = A * C - B * D;
+    double rb = B * C + A * D;
+    A = ra;
+    B = rb;
 }
 
 void CompNumObj::div(NumObj *_r) {
@@ -583,8 +593,10 @@ void CompNumObj::div(NumObj *_r) {
     if (f == 0)
         throw NormalError(RUN_ERR_NUMERIC_OVERFLOW);
     f = 1 / f;
-    A = (A * C + B * D) * f,
-    B = (B * C - A * D) * f;
+    double ra = (A * C + B * D) * f;
+    double rb = (B * C - A * D) * f;
+    A = ra;
+    B = rb;
 }
 
 bool NumObj::lt(NumObj *_r) {

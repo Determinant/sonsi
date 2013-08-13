@@ -2,7 +2,7 @@ sonsi: main.o parser.o builtin.o model.o eval.o exc.o consts.o types.o gc.o
 	g++ -o sonsi $^ -pg -lgmp
 
 .cpp.o:
-	g++ $< -c -O2 -DGMP_SUPPORT -Wall
+	g++ $< -c -g -DGMP_SUPPORT -Wall -O2
 
 clean:
 	rm -f *.o
