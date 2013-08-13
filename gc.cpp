@@ -66,6 +66,8 @@ void GarbageCollector::force() {
     {
 #ifdef GC_DEBUG
         fprintf(stderr, "GC: !!! destroying space 0x%llx. \n", (ull)*l);
+#endif
+#ifdef GC_INFO
         cnt++;
 #endif
         delete *l;
