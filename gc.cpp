@@ -65,7 +65,7 @@ void GarbageCollector::force() {
     for (; l != r; l++)
     {
 #ifdef GC_DEBUG
-        fprintf(stderr, "GC: !!! destroying space 0x%llx. \n", (ull)*l);
+        fprintf(stderr, "GC: !!! destroying space 0x%llx: %s. \n", (ull)*l, (*l)->ext_repr().c_str());
 #endif
 #ifdef GC_INFO
         cnt++;
@@ -114,7 +114,7 @@ EvalObj *GarbageCollector::attach(EvalObj *ptr) {
 
 void GarbageCollector::cycle_resolve() {
     if (mapping.size() < GC_CYC_THRESHOLD)
-        return;
+        return; 
     EvalObjSet visited;
     Container **clptr = cyc_list;
     for (EvalObj2Int::iterator it = mapping.begin();

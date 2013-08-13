@@ -109,5 +109,6 @@ int main(int argc, char **argv) {
             fprintf(stderr, "An error occured: %s\n", e.get_msg().c_str());
         }
         gc.force();
+        gc.cycle_resolve();
     }
 }

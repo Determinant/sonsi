@@ -139,7 +139,7 @@ class Continuation;
  */
 class OptObj: public Container {/*{{{*/
     public:
-        OptObj();
+        OptObj(int otype = 0);
         /**
          * The function is called when an operation is needed.
          * @param args The argument list (the first one is the opt itself)
@@ -300,7 +300,7 @@ class CharObj: public EvalObj {/*{{{*/
  * @class VecObj
  * Vector support (currently a wrapper of STL vector)
  */
-class VecObj: public EvalObj {/*{{{*/
+class VecObj: public Container {/*{{{*/
     public:
         EvalObjVec vec;
         /** Construct a vector object */
@@ -315,13 +315,16 @@ class VecObj: public EvalObj {/*{{{*/
         void set(size_t idx, EvalObj *obj);
         EvalObj *get(size_t idx);
         ReprCons *get_repr_cons();
+
+        void gc_decrement();
+        void gc_trigger(EvalObj ** &tail, EvalObjSet &visited);
 };/*}}}*/
 
 /**
  * @class PromObj
  * Promise support (partial)
  */
-class PromObj: public EvalObj {/*{{{*/
+class PromObj: public Container {/*{{{*/
     private:
         Pair *entry;
         EvalObj *mem;
@@ -332,6 +335,9 @@ class PromObj: public EvalObj {/*{{{*/
         EvalObj *get_mem();
         void feed_mem(EvalObj *res);
         ReprCons *get_repr_cons();
+
+        void gc_decrement();
+        void gc_trigger(EvalObj ** &tail, EvalObjSet &visited);
 };/*}}}*/
 
 /** @class Environment

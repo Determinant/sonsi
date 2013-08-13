@@ -109,7 +109,7 @@ class Container: public EvalObj {
     public:
     bool keep;
     size_t gc_refs;
-    Container(int otype = 0);
+    Container(int otype = 0, bool override = false);
     virtual void gc_decrement() = 0;
     virtual void gc_trigger(EvalObj ** &tail, EvalObjSet &visited) = 0;
 };

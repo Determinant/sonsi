@@ -67,3 +67,9 @@
   res)
 
 (display (queen 8))
+
+(define shl '())
+(define shr '())
+(define empty-bits '())
+(define res '())
+(define queen '())

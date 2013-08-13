@@ -137,5 +137,5 @@ string EvalObj::ext_repr() {
 RetAddr::RetAddr(Pair *_addr, Pair *_state) : 
     FrameObj(CLS_RET_ADDR), addr(_addr), state(_state) {}
 
-Container::Container(int otype) : EvalObj(otype | CLS_CONTAINER) {
-}
+Container::Container(int otype, bool override) : 
+    EvalObj(otype | (override ? 0 : CLS_CONTAINER)) {}

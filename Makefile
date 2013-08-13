@@ -4,6 +4,7 @@ BUILD_DIR = build
 all: gc_debug
 debug: CXX += -DGC_INFO -g -pg
 gc_debug: CXX += -DGC_INFO -DGC_DEBUG -g -pg
+release: CXX += -O2
 
 release: $(BUILD_DIR) $(BUILD_DIR)/sonsi
 debug: $(BUILD_DIR) $(BUILD_DIR)/sonsi

@@ -57,13 +57,13 @@ SymObj::SymObj(const string &str) :
         return new ReprStr(val);
     }
 
-OptObj::OptObj() : Container(CLS_SIM_OBJ | CLS_OPT_OBJ) {}
+OptObj::OptObj(int otype) : Container(otype | CLS_SIM_OBJ | CLS_OPT_OBJ, true) {}
 
 void OptObj::gc_decrement() {}
 void OptObj::gc_trigger(EvalObj ** &tail, EvalObjSet &visited) {}
 
 ProcObj::ProcObj(Pair *_body, Environment *_envt, EvalObj *_params) :
-    OptObj(), body(_body), params(_params), envt(_envt) {
+    OptObj(CLS_CONTAINER), body(_body), params(_params), envt(_envt) {
     gc.attach(body);
     gc.attach(params);
     gc.attach(envt);
@@ -187,7 +187,7 @@ ReprCons *CharObj::get_repr_cons() {
 }
 
 VecObj::VecObj(size_t size, EvalObj *fill) :
-    EvalObj(CLS_SIM_OBJ | CLS_VECT_OBJ) {
+    Container(CLS_SIM_OBJ | CLS_VECT_OBJ) {
     vec.resize(size);
     for (size_t i = 0; i < size; i++)
     {
@@ -235,6 +235,18 @@ void VecObj::fill(EvalObj *obj) {
 
 ReprCons *VecObj::get_repr_cons() {
     return new VectReprCons(this, this);
+}
+
+void VecObj::gc_decrement() {
+    for (EvalObjVec::iterator it = vec.begin();
+            it != vec.end(); it++)
+        GC_CYC_DEC(*it);
+}
+
+void VecObj::gc_trigger(EvalObj ** &tail, EvalObjSet &visited) {
+    for (EvalObjVec::iterator it = vec.begin();
+            it != vec.end(); it++)
+        GC_CYC_TRIGGER(*it);
 }
 
 StrObj *StrObj::from_string(string repr) {
@@ -453,7 +465,7 @@ VectReprCons::VectReprCons(VecObj *_ptr, EvalObj *_ori) :
     }
 
 PromObj::PromObj(EvalObj *exp) :
-    EvalObj(CLS_SIM_OBJ | CLS_PROM_OBJ),
+    Container(CLS_SIM_OBJ | CLS_PROM_OBJ),
     entry(new Pair(exp, empty_list)), mem(NULL) {
         gc.attach(entry);
         entry->next = NULL;
@@ -462,6 +474,16 @@ PromObj::PromObj(EvalObj *exp) :
 PromObj::~PromObj() {
     gc.expose(entry);
     gc.expose(mem);
+}
+
+void PromObj::gc_decrement() {
+    GC_CYC_DEC(entry);
+    GC_CYC_DEC(mem);
+}
+
+void PromObj::gc_trigger(EvalObj ** &tail, EvalObjSet &visited) {
+    GC_CYC_TRIGGER(entry);
+    GC_CYC_TRIGGER(mem);
 }
 
 Pair *PromObj::get_entry() { return entry; }
