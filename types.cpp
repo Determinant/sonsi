@@ -15,8 +15,8 @@ const int PREC = 16;
 extern EmptyList *empty_list;
 extern UnspecObj *unspec_obj;
 
-Pair::Pair(EvalObj *_car, EvalObj *_cdr) : EvalObj(CLS_PAIR_OBJ),
-    car(_car), cdr(_cdr), next(NULL) {
+Pair::Pair(EvalObj *_car, EvalObj *_cdr) : 
+Container(CLS_PAIR_OBJ), car(_car), cdr(_cdr), next(NULL) {
 
     gc.attach(car);
     gc.attach(cdr);

@@ -15,6 +15,7 @@ const int CLS_PAR_BRA = 1 << 2;
 
 const int CLS_SIM_OBJ = 1 << 0;
 const int CLS_PAIR_OBJ = 1 << 1;
+const int CLS_CONTAINER = 1 << 20;
 
 #define TO_PAIR(ptr) \
     (static_cast<Pair*>(ptr))
@@ -99,6 +100,12 @@ class EvalObj : public FrameObj {
         virtual bool is_true();
         /** External representation construction */
         virtual ReprCons *get_repr_cons() = 0;
+};
+
+class Container: public EvalObj {
+    public:
+    size_t gc_refs;
+    Container(int otype);
 };
 
 /** @class RetAddr

@@ -44,7 +44,7 @@ class PairReprCons;
  * more, a syntax tree
  * (car . cdr) in Scheme
  */
-class Pair : public EvalObj {/*{{{*/
+class Pair : public Container {/*{{{*/
     public:
         EvalObj *car;                   /**< car (as in Scheme) */
         EvalObj *cdr;                      /**< cdr (as in Scheme) */
