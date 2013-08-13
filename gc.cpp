@@ -13,7 +13,6 @@ GarbageCollector::GarbageCollector() {
     mapping.clear();
     pend_cnt = 0;
     pending_list = NULL;
-    collecting = false;
 }
 
 GarbageCollector::PendingEntry::PendingEntry(
@@ -28,7 +27,7 @@ void GarbageCollector::expose(EvalObj *ptr) {
         fprintf(stderr, "GC: 0x%llx exposed. count = %lu \"%s\"\n", 
             (ull)ptr, mapping[ptr] - 1, ptr->ext_repr().c_str());
 #endif
-        if (!--mapping[ptr] && collecting)
+        if (!--mapping[ptr])
         {
 #ifdef GC_DEBUG
             fprintf(stderr, "GC: 0x%llx pending. \n", (ull)ptr);
@@ -40,19 +39,19 @@ void GarbageCollector::expose(EvalObj *ptr) {
 
 void GarbageCollector::force() {
     EvalObj **l = gcq, **r = l;
-/*    for (PendingEntry *p = pending_list, *np; p; p = np)
+    for (PendingEntry *p = pending_list, *np; p; p = np)
     {
         np = p->next;
-        *r++ = p->obj;
+        if (mapping[p->obj] == 0)
+            *r++ = p->obj;
         delete p;
     }   // fetch the pending pointers in the list
     // clear the list
-    pending_list = NULL; */
-    for (EvalObj2Int::iterator it = mapping.begin(); 
+    pending_list = NULL; 
+/*    for (EvalObj2Int::iterator it = mapping.begin(); 
             it != mapping.end(); it++)
-        if (it->second == 0) *r++ = it->first;
+        if (it->second == 0) *r++ = it->first;*/
 
-    collecting = true;
 #ifdef GC_INFO
     fprintf(stderr, "%ld\n", mapping.size());
     size_t cnt = 0;
@@ -96,7 +95,6 @@ void GarbageCollector::force() {
         fprintf(stderr, "%llx => %s\n", (ull)it->first, it->first->ext_repr().c_str());
         */
 #endif
-    collecting = false;
 }
 
 EvalObj *GarbageCollector::attach(EvalObj *ptr) {
@@ -108,7 +106,7 @@ EvalObj *GarbageCollector::attach(EvalObj *ptr) {
     fprintf(stderr, "GC: 0x%llx attached. count = %lu \"%s\"\n", 
             (ull)ptr, mapping[ptr], ptr->ext_repr().c_str());
 #endif
-    if (mapping.size() > GC_QUEUE_SIZE >> 2)
+    if (mapping.size() > GC_QUEUE_SIZE >> 1)
         force();
     return ptr; // passing through
 }
