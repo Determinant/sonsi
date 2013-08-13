@@ -245,4 +245,7 @@ BUILTIN_PROC_DEF(vector_set);
 BUILTIN_PROC_DEF(vector_ref);
 BUILTIN_PROC_DEF(vector_length);
 
+BUILTIN_PROC_DEF(gc_status);
+BUILTIN_PROC_DEF(set_gc_resolve_threshold);
+
 #endif

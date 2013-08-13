@@ -14,6 +14,7 @@ static Container *cyc_list[GC_QUEUE_SIZE];
 GarbageCollector::GarbageCollector() {
     mapping.clear();
     pending_list = NULL;
+    resolve_threshold = GC_CYC_THRESHOLD;
 }
 
 GarbageCollector::PendingEntry::PendingEntry(
@@ -113,7 +114,7 @@ EvalObj *GarbageCollector::attach(EvalObj *ptr) {
 }
 
 void GarbageCollector::cycle_resolve() {
-    if (mapping.size() < GC_CYC_THRESHOLD)
+    if (mapping.size() < resolve_threshold)
         return; 
     EvalObjSet visited;
     Container **clptr = cyc_list;
@@ -151,4 +152,12 @@ void GarbageCollector::cycle_resolve() {
     fprintf(stderr, "GC: cycle resolved.\n");
 #endif
     force();
+}
+
+size_t GarbageCollector::get_remaining() {
+    return mapping.size();
+}
+
+void GarbageCollector::set_resolve_threshold(size_t new_thres) {
+    resolve_threshold = new_thres;
 }

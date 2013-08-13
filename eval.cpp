@@ -88,6 +88,9 @@ void Evaluator::add_builtin_routines() {
     ADD_BUILTIN_PROC("vector-set!", vector_set);
     ADD_BUILTIN_PROC("vector-ref", vector_ref);
     ADD_BUILTIN_PROC("vector-length", vector_length);
+
+    ADD_BUILTIN_PROC("gc-status", gc_status);
+    ADD_BUILTIN_PROC("set-gc-resolve-threshold!", set_gc_resolve_threshold);
 }
 
 Evaluator::Evaluator() {

@@ -1515,6 +1515,22 @@ BUILTIN_PROC_DEF(vector_length) {
     return new IntNumObj(vect->get_size());
 }
 
+BUILTIN_PROC_DEF(gc_status) {
+    if (args != empty_list)
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    return new IntNumObj(gc.get_remaining());
+}
+
+BUILTIN_PROC_DEF(set_gc_resolve_threshold) {
+    ARGS_EXACTLY_ONE;
+    CHECK_NUMBER(args->car);
+    CHECK_INT(static_cast<NumObj*>(args->car));
+    ssize_t s = static_cast<IntNumObj*>(args->car)->get_i();
+    if (s < 0)
+        throw TokenError("a non-negative integer", RUN_ERR_WRONG_TYPE);
+    gc.set_resolve_threshold(size_t(s));
+    return new UnspecObj();
+}
 
 BUILTIN_PROC_DEF(display) {
     ARGS_EXACTLY_ONE;

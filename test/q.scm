@@ -73,3 +73,7 @@
 (define empty-bits '())
 (define res '())
 (define queen '())
+(set-gc-resolve-threshold! 0)   ; force cycle resolve
+(display "\n")
+(display (gc-status))
+

@@ -5,7 +5,7 @@
 #include <map>
 
 const int GC_QUEUE_SIZE = 262144;
-const size_t GC_CYC_THRESHOLD = 1000;
+const size_t GC_CYC_THRESHOLD = GC_QUEUE_SIZE >> 2;
 
 typedef std::map<EvalObj*, size_t> EvalObj2Int;
 typedef std::set<EvalObj*> EvalObjSet;
@@ -33,12 +33,15 @@ class GarbageCollector {
 
     EvalObj2Int mapping;
     PendingEntry *pending_list;
+    size_t resolve_threshold;
 
     public:
     GarbageCollector();
     void cycle_resolve();
     void force();
     void expose(EvalObj *ptr);
+    void set_resolve_threshold(size_t new_thres);
+    size_t get_remaining();
     EvalObj *attach(EvalObj *ptr);
 };
 
