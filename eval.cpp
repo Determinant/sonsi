@@ -205,6 +205,7 @@ EvalObj *Evaluator::run_expr(Pair *prog) {
                 else
                     throw TokenError(opt->ext_repr(), SYN_ERR_CAN_NOT_APPLY);
                 gc.force();
+                gc.cycle_resolve();
             }
         }
     }

@@ -1,6 +1,7 @@
 #include "gc.h"
 #include "exc.h"
 #include "consts.h"
+#include <vector>
 
 #if defined(GC_DEBUG) || defined (GC_INFO)
 #include <cstdio>
@@ -8,10 +9,10 @@ typedef unsigned long long ull;
 #endif
 
 static EvalObj *gcq[GC_QUEUE_SIZE];
+static Container *cyc_list[GC_QUEUE_SIZE];
 
 GarbageCollector::GarbageCollector() {
     mapping.clear();
-    pend_cnt = 0;
     pending_list = NULL;
 }
 
@@ -42,7 +43,7 @@ void GarbageCollector::force() {
     for (PendingEntry *p = pending_list, *np; p; p = np)
     {
         np = p->next;
-        if (mapping[p->obj] == 0)
+        if (mapping.count(p->obj) && mapping[p->obj] == 0)
             *r++ = p->obj;
         delete p;
     }   // fetch the pending pointers in the list
@@ -111,3 +112,43 @@ EvalObj *GarbageCollector::attach(EvalObj *ptr) {
     return ptr; // passing through
 }
 
+void GarbageCollector::cycle_resolve() {
+    if (mapping.size() < GC_CYC_THRESHOLD)
+        return;
+    EvalObjSet visited;
+    Container **clptr = cyc_list;
+    for (EvalObj2Int::iterator it = mapping.begin();
+            it != mapping.end(); it++)
+        if (it->first->is_container())
+        {
+            Container *p = static_cast<Container*>(it->first);
+            (*clptr++ = p)->gc_refs = it->second;   // init the count
+            p->keep = false;
+        }
+
+    EvalObj **l = gcq, **r = l;
+    for (Container **p = cyc_list; p < clptr; p++)
+        (*p)->gc_decrement();
+    for (Container **p = cyc_list; p < clptr; p++)
+        if ((*p)->gc_refs) 
+        {
+            *r++ = *p;
+            visited.insert(*p);
+        }
+    for (; l != r; l++)
+    {
+        Container *p = static_cast<Container*>(*l);
+        p->keep = true;        
+        p->gc_trigger(r, visited);
+    }
+    for (Container **p = cyc_list; p < clptr; p++)
+        if (!(*p)->keep) 
+        {
+            delete *p;
+            mapping.erase(*p);
+        }
+#ifdef GC_INFO
+    fprintf(stderr, "GC: cycle resolved.\n");
+#endif
+    force();
+}

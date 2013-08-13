@@ -54,7 +54,7 @@ class Pair : public Container {/*{{{*/
         ~Pair();
         ReprCons *get_repr_cons();
         void gc_decrement();
-        void gc_trigger(EvalObj ** &tail);
+        void gc_trigger(EvalObj ** &tail, EvalObjSet &visited);
 };/*}}}*/
 
 /** @class EmptyList
@@ -137,7 +137,7 @@ class Continuation;
 /** @class OptObj
  * "Operators" in general sense
  */
-class OptObj: public EvalObj {/*{{{*/
+class OptObj: public Container {/*{{{*/
     public:
         OptObj();
         /**
@@ -150,6 +150,9 @@ class OptObj: public EvalObj {/*{{{*/
          */
         virtual Pair *call(Pair *args, Environment * &envt,
                             Continuation * &cont, FrameObj ** &top_ptr) = 0;
+        virtual void gc_decrement();
+        virtual void gc_trigger(EvalObj ** &tail, EvalObjSet &visited);
+
 };/*}}}*/
 
 /** @class ProcObj
@@ -170,6 +173,9 @@ class ProcObj: public OptObj {/*{{{*/
         Pair *call(Pair *args, Environment * &envt,
                     Continuation * &cont, FrameObj ** &top_ptr);
         ReprCons *get_repr_cons();
+
+        void gc_decrement();
+        void gc_trigger(EvalObj ** &tail, EvalObjSet &visited);
 };/*}}}*/
 
 /** @class SpecialOptObj
@@ -331,7 +337,7 @@ class PromObj: public EvalObj {/*{{{*/
 /** @class Environment
  * The environment of current evaluation, i.e. the local variable binding
  */
-class Environment : public EvalObj{/*{{{*/
+class Environment : public Container{/*{{{*/
     private:
         Environment *prev_envt; /**< Pointer to the upper-level environment */
         Str2EvalObj binding;    /**< Store all pairs of identifier and its
@@ -354,6 +360,9 @@ class Environment : public EvalObj{/*{{{*/
          * */
         EvalObj *get_obj(EvalObj *obj);
         ReprCons *get_repr_cons();
+
+        void gc_decrement();
+        void gc_trigger(EvalObj ** &tail, EvalObjSet &visited);
 };/*}}}*/
 
 /** @class Continuation
@@ -361,7 +370,7 @@ class Environment : public EvalObj{/*{{{*/
  * being made (Behave like a stack frame in C). When the call has accomplished,
  * the system will restore all the registers according to the continuation.
  */
-class Continuation : public EvalObj {/*{{{*/
+class Continuation : public Container {/*{{{*/
     public:
         /** Linking the previous continuation on the chain */
         Continuation *prev_cont;
@@ -377,6 +386,9 @@ class Continuation : public EvalObj {/*{{{*/
                 Pair *proc_body);
         ~Continuation();
         ReprCons *get_repr_cons();
+
+        void gc_decrement();
+        void gc_trigger(EvalObj ** &tail, EvalObjSet &visited);
 };/*}}}*/
 
 /** @class InexactNumObj

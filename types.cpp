@@ -28,15 +28,13 @@ Pair::~Pair() {
 }
 
 void Pair::gc_decrement() {
-    if (car->is_container())
-        static_cast<Container*>(car)->gc_refs--;
-    if (cdr->is_container())
-        static_cast<Container*>(cdr)->gc_refs--;
+    GC_CYC_DEC(car);
+    GC_CYC_DEC(cdr);
 }
 
-void Pair::gc_trigger(EvalObj ** &tail) {
-    *tail++ = car;
-    *tail++ = cdr;
+void Pair::gc_trigger(EvalObj ** &tail, EvalObjSet &visited) {
+    GC_CYC_TRIGGER(car);
+    GC_CYC_TRIGGER(cdr);
 }
 
 ReprCons *Pair::get_repr_cons() {
@@ -59,7 +57,10 @@ SymObj::SymObj(const string &str) :
         return new ReprStr(val);
     }
 
-OptObj::OptObj() : EvalObj(CLS_SIM_OBJ | CLS_OPT_OBJ) {}
+OptObj::OptObj() : Container(CLS_SIM_OBJ | CLS_OPT_OBJ) {}
+
+void OptObj::gc_decrement() {}
+void OptObj::gc_trigger(EvalObj ** &tail, EvalObjSet &visited) {}
 
 ProcObj::ProcObj(Pair *_body, Environment *_envt, EvalObj *_params) :
     OptObj(), body(_body), params(_params), envt(_envt) {
@@ -112,6 +113,18 @@ Pair *ProcObj::call(Pair *_args, Environment * &genvt,
     *top_ptr++ = new RetAddr(NULL);     // Mark the entrance of a cont
     gc.expose(_args);
     return body;                        // Move pc to the proc entry point
+}
+
+void ProcObj::gc_decrement() {
+    GC_CYC_DEC(body);
+    GC_CYC_DEC(params);
+    GC_CYC_DEC(envt);
+}
+
+void ProcObj::gc_trigger(EvalObj ** &tail, EvalObjSet &visited) {
+    GC_CYC_TRIGGER(body);
+    GC_CYC_TRIGGER(params);
+    GC_CYC_TRIGGER(envt);
 }
 
 ReprCons *ProcObj::get_repr_cons() {
@@ -268,7 +281,8 @@ ReprCons *BuiltinProcObj::get_repr_cons() {
     return new ReprStr("#<Builtin Procedure: " + name + ">");
 }
 
-Environment::Environment(Environment *_prev_envt) : prev_envt(_prev_envt) {
+Environment::Environment(Environment *_prev_envt) : 
+    Container(), prev_envt(_prev_envt) {
     gc.attach(prev_envt);
 }
 
@@ -281,6 +295,20 @@ Environment::~Environment() {
 
 ReprCons *Environment::get_repr_cons() {
     return new ReprStr("#<Environment>");
+}
+
+void Environment::gc_decrement() {
+    GC_CYC_DEC(prev_envt);
+    for (Str2EvalObj::iterator it = binding.begin();
+            it != binding.end(); it++)
+        GC_CYC_DEC(it->second);
+}
+
+void Environment::gc_trigger(EvalObj ** &tail, EvalObjSet &visited) {
+    GC_CYC_TRIGGER(prev_envt);
+    for (Str2EvalObj::iterator it = binding.begin();
+            it != binding.end(); it++)
+        GC_CYC_TRIGGER(it->second);
 }
 
 bool Environment::add_binding(SymObj *sym_obj, EvalObj *eval_obj, bool def) {
@@ -337,7 +365,7 @@ EvalObj *Environment::get_obj(EvalObj *obj) {
 
 Continuation::Continuation(Environment *_envt, Pair *_pc,
         Continuation *_prev_cont, Pair *_proc_body) :
-    prev_cont(_prev_cont), envt(_envt), pc(_pc), proc_body(_proc_body) {
+    Container(), prev_cont(_prev_cont), envt(_envt), pc(_pc), proc_body(_proc_body) {
         gc.attach(prev_cont);
         gc.attach(envt);
     }
@@ -345,6 +373,16 @@ Continuation::Continuation(Environment *_envt, Pair *_pc,
 Continuation::~Continuation() {
     gc.expose(prev_cont);
     gc.expose(envt);
+}
+
+void Continuation::gc_decrement() {
+    GC_CYC_DEC(prev_cont);
+    GC_CYC_DEC(envt);
+}
+
+void Continuation::gc_trigger(EvalObj ** &tail, EvalObjSet &visited) {
+    GC_CYC_TRIGGER(prev_cont);
+    GC_CYC_TRIGGER(envt);
 }
 
 ReprCons *Continuation::get_repr_cons() {

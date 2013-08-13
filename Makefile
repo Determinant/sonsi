@@ -1,8 +1,8 @@
 CXX = g++ -DGMP_SUPPORT
 BUILD_DIR = build
 
-all: release
-debug: CXX += -g -pg
+all: gc_debug
+debug: CXX += -DGC_INFO -g -pg
 gc_debug: CXX += -DGC_INFO -DGC_DEBUG -g -pg
 
 release: $(BUILD_DIR) $(BUILD_DIR)/sonsi
@@ -24,7 +24,7 @@ $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 $(BUILD_DIR)/%.o : %.cpp
-	$(CXX) -o $@ -c $< -Wall -O2
+	$(CXX) -o $@ -c $< -Wall 
 
 clean:
 	rm -rf $(BUILD_DIR)

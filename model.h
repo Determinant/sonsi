@@ -2,6 +2,7 @@
 #define MODEL_H
 
 #include <string>
+#include <set>
 
 using std::string;
 
@@ -103,12 +104,14 @@ class EvalObj : public FrameObj {
         virtual ReprCons *get_repr_cons() = 0;
 };
 
+typedef std::set<EvalObj*> EvalObjSet;
 class Container: public EvalObj {
     public:
+    bool keep;
     size_t gc_refs;
-    Container(int otype);
+    Container(int otype = 0);
     virtual void gc_decrement() = 0;
-    virtual void gc_trigger(EvalObj ** &tail) = 0;
+    virtual void gc_trigger(EvalObj ** &tail, EvalObjSet &visited) = 0;
 };
 
 /** @class RetAddr
