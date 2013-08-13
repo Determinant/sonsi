@@ -149,6 +149,9 @@ EvalObj *Evaluator::run_expr(Pair *prog) {
     FrameObj **top_ptr = eval_stack;
     Pair *pc = prog;
     Continuation *cont = NULL;
+#ifdef GC_DEBUG
+    fprintf(stderr, "Start the evaluation...\n");
+#endif
     // envt is this->envt
     push(pc, top_ptr, envt);
     gc.attach(prog);
@@ -170,6 +173,7 @@ EvalObj *Evaluator::run_expr(Pair *prog) {
             }
             //< static_cast because the while condition
             RetAddr *ret_addr = static_cast<RetAddr*>(*top_ptr);
+            gc.attach(args);
             if (!ret_addr->addr)
             {
                 Pair *nexp = TO_PAIR(cont->proc_body->cdr);
@@ -189,11 +193,11 @@ EvalObj *Evaluator::run_expr(Pair *prog) {
                     gc.attach(cont);
                 }
                 else pc = nexp;
+                gc.expose(args);
                 top_ptr++;
             }
             else
             {
-                gc.attach(args);
                 EvalObj *opt = args->car;
                 if (opt->is_opt_obj())
                     pc = static_cast<OptObj*>(opt)->

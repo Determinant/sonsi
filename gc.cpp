@@ -48,7 +48,7 @@ void GarbageCollector::force() {
     }   // fetch the pending pointers in the list
     // clear the list
     pending_list = NULL; */
-    fprintf(stderr, "%d\n", mapping.size());
+    fprintf(stderr, "%ld\n", mapping.size());
     for (EvalObj2Int::iterator it = mapping.begin(); 
             it != mapping.end(); it++)
         if (it->second == 0) *r++ = it->first;
@@ -86,10 +86,12 @@ void GarbageCollector::force() {
     fprintf(stderr, "GC: Forced clear, %lu objects are freed, "
             "%lu remains\n"
             "=============================\n", cnt, mapping.size());
-/*    for (EvalObj2Int::iterator it = mapping.begin();
+        
+#endif
+#ifdef GC_DEBUG
+    for (EvalObj2Int::iterator it = mapping.begin();
             it != mapping.end(); it++)
-        fprintf(stderr, "%llx => %lu\n", (ull)it->first, it->second);
-        */
+        fprintf(stderr, "%llx => %s\n", (ull)it->first, it->first->ext_repr().c_str());
 #endif
     collecting = false;
 }
