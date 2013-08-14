@@ -193,6 +193,7 @@ Pair *ASTGenerator::absorb(Tokenizor *tk) {
                     Pair *_lst = TO_PAIR(lst);
                     lst = _lst->car;
                     delete _lst;
+                    delete obj;
                 }
                 else
                 {

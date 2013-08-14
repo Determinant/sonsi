@@ -4,9 +4,11 @@
 #include "exc.h"
 #include "consts.h"
 #include "types.h"
+#include "gc.h"
 
 const int REPR_STACK_SIZE = 262144;
 extern EmptyList *empty_list;
+extern GarbageCollector gc;
 
 static EvalObjAddrHash hash;
 static ReprCons *repr_stack[REPR_STACK_SIZE];
@@ -21,7 +23,18 @@ bool FrameObj::is_parse_bracket() {
     return ftype & CLS_PAR_BRA;
 }
 
-EvalObj::EvalObj(int _otype) : FrameObj(CLS_EVAL_OBJ), otype(_otype) {}
+bool EvalObj::gc_dec() { return --gc_cnt == 0; }
+void EvalObj::gc_inc() { gc_cnt++; }
+size_t EvalObj::gc_get_cnt() { return gc_cnt; }
+
+EvalObj::EvalObj(int _otype) : 
+    FrameObj(CLS_EVAL_OBJ), gc_cnt(0), otype(_otype) {
+    gc.join(this);
+}
+
+EvalObj::~EvalObj() {
+    gc.quit(this);
+}
 
 bool EvalObj::is_container() {
     return otype & CLS_CONTAINER;

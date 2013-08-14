@@ -63,6 +63,8 @@ class ReprCons;
  * Objects that represents a value in evaluation
  */
 class EvalObj : public FrameObj {
+    private:
+        size_t gc_cnt;
     protected:
         /**
          * Report the type of the EvalObj, which can avoid the use of
@@ -77,6 +79,7 @@ class EvalObj : public FrameObj {
          * CLS_SIM_OBJ
          */
         EvalObj(int otype = CLS_SIM_OBJ);
+        ~EvalObj();
         /** Check if the object is a simple object (instead of a call
          * invocation)
          * @return true if the object is not a construction (Pair)
@@ -107,6 +110,9 @@ class EvalObj : public FrameObj {
         virtual bool is_true();
         /** External representation construction */
         virtual ReprCons *get_repr_cons() = 0;
+        bool gc_dec();
+        void gc_inc();
+        size_t gc_get_cnt();
 };
 
 typedef std::set<EvalObj*> EvalObjSet;

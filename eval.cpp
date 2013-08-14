@@ -11,7 +11,11 @@ EvalObj *eval_stack[EVAL_STACK_SIZE];
 void Evaluator::add_builtin_routines() {
 
 #define ADD_ENTRY(name, rout) \
-    envt->add_binding(new SymObj(name), rout)
+do { \
+    SymObj *tmp = new SymObj(name); \
+    envt->add_binding(tmp, rout); \
+    delete tmp; \
+} while (0)
 
 #define ADD_BUILTIN_PROC(name, rout) \
     ADD_ENTRY(name, new BuiltinProcObj(rout, name))
