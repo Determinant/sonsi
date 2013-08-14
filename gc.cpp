@@ -151,6 +151,13 @@ void GarbageCollector::cycle_resolve() {
 #ifdef GC_INFO
     fprintf(stderr, "GC: cycle resolved.\n");
 #endif
+}
+
+void GarbageCollector::collect() {
+    force();
+    if (mapping.size() < resolve_threshold) 
+        return; 
+    cycle_resolve();
     force();
 }
 

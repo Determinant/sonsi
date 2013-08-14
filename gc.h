@@ -37,6 +37,7 @@ class GarbageCollector {
 
     public:
     GarbageCollector();
+    void collect();
     void cycle_resolve();
     void force();
     void expose(EvalObj *ptr);
