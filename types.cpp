@@ -57,13 +57,14 @@ SymObj::SymObj(const string &str) :
         return new ReprStr(val);
     }
 
-OptObj::OptObj(int otype) : Container(otype | CLS_SIM_OBJ | CLS_OPT_OBJ, true) {}
+OptObj::OptObj(Environment *_envt, int otype) : 
+    Container(otype | CLS_SIM_OBJ | CLS_OPT_OBJ, true), envt(_envt) {}
 
 void OptObj::gc_decrement() {}
 void OptObj::gc_trigger(EvalObj ** &tail, EvalObjSet &visited) {}
 
 ProcObj::ProcObj(Pair *_body, Environment *_envt, EvalObj *_params) :
-    OptObj(CLS_CONTAINER), body(_body), params(_params), envt(_envt) {
+    OptObj(_envt, CLS_CONTAINER), body(_body), params(_params) {
     gc.attach(body);
     gc.attach(params);
     gc.attach(envt);
@@ -75,27 +76,19 @@ ProcObj::~ProcObj() {
     gc.expose(envt);
 }
 
-Pair *ProcObj::call(Pair *_args, Environment * &genvt,
-        Continuation * &cont, FrameObj ** &top_ptr) {
+Pair *ProcObj::call(Pair *_args, Environment * &lenvt,
+        Continuation * &cont, EvalObj ** &top_ptr) {
     // Create a new continuation
     // static_cast see `call` invocation in eval.cpp
-    RetAddr *ret_info = static_cast<RetAddr*>(*top_ptr);
-    Pair *ret_addr = ret_info->addr;
-    if (ret_info->state)
+    Pair *ret_addr = cont->pc;
+    if (cont->state)
     {
-        Pair *nexp = TO_PAIR(ret_info->state->cdr);
+        Pair *nexp = TO_PAIR(cont->state->cdr);
         if (nexp == empty_list)
         {
-            delete *top_ptr;
+            gc.expose(*top_ptr);
             *top_ptr++ = gc.attach(TO_PAIR(_args->cdr)->car);
-
-            gc.expose(genvt);
-            genvt = cont->envt;
-            gc.attach(genvt);
-
-            gc.expose(cont);
-            cont = cont->prev_cont;
-            gc.attach(cont);
+            EXIT_CURRENT_CONT(lenvt, cont);
             gc.expose(_args);
             return ret_addr->next;
         }
@@ -103,17 +96,17 @@ Pair *ProcObj::call(Pair *_args, Environment * &genvt,
         {
             gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
             top_ptr++;
-            ret_info->state = nexp;
+            cont->state = nexp;
             gc.expose(_args);
-            return ret_info->state;
+            return cont->state;
         }
     }
     else
     {
-        Continuation *_cont = new Continuation(genvt, ret_addr, cont, body);
-        // Create local env and recall the closure
-        Environment *_envt = new Environment(envt);
-        // static_cast<SymObj*> because the params is already checked
+        gc.expose(lenvt);
+        lenvt = new Environment(envt);
+        gc.attach(lenvt);
+
         EvalObj *ppar, *nptr;
         Pair *args = _args;
         for (ppar = params;
@@ -123,29 +116,19 @@ Pair *ProcObj::call(Pair *_args, Environment * &genvt,
             if ((nptr = args->cdr) != empty_list)
                 args = TO_PAIR(nptr);
             else break;
-            _envt->add_binding(static_cast<SymObj*>(TO_PAIR(ppar)->car), args->car);
+            lenvt->add_binding(static_cast<SymObj*>(TO_PAIR(ppar)->car), args->car);
         }
 
         if (ppar->is_sym_obj())
-            _envt->add_binding(static_cast<SymObj*>(ppar), args->cdr); // (... . var_n)
+            lenvt->add_binding(static_cast<SymObj*>(ppar), args->cdr); // (... . var_n)
         else if (args->cdr != empty_list || ppar != empty_list)
             throw TokenError("", RUN_ERR_WRONG_NUM_OF_ARGS);
 
-        gc.expose(genvt);
-        genvt = _envt;
-        gc.attach(genvt);
-
-        gc.expose(cont);
-        cont = _cont;
-        gc.attach(cont);
-
         gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
         top_ptr++;
-        ret_info->state = body;
-//        delete *top_ptr;                    // release ret addr
-//        *top_ptr++ = new RetAddr(NULL);     // Mark the entrance of a cont
+        cont->state = body;
         gc.expose(_args);
-        return ret_info->state;               // Move pc to the proc entry point
+        return cont->state;               // Move pc to the proc entry point
     }
 }
 
@@ -165,7 +148,7 @@ ReprCons *ProcObj::get_repr_cons() {
     return new ReprStr("#<Procedure>");
 }
 
-SpecialOptObj::SpecialOptObj(string _name) : OptObj(), name(_name) {}
+SpecialOptObj::SpecialOptObj(Environment *envt, string _name) : OptObj(envt), name(_name) {}
 ReprCons *SpecialOptObj::get_repr_cons() {
     return new ReprStr("#<Built-in Opt: " + name + ">");
 }
@@ -310,15 +293,16 @@ bool StrObj::eq(StrObj *r) {
     return str == r->str;
 }
 
-BuiltinProcObj::BuiltinProcObj(BuiltinProc f, string _name) :
-    OptObj(), handler(f), name(_name) {}
+BuiltinProcObj::BuiltinProcObj(Environment *envt, BuiltinProc f, string _name) :
+    OptObj(envt), handler(f), name(_name) {}
 
-    Pair *BuiltinProcObj::call(Pair *args, Environment * &envt,
-            Continuation * &cont, FrameObj ** &top_ptr) {
+    Pair *BuiltinProcObj::call(Pair *args, Environment * &lenvt,
+            Continuation * &cont, EvalObj ** &top_ptr) {
 
-        Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
-        delete *top_ptr;
+        Pair *ret_addr = cont->pc;
+        gc.expose(*top_ptr);
         *top_ptr++ = gc.attach(handler(TO_PAIR(args->cdr), name));
+        EXIT_CURRENT_CONT(lenvt, cont);
         gc.expose(args);
         return ret_addr->next;          // Move to the next instruction
     }
@@ -409,9 +393,12 @@ EvalObj *Environment::get_obj(EvalObj *obj) {
     throw TokenError(name, RUN_ERR_UNBOUND_VAR);
 }
 
-Continuation::Continuation(Environment *_envt, Pair *_pc,
-        Continuation *_prev_cont, Pair *_proc_body) :
-    Container(), prev_cont(_prev_cont), envt(_envt), pc(_pc), proc_body(_proc_body) {
+Environment *Environment::get_prev() {
+    return prev_envt;
+}
+
+Continuation::Continuation(Environment *_envt, Pair *_pc, Continuation *_prev_cont ) :
+    Container(), prev_cont(_prev_cont), envt(_envt), pc(_pc), state(NULL) {
         gc.attach(prev_cont);
         gc.attach(envt);
     }

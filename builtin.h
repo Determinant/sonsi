@@ -17,14 +17,14 @@ class SpecialOptIf: public SpecialOptObj {/*{{{*/
         unsigned char state; /**< 0 for prepared, 1 for pre_called */
     public:
         /** Construct a `if` operator */
-        SpecialOptIf();
+        SpecialOptIf(Environment *envt);
         /** Prevent <condition> and <consequence> from being evaluated */
         void prepare(Pair *pc);
         /** When it's invoked at the first time, it will determined which of
          * <condition> and <consequence> should be evaluated.  Then when it's
          * invoked again, it will tell the system the corresponding result.*/
         Pair *call(Pair *args, Environment * &envt,
-                Continuation * &cont, FrameObj ** &top_ptr);
+                Continuation * &cont, EvalObj ** &top_ptr);
 };/*}}}*/
 
 /** @class SpecialOptLambda
@@ -33,12 +33,12 @@ class SpecialOptIf: public SpecialOptObj {/*{{{*/
 class SpecialOptLambda: public SpecialOptObj {/*{{{*/
     public:
         /** Construct a `lambda` operator */
-        SpecialOptLambda();
+        SpecialOptLambda(Environment *envt);
         /** Prevent all parts of the expression being evaluated */
         void prepare(Pair *pc);
         /** Make up a ProcObj and push into the stack */
         Pair *call(Pair *args, Environment * &envt,
-                Continuation * &cont, FrameObj ** &top_ptr);
+                Continuation * &cont, EvalObj ** &top_ptr);
 
 };/*}}}*/
 
@@ -48,12 +48,12 @@ class SpecialOptLambda: public SpecialOptObj {/*{{{*/
 class SpecialOptDefine: public SpecialOptObj {/*{{{*/
     public:
         /** Construct a `define` operator */
-        SpecialOptDefine();
+        SpecialOptDefine(Environment *envt);
         /** Prevent some parts from being evaluated */
         void prepare(Pair *pc);
         /** See `SpecialOptLambda` */
         Pair *call(Pair *args, Environment * &envt,
-                Continuation * &cont, FrameObj ** &top_ptr);
+                Continuation * &cont, EvalObj ** &top_ptr);
 };/*}}}*/
 
 /** @class SpecialOptSet
@@ -62,12 +62,12 @@ class SpecialOptDefine: public SpecialOptObj {/*{{{*/
 class SpecialOptSet: public SpecialOptObj {/*{{{*/
     public:
         /** Construct a `set!` operator */
-        SpecialOptSet();
+        SpecialOptSet(Environment *envt);
         /** See `SpecialOptDefine */
         void prepare(Pair *pc);
         /** See `SpecialOptDefine */
         Pair *call(Pair *args, Environment * &envt,
-                Continuation * &cont, FrameObj ** &top_ptr);
+                Continuation * &cont, EvalObj ** &top_ptr);
 };/*}}}*/
 
 /** @class SpecialOptLambda
@@ -76,12 +76,12 @@ class SpecialOptSet: public SpecialOptObj {/*{{{*/
 class SpecialOptQuote: public SpecialOptObj {/*{{{*/
     public:
         /** Construct a `quote` operator */
-        SpecialOptQuote();
+        SpecialOptQuote(Environment *envt);
         /** Prevent the literal part from being evaluated */
         void prepare(Pair *pc);
         /** Return the literal */
         Pair *call(Pair *args, Environment * &envt,
-                Continuation * &cont, FrameObj ** &top_ptr);
+                Continuation * &cont, EvalObj ** &top_ptr);
 
 };/*}}}*/
 
@@ -93,12 +93,12 @@ class SpecialOptEval: public SpecialOptObj {/*{{{*/
         unsigned char state; /**< 0 for prepared, 1 for pre_called */
     public:
         /** Construct an `eval` operator */
-        SpecialOptEval();
+        SpecialOptEval(Environment *envt);
         /** Set state to 0 */
         void prepare(Pair *pc);
         /** Behaves like the one in `SpecialOptIf` */
         Pair *call(Pair *args, Environment * &envt,
-                Continuation * &cont, FrameObj ** &top_ptr);
+                Continuation * &cont, EvalObj ** &top_ptr);
 
 };/*}}}*/
 
@@ -108,12 +108,12 @@ class SpecialOptEval: public SpecialOptObj {/*{{{*/
 class SpecialOptAnd: public SpecialOptObj {/*{{{*/
     public:
         /** Construct an `and` operator */
-        SpecialOptAnd();
+        SpecialOptAnd(Environment *envt);
         /** Prevent all parts from being evaluated */
         void prepare(Pair *pc);
         /** Acts like `SpecialOptIf` */
         Pair *call(Pair *args, Environment * &envt,
-                Continuation * &cont, FrameObj ** &top_ptr);
+                Continuation * &cont, EvalObj ** &top_ptr);
 
 };/*}}}*/
 
@@ -123,12 +123,12 @@ class SpecialOptAnd: public SpecialOptObj {/*{{{*/
 class SpecialOptOr: public SpecialOptObj {/*{{{*/
     public:
         /** Construct an `or` operator */
-        SpecialOptOr();
+        SpecialOptOr(Environment *envt);
         /** See `SpecialOptAnd` */
         void prepare(Pair *pc);
         /** See `SpecialOptAnd` */
         Pair *call(Pair *args, Environment * &envt,
-                Continuation * &cont, FrameObj ** &top_ptr);
+                Continuation * &cont, EvalObj ** &top_ptr);
 
 };/*}}}*/
 
@@ -138,12 +138,12 @@ class SpecialOptOr: public SpecialOptObj {/*{{{*/
 class SpecialOptApply: public SpecialOptObj {/*{{{*/
     public:
         /** Construct an `apply` operator */
-        SpecialOptApply();
+        SpecialOptApply(Environment *envt);
         /** Do nothing */
         void prepare(Pair *pc);
         /** Provoke the <proc> with args */
         Pair *call(Pair *args, Environment * &envt,
-                Continuation * &cont, FrameObj ** &top_ptr);
+                Continuation * &cont, EvalObj ** &top_ptr);
 
 };/*}}}*/
 
@@ -153,12 +153,12 @@ class SpecialOptApply: public SpecialOptObj {/*{{{*/
 class SpecialOptDelay: public SpecialOptObj {/*{{{*/
     public:
         /** Construct a `delay` operator */
-        SpecialOptDelay();
+        SpecialOptDelay(Environment *envt);
         /** Do nothing */
         void prepare(Pair *pc);
         /** Make up a PromObj and push into the stack */
         Pair *call(Pair *args, Environment * &envt,
-                Continuation * &cont, FrameObj ** &top_ptr);
+                Continuation * &cont, EvalObj ** &top_ptr);
 
 };/*}}}*/
 
@@ -171,7 +171,7 @@ class SpecialOptForce: public SpecialOptObj {/*{{{*/
         PromObj* prom;
     public:
         /** Construct a `force` operator */
-        SpecialOptForce();
+        SpecialOptForce(Environment *envt);
         /** Set the state to 0 */
         void prepare(Pair *pc);
         /** Force the evaluation of a promise. If the promise has not been
@@ -179,7 +179,7 @@ class SpecialOptForce: public SpecialOptObj {/*{{{*/
          * while if it has already been evaluated, just push the result into
          * the stack */
         Pair *call(Pair *args, Environment * &envt,
-                Continuation * &cont, FrameObj ** &top_ptr);
+                Continuation * &cont, EvalObj ** &top_ptr);
 
 };/*}}}*/
 

@@ -6,7 +6,7 @@
 #include <cstdio>
 
 extern Pair *empty_list;
-FrameObj *eval_stack[EVAL_STACK_SIZE];
+EvalObj *eval_stack[EVAL_STACK_SIZE];
 
 void Evaluator::add_builtin_routines() {
 
@@ -14,19 +14,19 @@ void Evaluator::add_builtin_routines() {
     envt->add_binding(new SymObj(name), rout)
 
 #define ADD_BUILTIN_PROC(name, rout) \
-    ADD_ENTRY(name, new BuiltinProcObj(rout, name))
+    ADD_ENTRY(name, new BuiltinProcObj(envt, rout, name))
 
-    ADD_ENTRY("if", new SpecialOptIf());
-    ADD_ENTRY("lambda", new SpecialOptLambda());
-    ADD_ENTRY("define", new SpecialOptDefine());
-    ADD_ENTRY("set!", new SpecialOptSet());
-    ADD_ENTRY("quote", new SpecialOptQuote());
-    ADD_ENTRY("eval", new SpecialOptEval());
-    ADD_ENTRY("and", new SpecialOptAnd());
-    ADD_ENTRY("or", new SpecialOptOr());
-    ADD_ENTRY("apply", new SpecialOptApply());
-    ADD_ENTRY("delay", new SpecialOptDelay());
-    ADD_ENTRY("force", new SpecialOptForce());
+    ADD_ENTRY("if", new SpecialOptIf(envt));
+    ADD_ENTRY("lambda", new SpecialOptLambda(envt));
+    ADD_ENTRY("define", new SpecialOptDefine(envt));
+    ADD_ENTRY("set!", new SpecialOptSet(envt));
+    ADD_ENTRY("quote", new SpecialOptQuote(envt));
+    ADD_ENTRY("eval", new SpecialOptEval(envt));
+    ADD_ENTRY("and", new SpecialOptAnd(envt));
+    ADD_ENTRY("or", new SpecialOptOr(envt));
+    ADD_ENTRY("apply", new SpecialOptApply(envt));
+    ADD_ENTRY("delay", new SpecialOptDelay(envt));
+    ADD_ENTRY("force", new SpecialOptForce(envt));
 
     ADD_BUILTIN_PROC("+", num_add);
     ADD_BUILTIN_PROC("-", num_sub);
@@ -113,7 +113,7 @@ inline bool make_exec(Pair *ptr) {
     return ptr->cdr == empty_list;
 }
 
-inline void push(Pair * &pc, FrameObj ** &top_ptr, Environment *envt) {
+inline void push(Pair * &pc, EvalObj ** &top_ptr, Environment * &envt, Continuation * &cont) {
 //    if (pc->car == NULL)
  //       puts("oops");
     if (pc->car->is_simple_obj())           // Not an opt invocation
@@ -128,7 +128,13 @@ inline void push(Pair * &pc, FrameObj ** &top_ptr, Environment *envt) {
         if (pc->car == empty_list)
             throw NormalError(SYN_ERR_EMPTY_COMB);
 
-        *top_ptr++ = new RetAddr(pc, NULL);       // Push the return address
+        gc.expose(cont);
+        cont = new Continuation(envt, pc, cont);
+        gc.attach(cont);
+
+        *top_ptr++ = gc.attach(cont);
+
+
         if (!make_exec(TO_PAIR(pc->car)))
             throw TokenError(pc->car->ext_repr(), RUN_ERR_WRONG_NUM_OF_ARGS);
         // static_cast because of is_simple_obj() is false
@@ -137,56 +143,47 @@ inline void push(Pair * &pc, FrameObj ** &top_ptr, Environment *envt) {
     }
 }
 
-void print_stack(FrameObj **top) {
-    for (FrameObj **i = eval_stack; i < top; i++)
-    {
-        if ((*i)->is_ret_addr())
-            puts("<return addr>");
-        else 
-            printf("%s\n", static_cast<EvalObj*>(*i)->ext_repr().c_str());
-    }
-    puts("");
-}
-
 EvalObj *Evaluator::run_expr(Pair *prog) {
-    FrameObj **top_ptr = eval_stack;
+    EvalObj **top_ptr = eval_stack;
     Pair *pc = prog;
     Continuation *cont = NULL;
 #ifdef GC_DEBUG
     fprintf(stderr, "Start the evaluation...\n");
 #endif
     // envt is this->envt
-    push(pc, top_ptr, envt);
+    push(pc, top_ptr, envt, cont);
     gc.attach(prog);
 
-    while((*eval_stack)->is_ret_addr())
+    while (cont)
     {
         if (top_ptr == eval_stack + EVAL_STACK_SIZE)
             throw TokenError("Evaluation", RUN_ERR_STACK_OVERFLOW);
         if (pc)
-            push(pc, top_ptr, envt);
+            push(pc, top_ptr, envt, cont);
         else
         {
             Pair *args = empty_list;
-            while (!(*(--top_ptr))->is_ret_addr())
+            while (*(--top_ptr) != cont)
             {
                 EvalObj* obj = static_cast<EvalObj*>(*top_ptr);
                 gc.expose(obj);
                 args = new Pair(obj, args);
             }
+            //gc.expose(*top_ptr);
             //< static_cast because the while condition
-//            RetAddr *ret_addr = static_cast<RetAddr*>(*top_ptr);
             gc.attach(args);
-            EvalObj *opt = args->car;
-            if (opt->is_opt_obj())
-                pc = static_cast<OptObj*>(opt)->
-                    call(args, envt, cont, top_ptr);
+            if ((args->car)->is_opt_obj())
+            {
+                OptObj *opt = static_cast<OptObj*>(args->car);
+                pc = opt->call(args, envt, cont, top_ptr);
+            }
             else
-                throw TokenError(opt->ext_repr(), SYN_ERR_CAN_NOT_APPLY);
+                throw TokenError((args->car)->ext_repr(), SYN_ERR_CAN_NOT_APPLY);
             gc.collect();
         }
     }
     gc.expose(prog);
+    gc.expose(cont);
     // static_cast because the previous while condition
     return static_cast<EvalObj*>(*(eval_stack));
 }

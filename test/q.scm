@@ -68,12 +68,11 @@
 
 (display (queen 8))
 
-;(define shl '())
-;(define shr '())
-;(define empty-bits '())
-;(define res '())
-;(define queen '())
-;(set-gc-resolve-threshold! 0)   ; force cycle resolve
-;(display "\n")
-;(display (gc-status))
-;
+(define shl '())
+(define shr '())
+(define empty-bits '())
+(define res '())
+(define queen '())
+(set-gc-resolve-threshold! 0)   ; force cycle resolve
+(display "\n")
+(display (gc-status))

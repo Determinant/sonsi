@@ -5,7 +5,7 @@
 #include <map>
 
 const int GC_QUEUE_SIZE = 262144;
-const size_t GC_CYC_THRESHOLD = GC_QUEUE_SIZE >> 2;
+const size_t GC_CYC_THRESHOLD = GC_QUEUE_SIZE >> 1;
 
 typedef std::map<EvalObj*, size_t> EvalObj2Int;
 typedef std::set<EvalObj*> EvalObjSet;

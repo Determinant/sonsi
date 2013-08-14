@@ -21,6 +21,16 @@ const int CLS_CONTAINER = 1 << 20;
 #define TO_PAIR(ptr) \
     (static_cast<Pair*>(ptr))
 
+#define EXIT_CURRENT_CONT(lenvt, cont) \
+    do { \
+        gc.expose(lenvt); \
+        lenvt = cont->envt; \
+        gc.attach(lenvt); \
+        gc.expose(cont); \
+        cont = cont->prev_cont; \
+        gc.attach(cont); \
+    } while (0)
+
 /** @class FrameObj
  * Objects that can be held in the evaluation stack
  */
@@ -39,11 +49,6 @@ class FrameObj {
          */
         FrameObj(FrameType ftype);
         virtual ~FrameObj() {}
-        /**
-         * Tell whether the object is a return address, according to ftype
-         * @return true for yes
-         */
-        bool is_ret_addr();
         /**
          * Tell whether the object is a bracket, according to ftype
          * @return true for yes
@@ -113,17 +118,5 @@ class Container: public EvalObj {
     virtual void gc_decrement() = 0;
     virtual void gc_trigger(EvalObj ** &tail, EvalObjSet &visited) = 0;
 };
-
-/** @class RetAddr
- * Tracking the caller's Pair pointer
- */
-class RetAddr : public FrameObj {/*{{{*/
-    public:
-        Pair* addr;                      /**< The return address  */
-        Pair* state;
-        /** Constructs a return address object which refers to the node addr in
-         * the AST */
-        RetAddr(Pair *addr, Pair *state = NULL);
-};/*}}}*/
 
 #endif

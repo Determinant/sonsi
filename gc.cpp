@@ -92,10 +92,9 @@ void GarbageCollector::force() {
         
 #endif
 #ifdef GC_DEBUG
-/*    for (EvalObj2Int::iterator it = mapping.begin();
+    for (EvalObj2Int::iterator it = mapping.begin();
             it != mapping.end(); it++)
         fprintf(stderr, "%llx => %s\n", (ull)it->first, it->first->ext_repr().c_str());
-        */
 #endif
 }
 
@@ -114,8 +113,7 @@ EvalObj *GarbageCollector::attach(EvalObj *ptr) {
 }
 
 void GarbageCollector::cycle_resolve() {
-    if (mapping.size() < resolve_threshold)
-        return; 
+    if (mapping.size() < resolve_threshold) return; 
     EvalObjSet visited;
     Container **clptr = cyc_list;
     for (EvalObj2Int::iterator it = mapping.begin();
@@ -155,8 +153,7 @@ void GarbageCollector::cycle_resolve() {
 
 void GarbageCollector::collect() {
     force();
-    if (mapping.size() < resolve_threshold) 
-        return; 
+    if (mapping.size() < resolve_threshold) return; 
     cycle_resolve();
     force();
 }

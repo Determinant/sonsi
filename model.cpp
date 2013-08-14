@@ -17,10 +17,6 @@ EmptyList::EmptyList() : Pair(NULL, NULL) {}
 
 ReprCons *EmptyList::get_repr_cons() { return new ReprStr("()"); }
 
-bool FrameObj::is_ret_addr() {
-    return ftype & CLS_RET_ADDR;
-}
-
 bool FrameObj::is_parse_bracket() {
     return ftype & CLS_PAR_BRA;
 }
@@ -133,9 +129,6 @@ string EvalObj::ext_repr() {
         res = "(" + res + ")";
     return res;
 }
-
-RetAddr::RetAddr(Pair *_addr, Pair *_state) : 
-    FrameObj(CLS_RET_ADDR), addr(_addr), state(_state) {}
 
 Container::Container(int otype, bool override) : 
     EvalObj(otype | (override ? 0 : CLS_CONTAINER)) {}

@@ -139,7 +139,11 @@ class Continuation;
  */
 class OptObj: public Container {/*{{{*/
     public:
-        OptObj(int otype = 0);
+        /** Pointer to the environment */
+        Environment *envt;
+
+        OptObj(Environment *envt, int otype = 0);
+
         /**
          * The function is called when an operation is needed.
          * @param args The argument list (the first one is the opt itself)
@@ -149,7 +153,7 @@ class OptObj: public Container {/*{{{*/
          * @return New value for pc register
          */
         virtual Pair *call(Pair *args, Environment * &envt,
-                            Continuation * &cont, FrameObj ** &top_ptr) = 0;
+                            Continuation * &cont, EvalObj ** &top_ptr) = 0;
         virtual void gc_decrement();
         virtual void gc_trigger(EvalObj ** &tail, EvalObjSet &visited);
 
@@ -164,14 +168,12 @@ class ProcObj: public OptObj {/*{{{*/
         Pair *body;
         /** The arguments: <list> | var1 ... | var1 var2 ... . varn */
         EvalObj *params;
-        /** Pointer to the environment */
-        Environment *envt;
 
         /** Conctructs a ProcObj */
         ProcObj(Pair *body, Environment *envt, EvalObj *params);
         ~ProcObj();
         Pair *call(Pair *args, Environment * &envt,
-                    Continuation * &cont, FrameObj ** &top_ptr);
+                    Continuation * &cont, EvalObj ** &top_ptr);
         ReprCons *get_repr_cons();
 
         void gc_decrement();
@@ -185,7 +187,7 @@ class SpecialOptObj: public OptObj {/*{{{*/
     protected:
         string name;
     public:
-        SpecialOptObj(string name);
+        SpecialOptObj(Environment *envt, string name);
         ReprCons *get_repr_cons();
 };/*}}}*/
 
@@ -203,9 +205,9 @@ class BuiltinProcObj: public OptObj {/*{{{*/
          * @param proc the actual handler
          * @param name the name of this built-in procedure
          */
-        BuiltinProcObj(BuiltinProc proc, string name);
+        BuiltinProcObj(Environment *envt, BuiltinProc proc, string name);
         Pair *call(Pair *args, Environment * &envt,
-                    Continuation * &cont, FrameObj ** &top_ptr);
+                    Continuation * &cont, EvalObj ** &top_ptr);
         ReprCons *get_repr_cons();
 };/*}}}*/
 
@@ -366,6 +368,7 @@ class Environment : public Container{/*{{{*/
          * */
         EvalObj *get_obj(EvalObj *obj);
         ReprCons *get_repr_cons();
+        Environment *get_prev();
 
         void gc_decrement();
         void gc_trigger(EvalObj ** &tail, EvalObjSet &visited);
@@ -382,14 +385,10 @@ class Continuation : public Container {/*{{{*/
         Continuation *prev_cont;
         Environment *envt;  /**< The saved envt */
         Pair *pc;           /**< The saved pc */
-        /** Pointing to the current expression that is being evaluated.
-         * When its value goes to empty_list, the call is accomplished.
-         */
-        Pair *proc_body;
+        Pair *state;        /**< The state of this compound */
 
         /** Create a continuation */
-        Continuation(Environment *envt, Pair *pc, Continuation *prev_cont,
-                Pair *proc_body);
+        Continuation(Environment *envt, Pair *pc, Continuation *prev_cont);
         ~Continuation();
         ReprCons *get_repr_cons();
 
