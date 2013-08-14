@@ -175,40 +175,15 @@ EvalObj *Evaluator::run_expr(Pair *prog) {
                 args = new Pair(obj, args);
             }
             //< static_cast because the while condition
-            RetAddr *ret_addr = static_cast<RetAddr*>(*top_ptr);
+//            RetAddr *ret_addr = static_cast<RetAddr*>(*top_ptr);
             gc.attach(args);
-            if (!ret_addr->addr)
-            {
-                Pair *nexp = TO_PAIR(cont->proc_body->cdr);
-                cont->proc_body = nexp;
-                if (nexp == empty_list)
-                {
-                    *top_ptr = gc.attach(args->car);
-
-                    gc.expose(envt);
-                    envt = cont->envt;
-                    gc.attach(envt);
-
-                    pc = cont->pc->next;
-
-                    gc.expose(cont);
-                    cont = cont->prev_cont;
-                    gc.attach(cont);
-                }
-                else pc = nexp;
-                gc.expose(args);
-                top_ptr++;
-            }
+            EvalObj *opt = args->car;
+            if (opt->is_opt_obj())
+                pc = static_cast<OptObj*>(opt)->
+                    call(args, envt, cont, top_ptr);
             else
-            {
-                EvalObj *opt = args->car;
-                if (opt->is_opt_obj())
-                    pc = static_cast<OptObj*>(opt)->
-                        call(args, envt, cont, top_ptr);
-                else
-                    throw TokenError(opt->ext_repr(), SYN_ERR_CAN_NOT_APPLY);
-                gc.collect();
-            }
+                throw TokenError(opt->ext_repr(), SYN_ERR_CAN_NOT_APPLY);
+            gc.collect();
         }
     }
     gc.expose(prog);

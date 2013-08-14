@@ -79,40 +79,74 @@ Pair *ProcObj::call(Pair *_args, Environment * &genvt,
         Continuation * &cont, FrameObj ** &top_ptr) {
     // Create a new continuation
     // static_cast see `call` invocation in eval.cpp
-    Pair *ret_addr = static_cast<RetAddr*>(*top_ptr)->addr;
-    Continuation *_cont = new Continuation(genvt, ret_addr, cont, body);
-    // Create local env and recall the closure
-    Environment *_envt = new Environment(envt);
-    // static_cast<SymObj*> because the params is already checked
-    EvalObj *ppar, *nptr;
-    Pair *args = _args;
-    for (ppar = params;
-            ppar->is_pair_obj();
-            ppar = TO_PAIR(ppar)->cdr)
+    RetAddr *ret_info = static_cast<RetAddr*>(*top_ptr);
+    Pair *ret_addr = ret_info->addr;
+    if (ret_info->state)
     {
-        if ((nptr = args->cdr) != empty_list)
-            args = TO_PAIR(nptr);
-        else break;
-        _envt->add_binding(static_cast<SymObj*>(TO_PAIR(ppar)->car), args->car);
+        Pair *nexp = TO_PAIR(ret_info->state->cdr);
+        if (nexp == empty_list)
+        {
+            delete *top_ptr;
+            *top_ptr++ = gc.attach(TO_PAIR(_args->cdr)->car);
+
+            gc.expose(genvt);
+            genvt = cont->envt;
+            gc.attach(genvt);
+
+            gc.expose(cont);
+            cont = cont->prev_cont;
+            gc.attach(cont);
+            gc.expose(_args);
+            return ret_addr->next;
+        }
+        else 
+        {
+            gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
+            top_ptr++;
+            ret_info->state = nexp;
+            gc.expose(_args);
+            return ret_info->state;
+        }
     }
+    else
+    {
+        Continuation *_cont = new Continuation(genvt, ret_addr, cont, body);
+        // Create local env and recall the closure
+        Environment *_envt = new Environment(envt);
+        // static_cast<SymObj*> because the params is already checked
+        EvalObj *ppar, *nptr;
+        Pair *args = _args;
+        for (ppar = params;
+                ppar->is_pair_obj();
+                ppar = TO_PAIR(ppar)->cdr)
+        {
+            if ((nptr = args->cdr) != empty_list)
+                args = TO_PAIR(nptr);
+            else break;
+            _envt->add_binding(static_cast<SymObj*>(TO_PAIR(ppar)->car), args->car);
+        }
 
-    if (ppar->is_sym_obj())
-        _envt->add_binding(static_cast<SymObj*>(ppar), args->cdr); // (... . var_n)
-    else if (args->cdr != empty_list || ppar != empty_list)
-        throw TokenError("", RUN_ERR_WRONG_NUM_OF_ARGS);
+        if (ppar->is_sym_obj())
+            _envt->add_binding(static_cast<SymObj*>(ppar), args->cdr); // (... . var_n)
+        else if (args->cdr != empty_list || ppar != empty_list)
+            throw TokenError("", RUN_ERR_WRONG_NUM_OF_ARGS);
 
-    gc.expose(genvt);
-    genvt = _envt;
-    gc.attach(genvt);
+        gc.expose(genvt);
+        genvt = _envt;
+        gc.attach(genvt);
 
-    gc.expose(cont);
-    cont = _cont;
-    gc.attach(cont);
+        gc.expose(cont);
+        cont = _cont;
+        gc.attach(cont);
 
-    delete *top_ptr;                    // release ret addr
-    *top_ptr++ = new RetAddr(NULL);     // Mark the entrance of a cont
-    gc.expose(_args);
-    return body;                        // Move pc to the proc entry point
+        gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
+        top_ptr++;
+        ret_info->state = body;
+//        delete *top_ptr;                    // release ret addr
+//        *top_ptr++ = new RetAddr(NULL);     // Mark the entrance of a cont
+        gc.expose(_args);
+        return ret_info->state;               // Move pc to the proc entry point
+    }
 }
 
 void ProcObj::gc_decrement() {
