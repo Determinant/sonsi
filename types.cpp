@@ -404,6 +404,7 @@ ReprCons *Continuation::get_repr_cons() {
 ReprCons::ReprCons(bool _done, EvalObj *_ori) : ori(_ori), done(_done) {}
 ReprStr::ReprStr(string _repr) : ReprCons(true) { repr = _repr; }
 EvalObj *ReprStr::next(const string &prev) {
+    fprintf(stderr, "Oops in ReprStr::next\n");
     throw NormalError(INT_ERR);
 }
 
@@ -995,6 +996,12 @@ void RatNumObj::abs() {
 #endif
 }
 
+IntNumObj *RatNumObj::to_int() {
+    if (val.get_den() != 1)
+        throw TokenError("an integer", RUN_ERR_WRONG_TYPE);
+    return new IntNumObj(val.get_num());
+}
+
 ReprCons *RatNumObj::get_repr_cons() {
 #ifndef GMP_SUPPORT
     return new ReprStr(int_to_str(A) + "/" + int_to_str(B));
@@ -1088,15 +1095,15 @@ void IntNumObj::div(NumObj *_r) {
 }
 
 void IntNumObj::gcd(NumObj *_r) {
-    mpz_t g;
-    mpz_gcd(g, val.get_mpz_t(), static_cast<IntNumObj*>(_r)->val.get_mpz_t());
-    val = mpz_class(g);
+    mpz_gcd(val.get_mpz_t(), 
+            val.get_mpz_t(), 
+            static_cast<IntNumObj*>(_r)->val.get_mpz_t());
 }
 
 void IntNumObj::lcm(NumObj *_r) {
-    mpz_t l;
-    mpz_lcm(l, val.get_mpz_t(), static_cast<IntNumObj*>(_r)->val.get_mpz_t());
-    val = mpz_class(l);
+    mpz_lcm(val.get_mpz_t(), 
+            val.get_mpz_t(), 
+            static_cast<IntNumObj*>(_r)->val.get_mpz_t());
 }
 
 bool IntNumObj::lt(NumObj *_r) {
@@ -1118,6 +1125,10 @@ bool IntNumObj::ge(NumObj *_r) {
 
 bool IntNumObj::eq(NumObj *_r) {
     return val == static_cast<IntNumObj*>(_r)->val;
+}
+
+IntNumObj* IntNumObj::to_int() {
+    return new IntNumObj(val);
 }
 
 ReprCons *IntNumObj::get_repr_cons() {

@@ -21,18 +21,19 @@ void load_file(const char *fname) {
         exit(0);
     }
     tk.set_stream(f);
+    Pair *tree;
     while (1)
     {
         try
         {
-            Pair *tree = ast.absorb(&tk);
+            tree = ast.absorb(&tk);
             if (!tree) break;
             EvalObj *ret = eval.run_expr(tree);
             gc.expose(ret);
         }
         catch (GeneralError &e)
         {
-            fprintf(stderr, "An error occured: %s\n", e.get_msg().c_str());
+            fprintf(stderr, "An error occured near [%s]: %s\n", tree->ext_repr().c_str(), e.get_msg().c_str());
         }
         gc.force();
         gc.cycle_resolve();

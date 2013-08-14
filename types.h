@@ -461,12 +461,14 @@ class RealNumObj: public InexactNumObj {/*{{{*/
 };/*}}}*/
 
 
+class IntNumObj;
 /** @class ExactNumObj
  * Exact number implementation (using gmp)
  */
 class ExactNumObj: public NumObj {/*{{{*/
     public:
         ExactNumObj(NumLvl level);
+        virtual IntNumObj *to_int() = 0;
 };/*}}}*/
 
 /** @class RatNumObj
@@ -482,6 +484,7 @@ class RatNumObj: public ExactNumObj {/*{{{*/
         mpq_class val;
         RatNumObj(mpq_class val);
         RatNumObj(const RatNumObj &ori);
+        IntNumObj *to_int();
 #endif
         NumObj *clone() const;
         /** Try to construct an RatNumObj object
@@ -501,6 +504,7 @@ class RatNumObj: public ExactNumObj {/*{{{*/
         bool le(NumObj *r);
         bool ge(NumObj *r);
         bool eq(NumObj *r);
+
         ReprCons *get_repr_cons();
 };/*}}}*/
 
@@ -520,6 +524,7 @@ class IntNumObj: public ExactNumObj {/*{{{*/
         IntNumObj(mpz_class val);
         int get_i();
         /** Copy constructor */
+        IntNumObj *to_int();
         IntNumObj(const IntNumObj &ori);
 #endif
         NumObj *clone() const;
@@ -546,6 +551,7 @@ class IntNumObj: public ExactNumObj {/*{{{*/
         bool le(NumObj *r);
         bool ge(NumObj *r);
         bool eq(NumObj *r);
+
         ReprCons *get_repr_cons();
 };/*}}}*/
 

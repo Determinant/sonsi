@@ -113,10 +113,10 @@ do \
         throw TokenError("a number", RUN_ERR_WRONG_TYPE); \
 } while (0)
 
-#define CHECK_INT(ptr) \
+#define CHECK_EXACT(ptr) \
 do \
 { \
-    if ((ptr)->level != NUM_LVL_INT) \
+    if (!(static_cast<NumObj*>(ptr))->is_exact()) \
         throw TokenError("an integer", RUN_ERR_WRONG_TYPE); \
 } while (0)
 
@@ -1031,18 +1031,23 @@ BUILTIN_PROC_DEF(length) {
 
 Pair *copy_list(Pair *src, EvalObj * &tail) {
     if (src == empty_list)
+    {
+        puts("oops");
         throw NormalError(INT_ERR);
+    }
     EvalObj* nptr;
     Pair head(NULL, NULL);
     tail = &head;
     for (;;)
     {
-        TO_PAIR(tail)->cdr = new Pair(*src);
+        gc.attach(TO_PAIR(tail)->cdr = new Pair(*src));
         tail = TO_PAIR(TO_PAIR(tail)->cdr);
+        gc.attach(TO_PAIR(tail)->car);
         if ((nptr = src->cdr)->is_pair_obj())
             src = TO_PAIR(nptr);
         else break;
     }
+    gc.attach(TO_PAIR(tail)->cdr);
     return TO_PAIR(head.cdr);
 }
 
@@ -1065,9 +1070,9 @@ BUILTIN_PROC_DEF(append) {
                 if (prev->cdr != empty_list)
                     throw TokenError("empty list", RUN_ERR_WRONG_TYPE);
                 if (args->car->is_pair_obj())
-                    prev->cdr = copy_list(TO_PAIR(args->car), tail);
+                    gc.attach(prev->cdr = copy_list(TO_PAIR(args->car), tail));
                 else
-                    prev->cdr = args->car;
+                    gc.attach(prev->cdr = args->car);
             }
             else
                 throw TokenError("a pair", RUN_ERR_WRONG_TYPE);
@@ -1091,10 +1096,11 @@ BUILTIN_PROC_DEF(reverse) {
 BUILTIN_PROC_DEF(list_tail) {
     ARGS_EXACTLY_TWO;
     EvalObj *sec = TO_PAIR(args->cdr)->car;
-    if (!sec->is_num_obj() ||
-            static_cast<NumObj*>(sec)->level != NUM_LVL_INT)
-        throw TokenError("an exact integer", RUN_ERR_WRONG_TYPE);
-    int i, k = static_cast<IntNumObj*>(sec)->get_i();
+    CHECK_NUMBER(sec);
+    CHECK_EXACT(sec);
+    IntNumObj *val = static_cast<ExactNumObj*>(sec)->to_int();
+    int i, k = val->get_i();
+    delete val;
     if (k < 0)
         throw TokenError("a non-negative integer", RUN_ERR_WRONG_TYPE);
     EvalObj *ptr;
@@ -1311,41 +1317,56 @@ BUILTIN_PROC_DEF(num_abs) {
 
 BUILTIN_PROC_DEF(num_mod) {
     ARGS_EXACTLY_TWO;
-    CHECK_NUMBER(args->car);
-    CHECK_NUMBER(TO_PAIR(args->cdr)->car);
-    NumObj* a = static_cast<NumObj*>(args->car);
-    NumObj* b = static_cast<NumObj*>(TO_PAIR(args->cdr)->car);
-    CHECK_INT(a);
-    CHECK_INT(b);
-    NumObj* res = a->clone();
-    static_cast<IntNumObj*>(res)->mod(b);
-    return res;
-}
+    EvalObj *first = args->car, *second = TO_PAIR(args->cdr)->car;
+    CHECK_NUMBER(first);
+    CHECK_NUMBER(second);
 
-BUILTIN_PROC_DEF(num_rem) {
-    ARGS_EXACTLY_TWO;
-    CHECK_NUMBER(args->car);
-    CHECK_NUMBER(TO_PAIR(args->cdr)->car);
-    NumObj* a = static_cast<NumObj*>(args->car);
-    NumObj* b = static_cast<NumObj*>(TO_PAIR(args->cdr)->car);
-    CHECK_INT(a);
-    CHECK_INT(b);
-    NumObj* res = a->clone();
-    static_cast<IntNumObj*>(res)->rem(b);
-    return res;
+    CHECK_EXACT(first);
+    CHECK_EXACT(second);
+
+    IntNumObj *a = static_cast<ExactNumObj*>(first)->to_int();
+    IntNumObj *b = static_cast<ExactNumObj*>(second)->to_int();
+
+    a->mod(b);
+
+    delete b;
+    return a;
 }
 
 BUILTIN_PROC_DEF(num_quo) {
     ARGS_EXACTLY_TWO;
-    CHECK_NUMBER(args->car);
-    CHECK_NUMBER(TO_PAIR(args->cdr)->car);
-    NumObj* a = static_cast<NumObj*>(args->car);
-    NumObj* b = static_cast<NumObj*>(TO_PAIR(args->cdr)->car);
-    CHECK_INT(a);
-    CHECK_INT(b);
-    NumObj* res = a->clone();
-    static_cast<IntNumObj*>(res)->div(b);
-    return res;
+    EvalObj *first = args->car, *second = TO_PAIR(args->cdr)->car;
+    CHECK_NUMBER(first);
+    CHECK_NUMBER(second);
+
+    CHECK_EXACT(first);
+    CHECK_EXACT(second);
+
+    IntNumObj *a = static_cast<ExactNumObj*>(first)->to_int();
+    IntNumObj *b = static_cast<ExactNumObj*>(second)->to_int();
+
+    a->div(b);
+
+    delete b;
+    return a;
+}
+
+BUILTIN_PROC_DEF(num_rem) {
+    ARGS_EXACTLY_TWO;
+    EvalObj *first = args->car, *second = TO_PAIR(args->cdr)->car;
+    CHECK_NUMBER(first);
+    CHECK_NUMBER(second);
+
+    CHECK_EXACT(first);
+    CHECK_EXACT(second);
+
+    IntNumObj *a = static_cast<ExactNumObj*>(first)->to_int();
+    IntNumObj *b = static_cast<ExactNumObj*>(second)->to_int();
+
+    a->rem(b);
+
+    delete b;
+    return a;
 }
 
 BUILTIN_PROC_DEF(num_gcd) {
@@ -1354,11 +1375,13 @@ BUILTIN_PROC_DEF(num_gcd) {
     IntNumObj *opr; 
     for (;args != empty_list; args = TO_PAIR(args->cdr))
     {
-        CHECK_NUMBER(args->car);
-        CHECK_INT(static_cast<NumObj*>(args->car));
+        EvalObj *obj = args->car;
+        CHECK_NUMBER(obj);
+        CHECK_EXACT(obj);
 
-        opr = static_cast<IntNumObj*>(args->car);
+        opr = static_cast<ExactNumObj*>(obj)->to_int();
         res->gcd(opr);
+        delete opr;
     }
     return res;
 }
@@ -1369,11 +1392,13 @@ BUILTIN_PROC_DEF(num_lcm) {
     IntNumObj *opr; 
     for (;args != empty_list; args = TO_PAIR(args->cdr))
     {
-        CHECK_NUMBER(args->car);
-        CHECK_INT(static_cast<NumObj*>(args->car));
+        EvalObj *obj = args->car;
+        CHECK_NUMBER(obj);
+        CHECK_EXACT(obj);
 
-        opr = static_cast<IntNumObj*>(args->car);
+        opr = static_cast<ExactNumObj*>(obj)->to_int();
         res->lcm(opr);
+        delete opr;
     }
     return res;
 }
@@ -1435,11 +1460,12 @@ BUILTIN_PROC_DEF(string_eq) {
 
 BUILTIN_PROC_DEF(make_vector) {
     ARGS_AT_LEAST_ONE;
-    if (!args->car->is_num_obj())
-        throw TokenError("a number", RUN_ERR_WRONG_TYPE);
-    if (static_cast<NumObj*>(args->car)->level != NUM_LVL_INT)
-        throw TokenError("an integer", RUN_ERR_WRONG_TYPE);
-    ssize_t len = static_cast<IntNumObj*>(args->car)->get_i();
+    EvalObj *first = args->car;
+    CHECK_NUMBER(first);
+    CHECK_EXACT(first);
+    IntNumObj *val = static_cast<ExactNumObj*>(first)->to_int();
+    ssize_t len = val->get_i();
+    delete val;
     if (len < 0)
         throw TokenError("a non-negative integer", RUN_ERR_WRONG_TYPE);
 
@@ -1467,9 +1493,12 @@ BUILTIN_PROC_DEF(vector_set) {
     args = TO_PAIR(args->cdr);
     if (args == empty_list)
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
-    CHECK_NUMBER(args->car);
-    CHECK_INT(static_cast<NumObj*>(args->car));
-    ssize_t k = static_cast<IntNumObj*>(args->car)->get_i();
+    EvalObj *second = args->car;
+    CHECK_NUMBER(second);
+    CHECK_EXACT(second);
+    IntNumObj *val = static_cast<ExactNumObj*>(second)->to_int();
+    ssize_t k = val->get_i();
+    delete val;
     if (k < 0)
         throw TokenError("a non-negative integer", RUN_ERR_WRONG_TYPE);
 
@@ -1496,9 +1525,12 @@ BUILTIN_PROC_DEF(vector_ref) {
     if (args->cdr != empty_list)
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
 
-    CHECK_NUMBER(args->car);
-    CHECK_INT(static_cast<NumObj*>(args->car));
-    ssize_t k = static_cast<IntNumObj*>(args->car)->get_i();
+    EvalObj *second = args->car;
+    CHECK_NUMBER(second);
+    CHECK_EXACT(second);
+    IntNumObj *val = static_cast<ExactNumObj*>(second)->to_int();
+    ssize_t k = val->get_i();
+    delete val;
     if (k < 0)
         throw TokenError("a non-negative integer", RUN_ERR_WRONG_TYPE);
     return vect->get(k);
@@ -1523,9 +1555,12 @@ BUILTIN_PROC_DEF(gc_status) {
 
 BUILTIN_PROC_DEF(set_gc_resolve_threshold) {
     ARGS_EXACTLY_ONE;
-    CHECK_NUMBER(args->car);
-    CHECK_INT(static_cast<NumObj*>(args->car));
-    ssize_t s = static_cast<IntNumObj*>(args->car)->get_i();
+    EvalObj *first = args->car;
+    CHECK_NUMBER(first);
+    CHECK_EXACT(first);
+    IntNumObj *val = static_cast<ExactNumObj*>(first)->to_int();
+    ssize_t s = val->get_i();
+    delete val;
     if (s < 0)
         throw TokenError("a non-negative integer", RUN_ERR_WRONG_TYPE);
     gc.set_resolve_threshold(size_t(s));
