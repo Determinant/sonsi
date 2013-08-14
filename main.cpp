@@ -33,7 +33,7 @@ void load_file(const char *fname) {
         }
         catch (GeneralError &e)
         {
-            fprintf(stderr, "An error occured near [%s]: %s\n", tree->ext_repr().c_str(), e.get_msg().c_str());
+            fprintf(stderr, "An error occured: %s\n", e.get_msg().c_str());
         }
         gc.force();
         gc.cycle_resolve();
