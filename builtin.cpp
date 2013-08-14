@@ -16,8 +16,7 @@ extern UnspecObj *unspec_obj;
 
 
 
-SpecialOptIf::SpecialOptIf(Environment *envt) : 
-    SpecialOptObj(envt, "if") {}
+SpecialOptIf::SpecialOptIf() : SpecialOptObj("if") {}
 
 void SpecialOptIf::prepare(Pair *pc) {
 #define IF_EXP_ERR \
@@ -142,8 +141,7 @@ do  \
 } \
 while (0)
 
-SpecialOptLambda::SpecialOptLambda(Environment *envt) : 
-    SpecialOptObj(envt, "lambda") {}
+SpecialOptLambda::SpecialOptLambda() : SpecialOptObj("lambda") {}
 
 void SpecialOptLambda::prepare(Pair *pc) {
     // Do not evaluate anything
@@ -183,8 +181,7 @@ Pair *SpecialOptLambda::call(Pair *args, Environment * &lenvt,
     return ret_addr->next;  // Move to the next instruction
 }
 
-SpecialOptDefine::SpecialOptDefine(Environment *envt) : 
-    SpecialOptObj(envt, "define") {}
+SpecialOptDefine::SpecialOptDefine() : SpecialOptObj("define") {}
 
 void SpecialOptDefine::prepare(Pair *pc) {
     Pair *first, *second;
@@ -261,8 +258,7 @@ Pair *SpecialOptDefine::call(Pair *args, Environment * &lenvt,
     return ret_addr->next;
 }
 
-SpecialOptSet::SpecialOptSet(Environment *envt) : 
-    SpecialOptObj(envt, "set!") {}
+SpecialOptSet::SpecialOptSet() : SpecialOptObj("set!") {}
 
 void SpecialOptSet::prepare(Pair *pc) {
     Pair *first, *second;
@@ -310,8 +306,7 @@ Pair *SpecialOptSet::call(Pair *args, Environment * &lenvt,
     return ret_addr->next;
 }
 
-SpecialOptQuote::SpecialOptQuote(Environment *envt) : 
-    SpecialOptObj(envt, "quote") {}
+SpecialOptQuote::SpecialOptQuote() : SpecialOptObj("quote") {}
 
 void SpecialOptQuote::prepare(Pair *pc) {
     // Do not evaluate anything
@@ -329,8 +324,7 @@ Pair *SpecialOptQuote::call(Pair *args, Environment * &lenvt,
     return ret_addr->next;
 }
 
-SpecialOptEval::SpecialOptEval(Environment *envt) : 
-    SpecialOptObj(envt, "eval") {}
+SpecialOptEval::SpecialOptEval() : SpecialOptObj("eval") {}
 
 void SpecialOptEval::prepare(Pair *pc) {
     if (pc->cdr == empty_list ||
@@ -363,8 +357,7 @@ Pair *SpecialOptEval::call(Pair *args, Environment * &lenvt,
     throw NormalError(INT_ERR);
 }
 
-SpecialOptAnd::SpecialOptAnd(Environment *envt) : 
-    SpecialOptObj(envt, "and") {}
+SpecialOptAnd::SpecialOptAnd() : SpecialOptObj("and") {}
 
 void SpecialOptAnd::prepare(Pair *pc) {
     pc->next = NULL;
@@ -423,8 +416,7 @@ Pair *SpecialOptAnd::call(Pair *args, Environment * &lenvt,
     throw NormalError(INT_ERR);
 }
 
-SpecialOptOr::SpecialOptOr(Environment *envt) : 
-    SpecialOptObj(envt, "or") {}
+SpecialOptOr::SpecialOptOr() : SpecialOptObj("or") {}
 
 void SpecialOptOr::prepare(Pair *pc) {
     pc->next = NULL;
@@ -483,8 +475,7 @@ Pair *SpecialOptOr::call(Pair *args, Environment * &lenvt,
     throw NormalError(INT_ERR);
 }
 
-SpecialOptApply::SpecialOptApply(Environment *envt) : 
-    SpecialOptObj(envt, "apply") {}
+SpecialOptApply::SpecialOptApply() : SpecialOptObj("apply") {}
 
 void SpecialOptApply::prepare(Pair *pc) {}
 
@@ -529,8 +520,7 @@ Pair *SpecialOptApply::call(Pair *_args, Environment * &lenvt,
     return NULL;
 }
 
-SpecialOptForce::SpecialOptForce(Environment *envt) : 
-    SpecialOptObj(envt, "force") {}
+SpecialOptForce::SpecialOptForce() : SpecialOptObj("force") {}
 
 void SpecialOptForce::prepare(Pair *pc) {
     if (pc->cdr == empty_list ||
@@ -579,8 +569,7 @@ Pair *SpecialOptForce::call(Pair *_args, Environment * &lenvt,
     }
 }
 
-SpecialOptDelay::SpecialOptDelay(Environment *envt) : 
-    SpecialOptObj(envt, "delay") {}
+SpecialOptDelay::SpecialOptDelay() : SpecialOptObj("delay") {}
 
 void SpecialOptDelay::prepare(Pair *pc) {
     if (pc->cdr == empty_list ||

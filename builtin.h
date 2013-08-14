@@ -17,7 +17,7 @@ class SpecialOptIf: public SpecialOptObj {/*{{{*/
         unsigned char state; /**< 0 for prepared, 1 for pre_called */
     public:
         /** Construct a `if` operator */
-        SpecialOptIf(Environment *envt);
+        SpecialOptIf();
         /** Prevent <condition> and <consequence> from being evaluated */
         void prepare(Pair *pc);
         /** When it's invoked at the first time, it will determined which of
@@ -33,7 +33,7 @@ class SpecialOptIf: public SpecialOptObj {/*{{{*/
 class SpecialOptLambda: public SpecialOptObj {/*{{{*/
     public:
         /** Construct a `lambda` operator */
-        SpecialOptLambda(Environment *envt);
+        SpecialOptLambda();
         /** Prevent all parts of the expression being evaluated */
         void prepare(Pair *pc);
         /** Make up a ProcObj and push into the stack */
@@ -48,7 +48,7 @@ class SpecialOptLambda: public SpecialOptObj {/*{{{*/
 class SpecialOptDefine: public SpecialOptObj {/*{{{*/
     public:
         /** Construct a `define` operator */
-        SpecialOptDefine(Environment *envt);
+        SpecialOptDefine();
         /** Prevent some parts from being evaluated */
         void prepare(Pair *pc);
         /** See `SpecialOptLambda` */
@@ -62,7 +62,7 @@ class SpecialOptDefine: public SpecialOptObj {/*{{{*/
 class SpecialOptSet: public SpecialOptObj {/*{{{*/
     public:
         /** Construct a `set!` operator */
-        SpecialOptSet(Environment *envt);
+        SpecialOptSet();
         /** See `SpecialOptDefine */
         void prepare(Pair *pc);
         /** See `SpecialOptDefine */
@@ -76,7 +76,7 @@ class SpecialOptSet: public SpecialOptObj {/*{{{*/
 class SpecialOptQuote: public SpecialOptObj {/*{{{*/
     public:
         /** Construct a `quote` operator */
-        SpecialOptQuote(Environment *envt);
+        SpecialOptQuote();
         /** Prevent the literal part from being evaluated */
         void prepare(Pair *pc);
         /** Return the literal */
@@ -93,7 +93,7 @@ class SpecialOptEval: public SpecialOptObj {/*{{{*/
         unsigned char state; /**< 0 for prepared, 1 for pre_called */
     public:
         /** Construct an `eval` operator */
-        SpecialOptEval(Environment *envt);
+        SpecialOptEval();
         /** Set state to 0 */
         void prepare(Pair *pc);
         /** Behaves like the one in `SpecialOptIf` */
@@ -108,7 +108,7 @@ class SpecialOptEval: public SpecialOptObj {/*{{{*/
 class SpecialOptAnd: public SpecialOptObj {/*{{{*/
     public:
         /** Construct an `and` operator */
-        SpecialOptAnd(Environment *envt);
+        SpecialOptAnd();
         /** Prevent all parts from being evaluated */
         void prepare(Pair *pc);
         /** Acts like `SpecialOptIf` */
@@ -123,7 +123,7 @@ class SpecialOptAnd: public SpecialOptObj {/*{{{*/
 class SpecialOptOr: public SpecialOptObj {/*{{{*/
     public:
         /** Construct an `or` operator */
-        SpecialOptOr(Environment *envt);
+        SpecialOptOr();
         /** See `SpecialOptAnd` */
         void prepare(Pair *pc);
         /** See `SpecialOptAnd` */
@@ -138,7 +138,7 @@ class SpecialOptOr: public SpecialOptObj {/*{{{*/
 class SpecialOptApply: public SpecialOptObj {/*{{{*/
     public:
         /** Construct an `apply` operator */
-        SpecialOptApply(Environment *envt);
+        SpecialOptApply();
         /** Do nothing */
         void prepare(Pair *pc);
         /** Provoke the <proc> with args */
@@ -153,7 +153,7 @@ class SpecialOptApply: public SpecialOptObj {/*{{{*/
 class SpecialOptDelay: public SpecialOptObj {/*{{{*/
     public:
         /** Construct a `delay` operator */
-        SpecialOptDelay(Environment *envt);
+        SpecialOptDelay();
         /** Do nothing */
         void prepare(Pair *pc);
         /** Make up a PromObj and push into the stack */
@@ -171,7 +171,7 @@ class SpecialOptForce: public SpecialOptObj {/*{{{*/
         PromObj* prom;
     public:
         /** Construct a `force` operator */
-        SpecialOptForce(Environment *envt);
+        SpecialOptForce();
         /** Set the state to 0 */
         void prepare(Pair *pc);
         /** Force the evaluation of a promise. If the promise has not been

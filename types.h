@@ -139,11 +139,8 @@ class Continuation;
  */
 class OptObj: public Container {/*{{{*/
     public:
-        /** Pointer to the environment */
-        Environment *envt;
 
-        OptObj(Environment *envt, int otype = 0);
-
+        OptObj(int otype = 0);
         /**
          * The function is called when an operation is needed.
          * @param args The argument list (the first one is the opt itself)
@@ -168,6 +165,8 @@ class ProcObj: public OptObj {/*{{{*/
         Pair *body;
         /** The arguments: <list> | var1 ... | var1 var2 ... . varn */
         EvalObj *params;
+        /** Pointer to the environment */
+        Environment *envt;
 
         /** Conctructs a ProcObj */
         ProcObj(Pair *body, Environment *envt, EvalObj *params);
@@ -187,7 +186,7 @@ class SpecialOptObj: public OptObj {/*{{{*/
     protected:
         string name;
     public:
-        SpecialOptObj(Environment *envt, string name);
+        SpecialOptObj(string name);
         ReprCons *get_repr_cons();
 };/*}}}*/
 
@@ -205,7 +204,7 @@ class BuiltinProcObj: public OptObj {/*{{{*/
          * @param proc the actual handler
          * @param name the name of this built-in procedure
          */
-        BuiltinProcObj(Environment *envt, BuiltinProc proc, string name);
+        BuiltinProcObj(BuiltinProc proc, string name);
         Pair *call(Pair *args, Environment * &envt,
                     Continuation * &cont, EvalObj ** &top_ptr);
         ReprCons *get_repr_cons();

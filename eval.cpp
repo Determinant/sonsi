@@ -14,19 +14,19 @@ void Evaluator::add_builtin_routines() {
     envt->add_binding(new SymObj(name), rout)
 
 #define ADD_BUILTIN_PROC(name, rout) \
-    ADD_ENTRY(name, new BuiltinProcObj(envt, rout, name))
+    ADD_ENTRY(name, new BuiltinProcObj(rout, name))
 
-    ADD_ENTRY("if", new SpecialOptIf(envt));
-    ADD_ENTRY("lambda", new SpecialOptLambda(envt));
-    ADD_ENTRY("define", new SpecialOptDefine(envt));
-    ADD_ENTRY("set!", new SpecialOptSet(envt));
-    ADD_ENTRY("quote", new SpecialOptQuote(envt));
-    ADD_ENTRY("eval", new SpecialOptEval(envt));
-    ADD_ENTRY("and", new SpecialOptAnd(envt));
-    ADD_ENTRY("or", new SpecialOptOr(envt));
-    ADD_ENTRY("apply", new SpecialOptApply(envt));
-    ADD_ENTRY("delay", new SpecialOptDelay(envt));
-    ADD_ENTRY("force", new SpecialOptForce(envt));
+    ADD_ENTRY("if", new SpecialOptIf());
+    ADD_ENTRY("lambda", new SpecialOptLambda());
+    ADD_ENTRY("define", new SpecialOptDefine());
+    ADD_ENTRY("set!", new SpecialOptSet());
+    ADD_ENTRY("quote", new SpecialOptQuote());
+    ADD_ENTRY("eval", new SpecialOptEval());
+    ADD_ENTRY("and", new SpecialOptAnd());
+    ADD_ENTRY("or", new SpecialOptOr());
+    ADD_ENTRY("apply", new SpecialOptApply());
+    ADD_ENTRY("delay", new SpecialOptDelay());
+    ADD_ENTRY("force", new SpecialOptForce());
 
     ADD_BUILTIN_PROC("+", num_add);
     ADD_BUILTIN_PROC("-", num_sub);

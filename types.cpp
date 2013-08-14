@@ -57,14 +57,14 @@ SymObj::SymObj(const string &str) :
         return new ReprStr(val);
     }
 
-OptObj::OptObj(Environment *_envt, int otype) : 
-    Container(otype | CLS_SIM_OBJ | CLS_OPT_OBJ, true), envt(_envt) {}
+OptObj::OptObj(int otype) : 
+    Container(otype | CLS_SIM_OBJ | CLS_OPT_OBJ, true) {}
 
 void OptObj::gc_decrement() {}
 void OptObj::gc_trigger(EvalObj ** &tail, EvalObjSet &visited) {}
 
 ProcObj::ProcObj(Pair *_body, Environment *_envt, EvalObj *_params) :
-    OptObj(_envt, CLS_CONTAINER), body(_body), params(_params) {
+    OptObj(CLS_CONTAINER), body(_body), params(_params), envt(_envt) {
     gc.attach(body);
     gc.attach(params);
     gc.attach(envt);
@@ -148,7 +148,7 @@ ReprCons *ProcObj::get_repr_cons() {
     return new ReprStr("#<Procedure>");
 }
 
-SpecialOptObj::SpecialOptObj(Environment *envt, string _name) : OptObj(envt), name(_name) {}
+SpecialOptObj::SpecialOptObj(string _name) : OptObj(), name(_name) {}
 ReprCons *SpecialOptObj::get_repr_cons() {
     return new ReprStr("#<Built-in Opt: " + name + ">");
 }
@@ -293,8 +293,8 @@ bool StrObj::eq(StrObj *r) {
     return str == r->str;
 }
 
-BuiltinProcObj::BuiltinProcObj(Environment *envt, BuiltinProc f, string _name) :
-    OptObj(envt), handler(f), name(_name) {}
+BuiltinProcObj::BuiltinProcObj(BuiltinProc f, string _name) :
+    OptObj(), handler(f), name(_name) {}
 
     Pair *BuiltinProcObj::call(Pair *args, Environment * &lenvt,
             Continuation * &cont, EvalObj ** &top_ptr) {
