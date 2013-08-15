@@ -8,6 +8,7 @@ const int GC_QUEUE_SIZE = 262144;
 const size_t GC_CYC_THRESHOLD = GC_QUEUE_SIZE >> 1;
 
 typedef std::set<EvalObj*> EvalObjSet;
+class GarbageCollector;
 
 #define GC_CYC_TRIGGER(ptr) \
 do { \
@@ -21,6 +22,27 @@ do { \
         static_cast<Container*>(ptr)->gc_refs--; \
 } while (0)
     
+extern GarbageCollector gc;
+#define EXIT_CURRENT_ENVT(lenvt) \
+    do { \
+        gc.expose(lenvt); \
+        lenvt = cont->envt; \
+        gc.attach(lenvt); \
+    } while (0)
+#define EXIT_CURRENT_CONT(cont) \
+    do { \
+        gc.expose(cont); \
+        cont = cont->prev_cont; \
+        gc.attach(cont); \
+    } while (0)
+
+#define EXIT_CURRENT_EXEC(lenvt, cont, args) \
+    do { \
+        EXIT_CURRENT_ENVT(lenvt); \
+        EXIT_CURRENT_CONT(cont); \
+        gc.expose(args); \
+        gc.collect(); \
+    } while (0)
 
 class GarbageCollector {
 
@@ -47,6 +69,5 @@ class GarbageCollector {
     EvalObj *attach(EvalObj *ptr);
 };
 
-extern GarbageCollector gc;
 
 #endif

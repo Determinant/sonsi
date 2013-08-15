@@ -3,8 +3,8 @@
 #include "consts.h"
 #include <vector>
 
-#if defined(GC_DEBUG) || defined (GC_INFO)
 #include <cstdio>
+#if defined(GC_DEBUG) || defined (GC_INFO)
 typedef unsigned long long ull;
 #endif
 
@@ -24,16 +24,18 @@ GarbageCollector::PendingEntry::PendingEntry(
 void GarbageCollector::expose(EvalObj *ptr) {
     if (ptr == NULL) return;
 #ifdef GC_DEBUG
-        fprintf(stderr, "GC: 0x%llx exposed. count = %lu \"%s\"\n", 
+    fprintf(stderr, "GC: 0x%llx exposed. count = %lu \"%s\"\n", 
             (ull)ptr, ptr->gc_get_cnt() - 1, ptr->ext_repr().c_str());
 #endif
-        if (ptr->gc_dec())
-        {
+    /*        if (ptr->gc_get_cnt() == 0)
+              puts("oops");*/
+    if (ptr->gc_dec())
+    {
 #ifdef GC_DEBUG
-            fprintf(stderr, "GC: 0x%llx pending. \n", (ull)ptr);
+        fprintf(stderr, "GC: 0x%llx pending. \n", (ull)ptr);
 #endif
-            pending_list = new PendingEntry(ptr, pending_list);
-        } 
+        pending_list = new PendingEntry(ptr, pending_list);
+    } 
 }
 
 void GarbageCollector::force() {

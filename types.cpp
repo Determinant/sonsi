@@ -88,17 +88,16 @@ Pair *ProcObj::call(Pair *_args, Environment * &lenvt,
         {
             gc.expose(*top_ptr);
             *top_ptr++ = gc.attach(TO_PAIR(_args->cdr)->car);
-            EXIT_CURRENT_EXEC(lenvt, cont); // exit cont and envt
-            gc.expose(_args);
+            EXIT_CURRENT_EXEC(lenvt, cont, _args); // exit cont and envt
             return ret_addr->next;
         }
         else 
         {
             if (nexp->cdr == empty_list && !nexp->car->is_simple_obj())    // tail recursion opt
             {
-                    cont->tail = true;
-                    cont->state = NULL;
-                    top_ptr++;              // revert the cont
+                cont->tail = true;
+                cont->state = NULL;
+                top_ptr++;              // revert the cont
             }
             else
             {
@@ -311,8 +310,7 @@ BuiltinProcObj::BuiltinProcObj(BuiltinProc f, string _name) :
         Pair *ret_addr = cont->pc;
         gc.expose(*top_ptr);
         *top_ptr++ = gc.attach(handler(TO_PAIR(args->cdr), name));
-        EXIT_CURRENT_EXEC(lenvt, cont);
-        gc.expose(args);
+        EXIT_CURRENT_EXEC(lenvt, cont, args);
         return ret_addr->next;          // Move to the next instruction
     }
 

@@ -21,24 +21,6 @@ const int CLS_CONTAINER = 1 << 20;
 #define TO_PAIR(ptr) \
     (static_cast<Pair*>(ptr))
 
-#define EXIT_CURRENT_ENVT(lenvt) \
-    do { \
-        gc.expose(lenvt); \
-        lenvt = cont->envt; \
-        gc.attach(lenvt); \
-    } while (0)
-#define EXIT_CURRENT_CONT(cont) \
-    do { \
-        gc.expose(cont); \
-        cont = cont->prev_cont; \
-        gc.attach(cont); \
-    } while (0)
-
-#define EXIT_CURRENT_EXEC(lenvt, cont) \
-    do { \
-        EXIT_CURRENT_ENVT(lenvt); \
-        EXIT_CURRENT_CONT(cont); \
-    } while (0)
 
 /** @class FrameObj
  * Objects that can be held in the evaluation stack

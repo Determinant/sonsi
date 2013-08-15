@@ -186,7 +186,7 @@ EvalObj *Evaluator::run_expr(Pair *prog) {
             }
             else
                 throw TokenError((args->car)->ext_repr(), SYN_ERR_CAN_NOT_APPLY);
-            gc.collect();
+//            gc.collect();
         }
     }
     gc.expose(prog);

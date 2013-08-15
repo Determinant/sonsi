@@ -14,8 +14,6 @@ using std::stringstream;
 extern EmptyList *empty_list;
 extern UnspecObj *unspec_obj;
 
-
-
 SpecialOptIf::SpecialOptIf() : SpecialOptObj("if") {}
 
 void SpecialOptIf::prepare(Pair *pc) {
@@ -49,8 +47,7 @@ Pair *SpecialOptIf::call(Pair *args, Environment * &lenvt,
         {
             gc.expose(*top_ptr);
             *top_ptr++ = gc.attach(TO_PAIR(args->cdr)->car);
-            EXIT_CURRENT_EXEC(lenvt, cont);
-            gc.expose(args);
+            EXIT_CURRENT_EXEC(lenvt, cont, args);
             return ret_addr->next;          // Move to the next instruction
         }
         else 
@@ -61,21 +58,39 @@ Pair *SpecialOptIf::call(Pair *args, Environment * &lenvt,
 
             if (TO_PAIR(args->cdr)->car->is_true())
             {
-                second->next = NULL;
-                // Undo pop and invoke again
-                gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
-                top_ptr++;
-                cont->state = empty_list;
+                if (second->car->is_simple_obj())
+                {
+                    second->next = NULL;
+                    // Undo pop and invoke again
+                    gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
+                    top_ptr++;
+                    cont->state = empty_list;
+                }
+                else                        // tail recursion opt
+                {
+                    cont->tail = true;
+                    cont->state = NULL;
+                    top_ptr++;
+                }
                 gc.expose(args);
                 return second;
             }
             else if (third != empty_list)
             {
-                third->next = NULL;
-                // Undo pop and invoke again
-                gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
-                top_ptr++;
-                cont->state = empty_list;
+                if (third->car->is_simple_obj())
+                {
+                    third->next = NULL;
+                    // Undo pop and invoke again
+                    gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
+                    top_ptr++;
+                    cont->state = empty_list;
+                }
+                else                        // tail recursion opt
+                {
+                    cont->tail = true;
+                    cont->state = NULL;
+                    top_ptr++;
+                }
                 gc.expose(args);
                 return third;
             }
@@ -83,8 +98,7 @@ Pair *SpecialOptIf::call(Pair *args, Environment * &lenvt,
             {
                 gc.expose(*top_ptr);
                 *top_ptr++ = gc.attach(unspec_obj);
-                EXIT_CURRENT_EXEC(lenvt, cont);
-                gc.expose(args);
+                EXIT_CURRENT_EXEC(lenvt, cont, args);
                 return ret_addr->next;
             }
         }
@@ -174,8 +188,7 @@ Pair *SpecialOptLambda::call(Pair *args, Environment * &lenvt,
 
     gc.expose(*top_ptr);
     *top_ptr++ = gc.attach(new ProcObj(body, lenvt, params));
-    EXIT_CURRENT_EXEC(lenvt, cont);
-    gc.expose(args);
+    EXIT_CURRENT_EXEC(lenvt, cont, args);
     return ret_addr->next;  // Move to the next instruction
 }
 
@@ -250,8 +263,7 @@ Pair *SpecialOptDefine::call(Pair *args, Environment * &lenvt,
     lenvt->add_binding(id, obj);
     gc.expose(*top_ptr);
     *top_ptr++ = gc.attach(unspec_obj);
-    EXIT_CURRENT_EXEC(lenvt, cont);
-    gc.expose(args);
+    EXIT_CURRENT_EXEC(lenvt, cont, args);
     return ret_addr->next;
 }
 
@@ -297,8 +309,7 @@ Pair *SpecialOptSet::call(Pair *args, Environment * &lenvt,
     if (!flag) throw TokenError(id->ext_repr(), RUN_ERR_UNBOUND_VAR);
     gc.expose(*top_ptr);
     *top_ptr++ = gc.attach(unspec_obj);
-    EXIT_CURRENT_EXEC(lenvt, cont);
-    gc.expose(args);
+    EXIT_CURRENT_EXEC(lenvt, cont, args);
     return ret_addr->next;
 }
 
@@ -314,8 +325,7 @@ Pair *SpecialOptQuote::call(Pair *args, Environment * &lenvt,
     Pair *ret_addr = cont->pc;
     gc.expose(*top_ptr);
     *top_ptr++ = gc.attach(TO_PAIR(pc->cdr)->car);
-    EXIT_CURRENT_EXEC(lenvt, cont);
-    gc.expose(args);
+    EXIT_CURRENT_EXEC(lenvt, cont, args);
     return ret_addr->next;
 }
 
@@ -335,8 +345,7 @@ Pair *SpecialOptEval::call(Pair *args, Environment * &lenvt,
         gc.expose(cont->state);     // Exec done
         gc.expose(*top_ptr);
         *top_ptr++ = gc.attach(TO_PAIR(args->cdr)->car);
-        EXIT_CURRENT_EXEC(lenvt, cont);
-        gc.expose(args);
+        EXIT_CURRENT_EXEC(lenvt, cont, args);
         return ret_addr->next;          // Move to the next instruction
     }
     else
@@ -361,50 +370,70 @@ void SpecialOptAnd::prepare(Pair *pc) {
 Pair *SpecialOptAnd::call(Pair *args, Environment * &lenvt,
         Continuation * &cont, EvalObj ** &top_ptr, Pair *pc) {
     Pair *ret_addr = cont->pc;
-    if (pc->cdr == empty_list)
+    Pair *cs = cont->state;
+    Pair *nexp;
+    if (pc->cdr == empty_list)              // empty list
     {
         gc.expose(*top_ptr);
         *top_ptr++ = gc.attach(new BoolObj(true));
-        EXIT_CURRENT_EXEC(lenvt, cont);
-        gc.expose(args);
+        EXIT_CURRENT_EXEC(lenvt, cont, args);
         return ret_addr->next;
     }
-    if (!cont->state)
+    if (!cs)                       // spawn the first
     {
-        gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
-        top_ptr++;
-        cont->state = TO_PAIR(pc->cdr);
-        cont->state->next = NULL;
-        gc.expose(args);
-        return cont->state;
-    }
-    EvalObj *ret = TO_PAIR(args->cdr)->car;
-    if (ret->is_true())
-    {
-        if (cont->state->cdr == empty_list) // the last member
+        nexp = cont->state = TO_PAIR(pc->cdr);
+        if (nexp->cdr == empty_list && !nexp->car->is_simple_obj())
         {
-            gc.expose(*top_ptr);
-            *top_ptr++ = gc.attach(ret);
-            EXIT_CURRENT_EXEC(lenvt, cont);
+            cont->tail = true;
+            cont->state = NULL;
+            top_ptr++;
             gc.expose(args);
-            return ret_addr->next;
-        }
+            return nexp;
+        } 
         else
         {
             gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
             top_ptr++;
-            cont->state = TO_PAIR(cont->state->cdr);
-            cont->state->next = NULL;
+            nexp->next = NULL;
             gc.expose(args);
-            return cont->state;
+            return nexp;
+        }
+    }
+
+    EvalObj *ret = TO_PAIR(args->cdr)->car;
+    if (ret->is_true())
+    {
+        if (cs->cdr == empty_list) // the last member
+        {
+            gc.expose(*top_ptr);
+            *top_ptr++ = gc.attach(ret);
+            EXIT_CURRENT_EXEC(lenvt, cont, args);
+            return ret_addr->next;
+        }
+        else
+        {
+            nexp = TO_PAIR(cs->cdr);
+            if (nexp->cdr == empty_list && !nexp->car->is_simple_obj())
+            {
+                cont->tail = true;
+                cont->state = NULL;
+                top_ptr++;
+                gc.expose(args);
+                return nexp;
+            }  
+            gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
+            top_ptr++;
+            nexp = cont->state = TO_PAIR(cont->state->cdr);
+            nexp->next = NULL;
+            gc.expose(args);
+            return nexp;
         }
     }
     else
     {
         gc.expose(*top_ptr);
         *top_ptr++ = gc.attach(ret);
-        EXIT_CURRENT_EXEC(lenvt, cont);
-        gc.expose(args);
+        EXIT_CURRENT_EXEC(lenvt, cont, args);
         return ret_addr->next;
     }
     throw NormalError(INT_ERR);
@@ -423,8 +452,7 @@ Pair *SpecialOptOr::call(Pair *args, Environment * &lenvt,
     {
         gc.expose(*top_ptr);
         *top_ptr++ = gc.attach(new BoolObj(false));
-        EXIT_CURRENT_EXEC(lenvt, cont);
-        gc.expose(args);
+        EXIT_CURRENT_EXEC(lenvt, cont, args);
         return ret_addr->next;
     }
     if (!cont->state)
@@ -443,8 +471,7 @@ Pair *SpecialOptOr::call(Pair *args, Environment * &lenvt,
         {
             gc.expose(*top_ptr);
             *top_ptr++ = gc.attach(ret);
-            EXIT_CURRENT_EXEC(lenvt, cont);
-            gc.expose(args);
+            EXIT_CURRENT_EXEC(lenvt, cont, args);
             return ret_addr->next;
         }
         else
@@ -461,8 +488,7 @@ Pair *SpecialOptOr::call(Pair *args, Environment * &lenvt,
     {
         gc.expose(*top_ptr);
         *top_ptr++ = gc.attach(ret);
-        EXIT_CURRENT_EXEC(lenvt, cont);
-        gc.expose(args);
+        EXIT_CURRENT_EXEC(lenvt, cont, args);
         return ret_addr->next;
     }
     throw NormalError(INT_ERR);
@@ -532,8 +558,7 @@ Pair *SpecialOptForce::call(Pair *_args, Environment * &lenvt,
         prom->feed_mem(mem);
         gc.expose(*top_ptr);
         *top_ptr++ = gc.attach(mem);
-        EXIT_CURRENT_EXEC(lenvt, cont);
-        gc.expose(_args);
+        EXIT_CURRENT_EXEC(lenvt, cont, _args);
         return ret_addr->next;          // Move to the next instruction
     }
     else
@@ -546,8 +571,7 @@ Pair *SpecialOptForce::call(Pair *_args, Environment * &lenvt,
         {
             gc.expose(*top_ptr);
             *top_ptr++ = gc.attach(mem);
-            EXIT_CURRENT_EXEC(lenvt, cont);
-            gc.expose(_args);
+            EXIT_CURRENT_EXEC(lenvt, cont, _args);
             return ret_addr->next;      
         }
         else                            // force
@@ -576,8 +600,7 @@ Pair *SpecialOptDelay::call(Pair *args, Environment * &lenvt,
     Pair *ret_addr = cont->pc;
     gc.expose(*top_ptr);
     *top_ptr++ = gc.attach(new PromObj(TO_PAIR(pc->cdr)->car));
-    EXIT_CURRENT_EXEC(lenvt, cont);
-    gc.expose(args);
+    EXIT_CURRENT_EXEC(lenvt, cont, args);
     return ret_addr->next;          // Move to the next instruction
 }
 
