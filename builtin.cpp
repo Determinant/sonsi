@@ -448,26 +448,40 @@ void SpecialOptOr::prepare(Pair *pc) {
 Pair *SpecialOptOr::call(Pair *args, Environment * &lenvt,
         Continuation * &cont, EvalObj ** &top_ptr, Pair *pc) {
     Pair *ret_addr = cont->pc;
-    if (pc->cdr == empty_list)
+    Pair *cs = cont->state;
+    Pair *nexp;
+    if (pc->cdr == empty_list)              // empty list
     {
         gc.expose(*top_ptr);
         *top_ptr++ = gc.attach(new BoolObj(false));
         EXIT_CURRENT_EXEC(lenvt, cont, args);
         return ret_addr->next;
     }
-    if (!cont->state)
+    if (!cs)                       // spawn the first
     {
-        gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
-        top_ptr++;
-        cont->state = TO_PAIR(pc->cdr);
-        cont->state->next = NULL;
-        gc.expose(args);
-        return cont->state;
+        nexp = cont->state = TO_PAIR(pc->cdr);
+        if (nexp->cdr == empty_list && !nexp->car->is_simple_obj())
+        {
+            cont->tail = true;
+            cont->state = NULL;
+            top_ptr++;
+            gc.expose(args);
+            return nexp;
+        } 
+        else
+        {
+            gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
+            top_ptr++;
+            nexp->next = NULL;
+            gc.expose(args);
+            return nexp;
+        }
     }
+
     EvalObj *ret = TO_PAIR(args->cdr)->car;
     if (!ret->is_true())
     {
-        if (cont->state->cdr == empty_list) // the last member
+        if (cs->cdr == empty_list) // the last member
         {
             gc.expose(*top_ptr);
             *top_ptr++ = gc.attach(ret);
@@ -476,12 +490,21 @@ Pair *SpecialOptOr::call(Pair *args, Environment * &lenvt,
         }
         else
         {
+            nexp = TO_PAIR(cs->cdr);
+            if (nexp->cdr == empty_list && !nexp->car->is_simple_obj())
+            {
+                cont->tail = true;
+                cont->state = NULL;
+                top_ptr++;
+                gc.expose(args);
+                return nexp;
+            }  
             gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
             top_ptr++;
-            cont->state = TO_PAIR(cont->state->cdr);
-            cont->state->next = NULL;
+            nexp = cont->state = TO_PAIR(cont->state->cdr);
+            nexp->next = NULL;
             gc.expose(args);
-            return cont->state;
+            return nexp;
         }
     }
     else
