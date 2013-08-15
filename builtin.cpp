@@ -19,7 +19,7 @@ SpecialOptIf::SpecialOptIf() : SpecialOptObj("if") {}
 void SpecialOptIf::prepare(Pair *pc) {
 #define IF_EXP_ERR \
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
-    
+
     Pair *first, *second, *third;
 
     if (pc->cdr == empty_list)
@@ -41,16 +41,17 @@ void SpecialOptIf::prepare(Pair *pc) {
 Pair *SpecialOptIf::call(Pair *args, Environment * &lenvt,
         Continuation * &cont, EvalObj ** &top_ptr, Pair *pc) {
     Pair *ret_addr = cont->pc;
-    if (cont->state)
+    Pair *nexp = cont->state;
+    if (nexp)
     {
-        if (cont->state == empty_list)
+        if (nexp == empty_list)
         {
             gc.expose(*top_ptr);
             *top_ptr++ = gc.attach(TO_PAIR(args->cdr)->car);
             EXIT_CURRENT_EXEC(lenvt, cont, args);
             return ret_addr->next;          // Move to the next instruction
         }
-        else 
+        else
         {
             Pair *first = TO_PAIR(pc->cdr);
             Pair *second = TO_PAIR(first->cdr);
@@ -107,10 +108,10 @@ Pair *SpecialOptIf::call(Pair *args, Environment * &lenvt,
     {
         gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
         top_ptr++;
-        cont->state = TO_PAIR(pc->cdr);
-        cont->state->next = NULL;
+        nexp = cont->state = TO_PAIR(pc->cdr);
+        nexp->next = NULL;
         gc.expose(args);
-        return cont->state;
+        return nexp;
     }
     throw NormalError(INT_ERR);
 }
@@ -340,9 +341,10 @@ void SpecialOptEval::prepare(Pair *pc) {
 Pair *SpecialOptEval::call(Pair *args, Environment * &lenvt,
         Continuation * &cont, EvalObj ** &top_ptr, Pair *pc) {
     Pair *ret_addr = cont->pc;
-    if (cont->state)
+    Pair *nexp = cont->state;
+    if (nexp)
     {
-        gc.expose(cont->state);     // Exec done
+        gc.expose(nexp);     // Exec done
         gc.expose(*top_ptr);
         *top_ptr++ = gc.attach(TO_PAIR(args->cdr)->car);
         EXIT_CURRENT_EXEC(lenvt, cont, args);
@@ -352,11 +354,11 @@ Pair *SpecialOptEval::call(Pair *args, Environment * &lenvt,
     {
         gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
         top_ptr++;
-        cont->state = TO_PAIR(args->cdr);
-        gc.attach(cont->state);     // Or it will be released
-        cont->state->next = NULL;
+        nexp = cont->state = TO_PAIR(args->cdr);
+        gc.attach(nexp);     // Or it will be released
+        nexp->next = NULL;
         gc.expose(args);
-        return cont->state;
+        return nexp;
     }
     throw NormalError(INT_ERR);
 }
@@ -389,7 +391,7 @@ Pair *SpecialOptAnd::call(Pair *args, Environment * &lenvt,
             top_ptr++;
             gc.expose(args);
             return nexp;
-        } 
+        }
         else
         {
             gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
@@ -420,7 +422,7 @@ Pair *SpecialOptAnd::call(Pair *args, Environment * &lenvt,
                 top_ptr++;
                 gc.expose(args);
                 return nexp;
-            }  
+            }
             gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
             top_ptr++;
             nexp = cont->state = TO_PAIR(cont->state->cdr);
@@ -464,18 +466,15 @@ Pair *SpecialOptOr::call(Pair *args, Environment * &lenvt,
         {
             cont->tail = true;
             cont->state = NULL;
-            top_ptr++;
-            gc.expose(args);
-            return nexp;
-        } 
+        }
         else
         {
             gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
-            top_ptr++;
             nexp->next = NULL;
-            gc.expose(args);
-            return nexp;
         }
+        top_ptr++;
+        gc.expose(args);
+        return nexp;
     }
 
     EvalObj *ret = TO_PAIR(args->cdr)->car;
@@ -498,7 +497,7 @@ Pair *SpecialOptOr::call(Pair *args, Environment * &lenvt,
                 top_ptr++;
                 gc.expose(args);
                 return nexp;
-            }  
+            }
             gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
             top_ptr++;
             nexp = cont->state = TO_PAIR(cont->state->cdr);
@@ -575,7 +574,8 @@ Pair *SpecialOptForce::call(Pair *_args, Environment * &lenvt,
     Pair *args = _args;
     args = TO_PAIR(args->cdr);
     Pair *ret_addr = cont->pc;
-    if (cont->state)
+    Pair *nexp = cont->state;
+    if (nexp)
     {
         EvalObj *mem = args->car;
         prom->feed_mem(mem);
@@ -595,16 +595,16 @@ Pair *SpecialOptForce::call(Pair *_args, Environment * &lenvt,
             gc.expose(*top_ptr);
             *top_ptr++ = gc.attach(mem);
             EXIT_CURRENT_EXEC(lenvt, cont, _args);
-            return ret_addr->next;      
+            return ret_addr->next;
         }
         else                            // force
         {
             gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
             top_ptr++;
-            cont->state = prom->get_entry();
-            cont->state->next = NULL;
+            nexp = cont->state = prom->get_entry();
+            nexp->next = NULL;
             gc.expose(_args);
-            return cont->state;
+            return nexp;
         }
     }
 }
@@ -1330,7 +1330,7 @@ BUILTIN_PROC_DEF(is_number) {
 BUILTIN_PROC_DEF(is_complex) {
     ARGS_EXACTLY_ONE;
     return new BoolObj(args->car->is_num_obj());
-    // any numbers are complex 
+    // any numbers are complex
 }
 
 
@@ -1339,20 +1339,20 @@ BUILTIN_PROC_DEF(is_real) {
     if (!args->car->is_num_obj())
         return new BoolObj(false);
     NumObj *obj = static_cast<NumObj*>(args->car);
-    if (obj->level >= NUM_LVL_REAL) 
+    if (obj->level >= NUM_LVL_REAL)
         return new BoolObj(true);
     return new BoolObj(is_zero(static_cast<CompNumObj*>(obj)->imag));
 }
 
 BUILTIN_PROC_DEF(is_rational) {
     ARGS_EXACTLY_ONE;
-    return new BoolObj(args->car->is_num_obj() && 
+    return new BoolObj(args->car->is_num_obj() &&
                     static_cast<NumObj*>(args->car)->level >= NUM_LVL_RAT);
 }
 
 BUILTIN_PROC_DEF(is_integer) {
     ARGS_EXACTLY_ONE;
-    return new BoolObj(args->car->is_num_obj() && 
+    return new BoolObj(args->car->is_num_obj() &&
                     static_cast<NumObj*>(args->car)->level >= NUM_LVL_INT);
 }
 
@@ -1421,7 +1421,7 @@ BUILTIN_PROC_DEF(num_rem) {
 BUILTIN_PROC_DEF(num_gcd) {
 //    ARGS_AT_LEAST_ONE;
     IntNumObj *res = new IntNumObj(0);
-    IntNumObj *opr; 
+    IntNumObj *opr;
     for (;args != empty_list; args = TO_PAIR(args->cdr))
     {
         EvalObj *obj = args->car;
@@ -1438,7 +1438,7 @@ BUILTIN_PROC_DEF(num_gcd) {
 BUILTIN_PROC_DEF(num_lcm) {
 //    ARGS_AT_LEAST_ONE;
     IntNumObj *res = new IntNumObj(1);
-    IntNumObj *opr; 
+    IntNumObj *opr;
     for (;args != empty_list; args = TO_PAIR(args->cdr))
     {
         EvalObj *obj = args->car;
@@ -1518,14 +1518,14 @@ BUILTIN_PROC_DEF(make_vector) {
     if (len < 0)
         throw TokenError("a non-negative integer", RUN_ERR_WRONG_TYPE);
 
-    EvalObj *fill; 
+    EvalObj *fill;
 
     args = TO_PAIR(args->cdr);
     if (args == empty_list)
         fill = unspec_obj;
     else if (args->cdr == empty_list)
         fill = args->car;
-    else 
+    else
         throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
 
     VecObj *res = new VecObj(size_t(len), fill);
