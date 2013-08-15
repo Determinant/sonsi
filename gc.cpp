@@ -110,7 +110,6 @@ EvalObj *GarbageCollector::attach(EvalObj *ptr) {
 }
 
 void GarbageCollector::cycle_resolve() {
-    EvalObjSet visited;
     Container **clptr = cyc_list;
     for (ObjEntry *i = joined->next; i != oe_null; i = i->next)
     {
@@ -126,17 +125,16 @@ void GarbageCollector::cycle_resolve() {
     EvalObj **l = gcq, **r = l;
     for (Container **p = cyc_list; p < clptr; p++)
         (*p)->gc_decrement();
+
     for (Container **p = cyc_list; p < clptr; p++)
-        if ((*p)->gc_refs) 
-        {
+        if ((*p)->gc_refs)  // must not be recycled
             *r++ = *p;
-            visited.insert(*p);
-        }
+
     for (; l != r; l++)
     {
         Container *p = static_cast<Container*>(*l);
         p->keep = true;        
-        p->gc_trigger(r, visited);
+        p->gc_trigger(r);
     }
     for (Container **p = cyc_list; p < clptr; p++)
         if (!(*p)->keep) 

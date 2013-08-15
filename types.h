@@ -54,7 +54,7 @@ class Pair : public Container {/*{{{*/
         ~Pair();
         ReprCons *get_repr_cons();
         void gc_decrement();
-        void gc_trigger(EvalObj ** &tail, EvalObjSet &visited);
+        void gc_trigger(EvalObj ** &tail);
 };/*}}}*/
 
 /** @class EmptyList
@@ -143,7 +143,7 @@ class OptObj: public Container {/*{{{*/
         virtual Pair *call(Pair *args, Environment * &envt,
                             Continuation * &cont, EvalObj ** &top_ptr, Pair *pc) = 0;
         virtual void gc_decrement();
-        virtual void gc_trigger(EvalObj ** &tail, EvalObjSet &visited);
+        virtual void gc_trigger(EvalObj ** &tail);
 
 };/*}}}*/
 
@@ -167,7 +167,7 @@ class ProcObj: public OptObj {/*{{{*/
         ReprCons *get_repr_cons();
 
         void gc_decrement();
-        void gc_trigger(EvalObj ** &tail, EvalObjSet &visited);
+        void gc_trigger(EvalObj ** &tail);
 };/*}}}*/
 
 /** @class SpecialOptObj
@@ -309,7 +309,7 @@ class VecObj: public Container {/*{{{*/
         ReprCons *get_repr_cons();
 
         void gc_decrement();
-        void gc_trigger(EvalObj ** &tail, EvalObjSet &visited);
+        void gc_trigger(EvalObj ** &tail);
 };/*}}}*/
 
 /**
@@ -329,7 +329,7 @@ class PromObj: public Container {/*{{{*/
         ReprCons *get_repr_cons();
 
         void gc_decrement();
-        void gc_trigger(EvalObj ** &tail, EvalObjSet &visited);
+        void gc_trigger(EvalObj ** &tail);
 };/*}}}*/
 
 /** @class Environment
@@ -361,7 +361,7 @@ class Environment : public Container{/*{{{*/
         Environment *get_prev();
 
         void gc_decrement();
-        void gc_trigger(EvalObj ** &tail, EvalObjSet &visited);
+        void gc_trigger(EvalObj ** &tail);
 };/*}}}*/
 
 /** @class Continuation
@@ -385,7 +385,7 @@ class Continuation : public Container {/*{{{*/
         ReprCons *get_repr_cons();
 
         void gc_decrement();
-        void gc_trigger(EvalObj ** &tail, EvalObjSet &visited);
+        void gc_trigger(EvalObj ** &tail);
 };/*}}}*/
 
 /** @class InexactNumObj

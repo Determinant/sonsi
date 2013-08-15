@@ -12,8 +12,12 @@ class GarbageCollector;
 
 #define GC_CYC_TRIGGER(ptr) \
 do { \
-    if ((ptr) && (ptr)->is_container() && !visited.count(ptr)) \
-        visited.insert(*tail++ = (ptr)); \
+    if ((ptr) && (ptr)->is_container() &&  \
+            !(static_cast<Container*>(ptr)->keep)) \
+    { \
+        static_cast<Container*>(ptr)->keep = true; \
+        *tail++ = (ptr); \
+    } \
 } while (0)
 
 #define GC_CYC_DEC(ptr) \

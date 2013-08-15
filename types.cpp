@@ -32,7 +32,7 @@ void Pair::gc_decrement() {
     GC_CYC_DEC(cdr);
 }
 
-void Pair::gc_trigger(EvalObj ** &tail, EvalObjSet &visited) {
+void Pair::gc_trigger(EvalObj ** &tail) {
     GC_CYC_TRIGGER(car);
     GC_CYC_TRIGGER(cdr);
 }
@@ -53,7 +53,7 @@ OptObj::OptObj(int otype) :
     Container(otype | CLS_SIM_OBJ | CLS_OPT_OBJ, true) {}
 
 void OptObj::gc_decrement() {}
-void OptObj::gc_trigger(EvalObj ** &tail, EvalObjSet &visited) {}
+void OptObj::gc_trigger(EvalObj ** &tail) {}
 
 ProcObj::ProcObj(Pair *_body, Environment *_envt, EvalObj *_params) :
     OptObj(CLS_CONTAINER), body(_body), params(_params), envt(_envt) {
@@ -138,7 +138,7 @@ void ProcObj::gc_decrement() {
     GC_CYC_DEC(envt);
 }
 
-void ProcObj::gc_trigger(EvalObj ** &tail, EvalObjSet &visited) {
+void ProcObj::gc_trigger(EvalObj ** &tail) {
     GC_CYC_TRIGGER(body);
     GC_CYC_TRIGGER(params);
     GC_CYC_TRIGGER(envt);
@@ -260,7 +260,7 @@ void VecObj::gc_decrement() {
         GC_CYC_DEC(*it);
 }
 
-void VecObj::gc_trigger(EvalObj ** &tail, EvalObjSet &visited) {
+void VecObj::gc_trigger(EvalObj ** &tail) {
     for (EvalObjVec::iterator it = vec.begin();
             it != vec.end(); it++)
         GC_CYC_TRIGGER(*it);
@@ -333,7 +333,7 @@ void Environment::gc_decrement() {
         GC_CYC_DEC(it->second);
 }
 
-void Environment::gc_trigger(EvalObj ** &tail, EvalObjSet &visited) {
+void Environment::gc_trigger(EvalObj ** &tail) {
     GC_CYC_TRIGGER(prev_envt);
     for (Str2EvalObj::iterator it = binding.begin();
             it != binding.end(); it++)
@@ -412,7 +412,7 @@ void Continuation::gc_decrement() {
     GC_CYC_DEC(envt);
 }
 
-void Continuation::gc_trigger(EvalObj ** &tail, EvalObjSet &visited) {
+void Continuation::gc_trigger(EvalObj ** &tail) {
     GC_CYC_TRIGGER(prev_cont);
     GC_CYC_TRIGGER(envt);
 }
@@ -502,7 +502,7 @@ void PromObj::gc_decrement() {
     GC_CYC_DEC(mem);
 }
 
-void PromObj::gc_trigger(EvalObj ** &tail, EvalObjSet &visited) {
+void PromObj::gc_trigger(EvalObj ** &tail) {
     GC_CYC_TRIGGER(entry);
     GC_CYC_TRIGGER(mem);
 }
