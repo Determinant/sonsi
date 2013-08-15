@@ -150,7 +150,7 @@ class OptObj: public Container {/*{{{*/
          * @return New value for pc register
          */
         virtual Pair *call(Pair *args, Environment * &envt,
-                            Continuation * &cont, EvalObj ** &top_ptr) = 0;
+                            Continuation * &cont, EvalObj ** &top_ptr, Pair *pc) = 0;
         virtual void gc_decrement();
         virtual void gc_trigger(EvalObj ** &tail, EvalObjSet &visited);
 
@@ -172,7 +172,7 @@ class ProcObj: public OptObj {/*{{{*/
         ProcObj(Pair *body, Environment *envt, EvalObj *params);
         ~ProcObj();
         Pair *call(Pair *args, Environment * &envt,
-                    Continuation * &cont, EvalObj ** &top_ptr);
+                    Continuation * &cont, EvalObj ** &top_ptr, Pair *pc);
         ReprCons *get_repr_cons();
 
         void gc_decrement();
@@ -206,7 +206,7 @@ class BuiltinProcObj: public OptObj {/*{{{*/
          */
         BuiltinProcObj(BuiltinProc proc, string name);
         Pair *call(Pair *args, Environment * &envt,
-                    Continuation * &cont, EvalObj ** &top_ptr);
+                    Continuation * &cont, EvalObj ** &top_ptr, Pair *pc);
         ReprCons *get_repr_cons();
 };/*}}}*/
 
@@ -385,6 +385,7 @@ class Continuation : public Container {/*{{{*/
         Environment *envt;  /**< The saved envt */
         Pair *pc;           /**< The saved pc */
         Pair *state;        /**< The state of this compound */
+        Pair *prog;         /**< Pointing to ast */
         bool tail;          /**< If the proper tail opt is on */
 
         /** Create a continuation */

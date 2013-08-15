@@ -24,7 +24,7 @@ class SpecialOptIf: public SpecialOptObj {/*{{{*/
          * <condition> and <consequence> should be evaluated.  Then when it's
          * invoked again, it will tell the system the corresponding result.*/
         Pair *call(Pair *args, Environment * &envt,
-                Continuation * &cont, EvalObj ** &top_ptr);
+                Continuation * &cont, EvalObj ** &top_ptr, Pair *pc);
 };/*}}}*/
 
 /** @class SpecialOptLambda
@@ -38,7 +38,7 @@ class SpecialOptLambda: public SpecialOptObj {/*{{{*/
         void prepare(Pair *pc);
         /** Make up a ProcObj and push into the stack */
         Pair *call(Pair *args, Environment * &envt,
-                Continuation * &cont, EvalObj ** &top_ptr);
+                Continuation * &cont, EvalObj ** &top_ptr, Pair *pc);
 
 };/*}}}*/
 
@@ -53,7 +53,7 @@ class SpecialOptDefine: public SpecialOptObj {/*{{{*/
         void prepare(Pair *pc);
         /** See `SpecialOptLambda` */
         Pair *call(Pair *args, Environment * &envt,
-                Continuation * &cont, EvalObj ** &top_ptr);
+                Continuation * &cont, EvalObj ** &top_ptr, Pair *pc);
 };/*}}}*/
 
 /** @class SpecialOptSet
@@ -67,7 +67,7 @@ class SpecialOptSet: public SpecialOptObj {/*{{{*/
         void prepare(Pair *pc);
         /** See `SpecialOptDefine */
         Pair *call(Pair *args, Environment * &envt,
-                Continuation * &cont, EvalObj ** &top_ptr);
+                Continuation * &cont, EvalObj ** &top_ptr, Pair *pc);
 };/*}}}*/
 
 /** @class SpecialOptLambda
@@ -81,7 +81,7 @@ class SpecialOptQuote: public SpecialOptObj {/*{{{*/
         void prepare(Pair *pc);
         /** Return the literal */
         Pair *call(Pair *args, Environment * &envt,
-                Continuation * &cont, EvalObj ** &top_ptr);
+                Continuation * &cont, EvalObj ** &top_ptr, Pair *pc);
 
 };/*}}}*/
 
@@ -98,7 +98,7 @@ class SpecialOptEval: public SpecialOptObj {/*{{{*/
         void prepare(Pair *pc);
         /** Behaves like the one in `SpecialOptIf` */
         Pair *call(Pair *args, Environment * &envt,
-                Continuation * &cont, EvalObj ** &top_ptr);
+                Continuation * &cont, EvalObj ** &top_ptr, Pair *pc);
 
 };/*}}}*/
 
@@ -113,7 +113,7 @@ class SpecialOptAnd: public SpecialOptObj {/*{{{*/
         void prepare(Pair *pc);
         /** Acts like `SpecialOptIf` */
         Pair *call(Pair *args, Environment * &envt,
-                Continuation * &cont, EvalObj ** &top_ptr);
+                Continuation * &cont, EvalObj ** &top_ptr, Pair *pc);
 
 };/*}}}*/
 
@@ -128,7 +128,7 @@ class SpecialOptOr: public SpecialOptObj {/*{{{*/
         void prepare(Pair *pc);
         /** See `SpecialOptAnd` */
         Pair *call(Pair *args, Environment * &envt,
-                Continuation * &cont, EvalObj ** &top_ptr);
+                Continuation * &cont, EvalObj ** &top_ptr, Pair *pc);
 
 };/*}}}*/
 
@@ -143,7 +143,7 @@ class SpecialOptApply: public SpecialOptObj {/*{{{*/
         void prepare(Pair *pc);
         /** Provoke the <proc> with args */
         Pair *call(Pair *args, Environment * &envt,
-                Continuation * &cont, EvalObj ** &top_ptr);
+                Continuation * &cont, EvalObj ** &top_ptr, Pair *pc);
 
 };/*}}}*/
 
@@ -158,7 +158,7 @@ class SpecialOptDelay: public SpecialOptObj {/*{{{*/
         void prepare(Pair *pc);
         /** Make up a PromObj and push into the stack */
         Pair *call(Pair *args, Environment * &envt,
-                Continuation * &cont, EvalObj ** &top_ptr);
+                Continuation * &cont, EvalObj ** &top_ptr, Pair *pc);
 
 };/*}}}*/
 
@@ -179,7 +179,7 @@ class SpecialOptForce: public SpecialOptObj {/*{{{*/
          * while if it has already been evaluated, just push the result into
          * the stack */
         Pair *call(Pair *args, Environment * &envt,
-                Continuation * &cont, EvalObj ** &top_ptr);
+                Continuation * &cont, EvalObj ** &top_ptr, Pair *pc);
 
 };/*}}}*/
 

@@ -1,7 +1,7 @@
 CXX = g++ -DGMP_SUPPORT
 BUILD_DIR = build
 
-all: release
+all: debug
 debug: CXX += -DGC_INFO -g -pg
 gc_debug: CXX += -DGC_INFO -DGC_DEBUG -g -pg
 release: CXX += -O2

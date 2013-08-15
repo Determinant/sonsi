@@ -138,10 +138,11 @@ inline void push(Pair * &pc, EvalObj ** &top_ptr,
         }
         else cont->tail = false;
 
+
         if (!make_exec(TO_PAIR(pc->car)))
             throw TokenError(pc->car->ext_repr(), RUN_ERR_WRONG_NUM_OF_ARGS);
         // static_cast because of is_simple_obj() is false
-        pc = static_cast<Pair*>(pc->car);  // Go deeper to enter the call
+        cont->prog = pc = TO_PAIR(pc->car);  // Go deeper to enter the call
         envt->get_obj(pc->car)->prepare(pc);
     }
 }
@@ -180,7 +181,8 @@ EvalObj *Evaluator::run_expr(Pair *prog) {
             if ((args->car)->is_opt_obj())
             {
                 OptObj *opt = static_cast<OptObj*>(args->car);
-                pc = opt->call(args, envt, cont, top_ptr);
+//                printf("%s\n", args->ext_repr().c_str());
+                pc = opt->call(args, envt, cont, top_ptr, cont->prog);
             }
             else
                 throw TokenError((args->car)->ext_repr(), SYN_ERR_CAN_NOT_APPLY);

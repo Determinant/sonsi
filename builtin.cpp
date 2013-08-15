@@ -41,7 +41,7 @@ void SpecialOptIf::prepare(Pair *pc) {
 }
 
 Pair *SpecialOptIf::call(Pair *args, Environment * &lenvt,
-        Continuation * &cont, EvalObj ** &top_ptr) {
+        Continuation * &cont, EvalObj ** &top_ptr, Pair *pc) {
     Pair *ret_addr = cont->pc;
     if (cont->state)
     {
@@ -55,7 +55,6 @@ Pair *SpecialOptIf::call(Pair *args, Environment * &lenvt,
         }
         else 
         {
-            Pair *pc = TO_PAIR(ret_addr->car);
             Pair *first = TO_PAIR(pc->cdr);
             Pair *second = TO_PAIR(first->cdr);
             Pair *third = TO_PAIR(second->cdr);
@@ -94,7 +93,7 @@ Pair *SpecialOptIf::call(Pair *args, Environment * &lenvt,
     {
         gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
         top_ptr++;
-        cont->state = TO_PAIR(TO_PAIR(ret_addr->car)->cdr);
+        cont->state = TO_PAIR(pc->cdr);
         cont->state->next = NULL;
         gc.expose(args);
         return cont->state;
@@ -149,10 +148,9 @@ void SpecialOptLambda::prepare(Pair *pc) {
 }
 
 Pair *SpecialOptLambda::call(Pair *args, Environment * &lenvt,
-        Continuation * &cont, EvalObj ** &top_ptr) {
+        Continuation * &cont, EvalObj ** &top_ptr, Pair *pc) {
 
     Pair *ret_addr = cont->pc;
-    Pair *pc = static_cast<Pair*>(ret_addr->car);
 
     if (pc->cdr == empty_list)
         throw TokenError(name, SYN_ERR_EMPTY_PARA_LIST);
@@ -201,9 +199,8 @@ void SpecialOptDefine::prepare(Pair *pc) {
 }
 
 Pair *SpecialOptDefine::call(Pair *args, Environment * &lenvt,
-        Continuation * &cont, EvalObj ** &top_ptr) {
+        Continuation * &cont, EvalObj ** &top_ptr, Pair *pc) {
     Pair *ret_addr = cont->pc;
-    Pair *pc = static_cast<Pair*>(ret_addr->car);
     EvalObj *obj;
     SymObj *id;
     EvalObj *first = TO_PAIR(pc->cdr)->car;
@@ -277,9 +274,8 @@ void SpecialOptSet::prepare(Pair *pc) {
 }
 
 Pair *SpecialOptSet::call(Pair *args, Environment * &lenvt,
-        Continuation * &cont, EvalObj ** &top_ptr) {
+        Continuation * &cont, EvalObj ** &top_ptr, Pair *pc) {
     Pair *ret_addr = cont->pc;
-    Pair *pc = static_cast<Pair*>(ret_addr->car);
     EvalObj *first = TO_PAIR(pc->cdr)->car;
 
     if (!cont->state)
@@ -314,9 +310,8 @@ void SpecialOptQuote::prepare(Pair *pc) {
 }
 
 Pair *SpecialOptQuote::call(Pair *args, Environment * &lenvt,
-        Continuation * &cont, EvalObj ** &top_ptr) {
+        Continuation * &cont, EvalObj ** &top_ptr, Pair *pc) {
     Pair *ret_addr = cont->pc;
-    Pair *pc = static_cast<Pair*>(ret_addr->car);
     gc.expose(*top_ptr);
     *top_ptr++ = gc.attach(TO_PAIR(pc->cdr)->car);
     EXIT_CURRENT_EXEC(lenvt, cont);
@@ -333,7 +328,7 @@ void SpecialOptEval::prepare(Pair *pc) {
 }
 
 Pair *SpecialOptEval::call(Pair *args, Environment * &lenvt,
-        Continuation * &cont, EvalObj ** &top_ptr) {
+        Continuation * &cont, EvalObj ** &top_ptr, Pair *pc) {
     Pair *ret_addr = cont->pc;
     if (cont->state)
     {
@@ -364,9 +359,8 @@ void SpecialOptAnd::prepare(Pair *pc) {
 }
 
 Pair *SpecialOptAnd::call(Pair *args, Environment * &lenvt,
-        Continuation * &cont, EvalObj ** &top_ptr) {
+        Continuation * &cont, EvalObj ** &top_ptr, Pair *pc) {
     Pair *ret_addr = cont->pc;
-    Pair *pc = static_cast<Pair*>(ret_addr->car);
     if (pc->cdr == empty_list)
     {
         gc.expose(*top_ptr);
@@ -423,9 +417,8 @@ void SpecialOptOr::prepare(Pair *pc) {
 }
 
 Pair *SpecialOptOr::call(Pair *args, Environment * &lenvt,
-        Continuation * &cont, EvalObj ** &top_ptr) {
+        Continuation * &cont, EvalObj ** &top_ptr, Pair *pc) {
     Pair *ret_addr = cont->pc;
-    Pair *pc = static_cast<Pair*>(ret_addr->car);
     if (pc->cdr == empty_list)
     {
         gc.expose(*top_ptr);
@@ -480,7 +473,7 @@ SpecialOptApply::SpecialOptApply() : SpecialOptObj("apply") {}
 void SpecialOptApply::prepare(Pair *pc) {}
 
 Pair *SpecialOptApply::call(Pair *_args, Environment * &lenvt,
-        Continuation * &cont, EvalObj ** &top_ptr) {
+        Continuation * &cont, EvalObj ** &top_ptr, Pair *pc) {
     Pair *args = _args;
     top_ptr++;          // Recover the return address
     if (args->cdr == empty_list)
@@ -529,7 +522,7 @@ void SpecialOptForce::prepare(Pair *pc) {
 }
 
 Pair *SpecialOptForce::call(Pair *_args, Environment * &lenvt,
-        Continuation * &cont, EvalObj ** &top_ptr) {
+        Continuation * &cont, EvalObj ** &top_ptr, Pair *pc) {
     Pair *args = _args;
     args = TO_PAIR(args->cdr);
     Pair *ret_addr = cont->pc;
@@ -579,9 +572,8 @@ void SpecialOptDelay::prepare(Pair *pc) {
 }
 
 Pair *SpecialOptDelay::call(Pair *args, Environment * &lenvt,
-        Continuation * &cont, EvalObj ** &top_ptr) {
+        Continuation * &cont, EvalObj ** &top_ptr, Pair *pc) {
     Pair *ret_addr = cont->pc;
-    Pair *pc = static_cast<Pair*>(ret_addr->car);
     gc.expose(*top_ptr);
     *top_ptr++ = gc.attach(new PromObj(TO_PAIR(pc->cdr)->car));
     EXIT_CURRENT_EXEC(lenvt, cont);

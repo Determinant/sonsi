@@ -77,7 +77,7 @@ ProcObj::~ProcObj() {
 }
 
 Pair *ProcObj::call(Pair *_args, Environment * &lenvt,
-        Continuation * &cont, EvalObj ** &top_ptr) {
+        Continuation * &cont, EvalObj ** &top_ptr, Pair *pc) {
     // Create a new continuation
     // static_cast see `call` invocation in eval.cpp
     Pair *ret_addr = cont->pc;
@@ -94,17 +94,18 @@ Pair *ProcObj::call(Pair *_args, Environment * &lenvt,
         }
         else 
         {
-            if (!nexp->is_simple_obj() && nexp->cdr == empty_list)    // tail recursion opt
+            if (nexp->cdr == empty_list && !nexp->car->is_simple_obj())    // tail recursion opt
             {
-                cont->tail = true;
-                cont->state = NULL;
+                    cont->tail = true;
+                    cont->state = NULL;
+                    top_ptr++;              // revert the cont
             }
             else
             {
                 gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
                 cont->state = nexp;
+                top_ptr++;
             }
-            top_ptr++;
             gc.expose(_args);
             return nexp;
         }
@@ -305,7 +306,7 @@ BuiltinProcObj::BuiltinProcObj(BuiltinProc f, string _name) :
     OptObj(), handler(f), name(_name) {}
 
     Pair *BuiltinProcObj::call(Pair *args, Environment * &lenvt,
-            Continuation * &cont, EvalObj ** &top_ptr) {
+            Continuation * &cont, EvalObj ** &top_ptr, Pair *pc) {
 
         Pair *ret_addr = cont->pc;
         gc.expose(*top_ptr);
@@ -406,7 +407,7 @@ Environment *Environment::get_prev() {
 }
 
 Continuation::Continuation(Environment *_envt, Pair *_pc, Continuation *_prev_cont ) :
-    Container(), prev_cont(_prev_cont), envt(_envt), pc(_pc), state(NULL), tail(false) {
+    Container(), prev_cont(_prev_cont), envt(_envt), pc(_pc), state(NULL), prog(NULL), tail(false) {
         gc.attach(prev_cont);
         gc.attach(envt);
     }
