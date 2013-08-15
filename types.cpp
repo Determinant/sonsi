@@ -41,14 +41,6 @@ ReprCons *Pair::get_repr_cons() {
     return new PairReprCons(this, this);
 }
 
-ParseBracket::ParseBracket(unsigned char _btype) :
-    FrameObj(CLS_SIM_OBJ | CLS_PAR_BRA), btype(_btype) {}
-
-    UnspecObj::UnspecObj() : EvalObj(CLS_SIM_OBJ) {}
-
-    ReprCons *UnspecObj::get_repr_cons() {
-        return new ReprStr("#<Unspecified>");
-    }
 
 SymObj::SymObj(const string &str) :
     EvalObj(CLS_SIM_OBJ | CLS_SYM_OBJ), val(str) {}

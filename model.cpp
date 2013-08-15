@@ -24,7 +24,7 @@ bool FrameObj::is_parse_bracket() {
 }
 
 EvalObj::EvalObj(int _otype) : 
-    FrameObj(CLS_EVAL_OBJ), otype(_otype) {
+FrameObj(CLS_EVAL_OBJ), otype(_otype) {
     gc_obj = gc.join(this);
 }
 
@@ -139,5 +139,15 @@ string EvalObj::ext_repr() {
     return res;
 }
 
+ParseBracket::ParseBracket(unsigned char _btype) :
+FrameObj(CLS_SIM_OBJ | CLS_PAR_BRA), btype(_btype) {}
+
+UnspecObj::UnspecObj() : EvalObj(CLS_SIM_OBJ) {}
+
+ReprCons *UnspecObj::get_repr_cons() {
+    return new ReprStr("#<Unspecified>");
+}
+
+
 Container::Container(int otype, bool override) : 
-    EvalObj(otype | (override ? 0 : CLS_CONTAINER)) {}
+EvalObj(otype | (override ? 0 : CLS_CONTAINER)) {}

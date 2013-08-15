@@ -100,15 +100,6 @@ class VectReprCons : public ReprCons {/*{{{*/
         EvalObj *next(const string &prev);
 };/*}}}*/
 
-/** @class ParseBracket
- * To indiate a left bracket when parsing, used in the parse_stack
- */
-class ParseBracket : public FrameObj {/*{{{*/
-    public:
-        unsigned char btype;            /**< The type of the bracket */
-        /** Construct a ParseBracket object */
-        ParseBracket(unsigned char btype);
-};/*}}}*/
 
 /** @class UnspecObj
  * The "unspecified" value returned by some builtin procedures

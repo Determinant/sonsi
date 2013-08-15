@@ -103,14 +103,25 @@ class EvalObj : public FrameObj {
         virtual ReprCons *get_repr_cons() = 0;
 };
 
+/** @class ParseBracket
+ * To indiate a left bracket when parsing, used in the parse_stack
+ */
+class ParseBracket : public FrameObj {/*{{{*/
+    public:
+        unsigned char btype;            /**< The type of the bracket */
+        /** Construct a ParseBracket object */
+        ParseBracket(unsigned char btype);
+};/*}}}*/
+
+
 typedef std::set<EvalObj*> EvalObjSet;
-class Container: public EvalObj {
+class Container: public EvalObj {/*{{{*/
     public:
     bool keep;
     size_t gc_refs;
     Container(int otype = 0, bool override = false);
     virtual void gc_decrement() = 0;
     virtual void gc_trigger(EvalObj ** &tail, EvalObjSet &visited) = 0;
-};
+};/*}}}*/
 
 #endif

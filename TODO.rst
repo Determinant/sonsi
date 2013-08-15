@@ -1,7 +1,11 @@
-- OPT:Special Opt Repr 
-- OPT:Special Arg Checking
-- Garbage Collection
-- Testing
-- Rounding support
-- ext_repr optimization 
-- Add macro support
+- Documents and comment
+
+  - model
+  - eval
+  - builtin
+  - gc
+  - types
+  - consts
+  - parser
+  - exc
+  - main
