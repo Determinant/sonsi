@@ -1,7 +1,7 @@
 - Documents and comment
 
-  - model
-  - eval
+  - model --- done
+  - eval  --- done
   - builtin
   - gc
   - types

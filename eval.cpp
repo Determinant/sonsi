@@ -1,13 +1,18 @@
+#include "consts.h"
 #include "eval.h"
 #include "builtin.h"
 #include "exc.h"
-#include "consts.h"
 #include "gc.h"
+
 #include <cstdio>
 
+static const int EVAL_STACK_SIZE = 262144;
 extern Pair *empty_list;
+
+/** The stack for evaluating expressions */
 EvalObj *eval_stack[EVAL_STACK_SIZE];
 
+/** Add all kinds of built-in facilities before the evaluation */
 void Evaluator::add_builtin_routines() {
 
 #define ADD_ENTRY(name, rout) \
@@ -103,6 +108,9 @@ Evaluator::Evaluator() {
     add_builtin_routines();
 }
 
+/**
+ * Initiate the `next` pointer of an s-expression (a list)
+ */
 inline bool make_exec(Pair *ptr) {
     if (ptr == empty_list) return true;
     EvalObj *nptr;
@@ -117,11 +125,15 @@ inline bool make_exec(Pair *ptr) {
     return ptr->cdr == empty_list;
 }
 
+/**
+ * Push a new stack frame according to current pc
+ */
 inline void push(Pair * &pc, EvalObj ** &top_ptr, 
         Environment * &envt, Continuation * &cont) {
     if (pc->car->is_simple_obj())           // Not an opt invocation
     {
-        *top_ptr++ = gc.attach(envt->get_obj(pc->car));  // Objectify the symbol
+        // Objectify the symbol
+        *top_ptr++ = gc.attach(envt->get_obj(pc->car));  
         pc = pc->next;                      // Move to the next instruction
     }
     else                                    // Operational Invocation
@@ -136,59 +148,71 @@ inline void push(Pair * &pc, EvalObj ** &top_ptr,
             gc.attach(cont);
             *top_ptr++ = gc.attach(cont);
         }
-        else cont->tail = false;
+        else cont->tail = false;            // tail recursion opt
 
 
         if (!make_exec(TO_PAIR(pc->car)))
+            // not a valid an invocation
             throw TokenError(pc->car->ext_repr(), RUN_ERR_WRONG_NUM_OF_ARGS);
-        // static_cast because of is_simple_obj() is false
-        cont->prog = pc = TO_PAIR(pc->car);  // Go deeper to enter the call
+        // dive into the call
+        cont->prog = pc = TO_PAIR(pc->car);  
+        // "pre-call" for some `SpecialObj`
         envt->get_obj(pc->car)->prepare(pc);
     }
 }
 
+/**
+ * The main routine for the evaluation
+ */
 EvalObj *Evaluator::run_expr(Pair *prog) {
+
     EvalObj **top_ptr = eval_stack;
     Pair *pc = prog;
     Continuation *bcont = new Continuation(NULL, NULL, NULL), // dummy cont
                  *cont = bcont; 
-    gc.attach(cont);
+
 #ifdef GC_DEBUG
     fprintf(stderr, "Start the evaluation...\n");
 #endif
+
+    // attach current cont and the whole s-expression tree, so they will not be
+    // garbage-collected
+    gc.attach(cont);
+    gc.attach(prog);        
     // envt is this->envt
     push(pc, top_ptr, envt, cont);
-    gc.attach(prog);
 
-    while (cont != bcont)
+    // (cont != bcont) Still need to evaluate at least one level of invocation
+    while (cont != bcont)   
     {
         if (top_ptr == eval_stack + EVAL_STACK_SIZE)
             throw TokenError("Evaluation", RUN_ERR_STACK_OVERFLOW);
         if (pc)
             push(pc, top_ptr, envt, cont);
-        else
+        else    // All arguments are evaluated
         {
             Pair *args = empty_list;
             while (*(--top_ptr) != cont)
             {
                 EvalObj* obj = static_cast<EvalObj*>(*top_ptr);
                 gc.expose(obj);
-                args = new Pair(obj, args);
+                // old args is auto attached due to the constructor of `Pair`
+                args = new Pair(obj, args); 
             }
-            //gc.expose(*top_ptr);
-            //< static_cast because the while condition
+            // manually protect the head pointer
             gc.attach(args);
             if ((args->car)->is_opt_obj())
             {
                 OptObj *opt = static_cast<OptObj*>(args->car);
-//                printf("%s\n", args->ext_repr().c_str());
                 pc = opt->call(args, envt, cont, top_ptr, cont->prog);
             }
             else
                 throw TokenError((args->car)->ext_repr(), SYN_ERR_CAN_NOT_APPLY);
-//            gc.collect();
+//            gc.collect(); THIS IS DEPRECATED BECAUSE IT'S NOT A SAFE POINT
+//            ANYMORE DUE TO THE TAIL RECURSION OPT
         }
     }
+    // remove the protection
     gc.expose(prog);
     gc.expose(cont);
     // static_cast because the previous while condition

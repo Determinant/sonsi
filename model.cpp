@@ -1,10 +1,10 @@
-#include <cstdio>
-
-#include "model.h"
-#include "exc.h"
 #include "consts.h"
+#include "model.h"
 #include "types.h"
+#include "exc.h"
 #include "gc.h"
+
+#include <cstdio>
 
 static const int REPR_STACK_SIZE = 262144;
 extern EmptyList *empty_list;

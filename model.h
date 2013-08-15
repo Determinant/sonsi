@@ -118,7 +118,7 @@ class EvalObj : public FrameObj {/*{{{*/
  */
 class ParseBracket : public FrameObj {/*{{{*/
     public:
-        /** The type of the bracket */
+        /** The type of the bracket (to distingiush '(' and '#(' ) */
         unsigned char btype;            
         /** Construct a ParseBracket object */
         ParseBracket(unsigned char btype);

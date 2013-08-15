@@ -3,9 +3,8 @@
 #include "model.h"
 #include "types.h"
 
-const int EVAL_STACK_SIZE = 262144;
 /** @class Evaluator
- * A runtime platform of interpreting
+ * A realtime interpreting platform
  */
 class Evaluator {
     private:
