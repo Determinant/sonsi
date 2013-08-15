@@ -2,9 +2,9 @@
 
   - model --- done
   - eval  --- done
-  - builtin
-  - gc
+  - builtin --- almost
   - types
+  - gc
   - consts
   - parser
   - exc

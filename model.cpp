@@ -5,11 +5,12 @@
 #include "gc.h"
 
 #include <cstdio>
+#include <set>
 
 static const int REPR_STACK_SIZE = 262144;
 extern EmptyList *empty_list;
 extern GarbageCollector gc;
-typedef set<EvalObj*> EvalObjAddrHash;
+typedef std::set<EvalObj*> EvalObjAddrHash;
 
 /** Maintain the current in-stack objects to detect circular structures */
 static EvalObjAddrHash hash;

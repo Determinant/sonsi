@@ -2,6 +2,7 @@
 #define TYPES_H
 
 #include "model.h"
+
 #include <string>
 #include <list>
 #include <map>
@@ -9,15 +10,9 @@
 #include <set>
 #include <gmpxx.h>
 
-using std::list;
 using std::string;
-using std::map;
-using std::vector;
-using std::set;
 
-const int CLS_OPT_OBJ = 1 << 3;
 const int CLS_PROM_OBJ = 1 << 9;
-
 const int CLS_SYM_OBJ = 1 << 2;
 const int CLS_NUM_OBJ = 1 << 4;
 const int CLS_BOOL_OBJ = 1 << 5;
@@ -25,6 +20,7 @@ const int CLS_CHAR_OBJ = 1 << 6;
 const int CLS_STR_OBJ = 1 << 7;
 const int CLS_VECT_OBJ = 1 << 8;
 
+const int CLS_OPT_OBJ = 1 << 3;
 const int CLS_CONT_OBJ = 1 << 9;
 const int CLS_ENVT_OBJ = 1 << 10;
 
@@ -33,8 +29,8 @@ static const int NUM_LVL_REAL = 1;
 static const int NUM_LVL_RAT = 2;
 static const int NUM_LVL_INT = 3;
 
-typedef vector<EvalObj*> EvalObjVec;
-typedef map<string, EvalObj*> Str2EvalObj;
+typedef std::vector<EvalObj*> EvalObjVec;
+typedef std::map<string, EvalObj*> Str2EvalObj;
 typedef EvalObj* (*BuiltinProc)(Pair *, const string &);
 
 class PairReprCons;
