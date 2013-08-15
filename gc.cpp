@@ -150,7 +150,7 @@ void GarbageCollector::cycle_resolve() {
 
 void GarbageCollector::collect() {
     force();
-//    if (joined_size >= resolve_threshold) 
+    if (joined_size >= resolve_threshold) 
     {
         cycle_resolve();
         force();
