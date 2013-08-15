@@ -6,11 +6,14 @@
 #include "types.h"
 #include "gc.h"
 
-const int REPR_STACK_SIZE = 262144;
+static const int REPR_STACK_SIZE = 262144;
 extern EmptyList *empty_list;
 extern GarbageCollector gc;
+typedef set<EvalObj*> EvalObjAddrHash;
 
+/** Maintain the current in-stack objects to detect circular structures */
 static EvalObjAddrHash hash;
+/** The stack for building external representation string */
 static ReprCons *repr_stack[REPR_STACK_SIZE];
 
 FrameObj::FrameObj(FrameType _ftype) : ftype(_ftype) {}
@@ -25,10 +28,12 @@ bool FrameObj::is_parse_bracket() {
 
 EvalObj::EvalObj(int _otype) : 
 FrameObj(CLS_EVAL_OBJ), otype(_otype) {
-    gc_obj = gc.join(this);
+    /** To notify GC when an EvalObj is constructed */
+    gc_rec = gc.join(this);
 }
 
 EvalObj::~EvalObj() {
+    /** To notify GC when an EvalObj is destructed */
     gc.quit(this);
 }
 
@@ -51,9 +56,9 @@ bool EvalObj::is_opt_obj() {
 }
 
 bool EvalObj::is_pair_obj() {
+    /** an empty list is not a pair obj */
     return this != empty_list && (otype & CLS_PAIR_OBJ);
 }
-
 
 bool EvalObj::is_num_obj() {
     return otype & CLS_NUM_OBJ;
@@ -80,13 +85,16 @@ int EvalObj::get_otype() {
 }
 
 bool EvalObj::is_true() {
+    /** will be override by `BoolObj` */
     return true;
 }
 
 string EvalObj::ext_repr() {
-    hash.clear();
     // TODO: Performance improvement
     // (from possibly O(n^2logn) to strictly O(nlogn))
+    // O(n^2logn) because the potential string concatenate
+    // cost
+    hash.clear();
     ReprCons **top_ptr = repr_stack;
     *top_ptr++ = this->get_repr_cons();
     EvalObj *obj;
@@ -97,6 +105,7 @@ string EvalObj::ext_repr() {
         {
             top_ptr -= 2;
             obj = (*top_ptr)->next((*(top_ptr + 1))->repr);
+            delete *(top_ptr + 1);
             if (obj)
             {
                 *(++top_ptr) = obj->get_repr_cons();
@@ -104,14 +113,19 @@ string EvalObj::ext_repr() {
                 if (ptr)
                 {
                     if (hash.count(ptr))
+                    {
+                        delete *top_ptr;
                         *top_ptr = new ReprStr("#inf#");
+                    }
                     else hash.insert(ptr);
                 }
             }
             else
             {
-                hash.erase((*top_ptr)->ori);
-                *top_ptr = new ReprStr((*top_ptr)->repr);
+                hash.erase((*top_ptr)->ori);    // poping from stack
+                ReprCons *p = *top_ptr;
+                *top_ptr = new ReprStr(p->repr);
+                delete p;
             }
         }
         else
@@ -125,17 +139,26 @@ string EvalObj::ext_repr() {
                 if (ptr)
                 {
                     if (hash.count(ptr))
+                    {
+                        delete *top_ptr;
                         *top_ptr = new ReprStr("#inf#");
-                    else hash.insert(ptr);
+                    }
+                    else hash.insert(ptr);      // push into stack
                 }
             }
-            else *top_ptr = new ReprStr((*top_ptr)->repr);
+            else
+            {
+                ReprCons *p = *top_ptr;
+                *top_ptr = new ReprStr(p->repr);
+                delete p;
+            }
         }
         top_ptr++;
     }
-    string &res = (*repr_stack)->repr;
+    string res = (*repr_stack)->repr;
     if (this->is_pair_obj())
         res = "(" + res + ")";
+    delete *repr_stack;
     return res;
 }
 

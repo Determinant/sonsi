@@ -25,12 +25,12 @@ GarbageCollector::PendingEntry::PendingEntry(
 
 
 void GarbageCollector::expose(EvalObj *ptr) {
-    if (ptr == NULL || ptr->gc_obj == NULL) return;
+    if (ptr == NULL || ptr->gc_rec == NULL) return;
 #ifdef GC_DEBUG
     fprintf(stderr, "GC: 0x%llx exposed. count = %lu \"%s\"\n", 
-            (ull)ptr, ptr->gc_obj->gc_cnt - 1, ptr->ext_repr().c_str());
+            (ull)ptr, ptr->gc_rec->gc_cnt - 1, ptr->ext_repr().c_str());
 #endif
-    if (--ptr->gc_obj->gc_cnt == 0)
+    if (--ptr->gc_rec->gc_cnt == 0)
     {
 #ifdef GC_DEBUG
         fprintf(stderr, "GC: 0x%llx pending. \n", (ull)ptr);
@@ -45,7 +45,7 @@ void GarbageCollector::force() {
     {
         np = p->next;
         EvalObj *obj = p->obj;
-        if (obj->gc_obj && !obj->gc_obj->gc_cnt)
+        if (obj->gc_rec && !obj->gc_rec->gc_cnt)
             *r++ = obj;
         delete p;
     }   // fetch the pending pointers in the list
@@ -99,10 +99,10 @@ EvalObj *GarbageCollector::attach(EvalObj *ptr) {
     if (flag) mapping[ptr]++;
     else mapping[ptr] = 1;
     */
-    ptr->gc_obj->gc_cnt++;
+    ptr->gc_rec->gc_cnt++;
 #ifdef GC_DEBUG
     fprintf(stderr, "GC: 0x%llx attached. count = %lu \"%s\"\n", 
-            (ull)ptr, ptr->gc_obj->gc_cnt, ptr->ext_repr().c_str());
+            (ull)ptr, ptr->gc_rec->gc_cnt, ptr->ext_repr().c_str());
 #endif
 /*    if (mapping.size() > GC_QUEUE_SIZE >> 1)
         force();*/
@@ -174,10 +174,10 @@ ObjEntry *GarbageCollector::join(EvalObj *ptr) {
 }
 
 void GarbageCollector::quit(EvalObj *ptr) {
-    ObjEntry *p = ptr->gc_obj;
+    ObjEntry *p = ptr->gc_rec;
     p->prev->next = p->next;
     p->next->prev = p->prev;
-    ptr->gc_obj = NULL;
+    ptr->gc_rec = NULL;
     delete p;
     joined_size--;
 }

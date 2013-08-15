@@ -33,7 +33,6 @@ static const int NUM_LVL_REAL = 1;
 static const int NUM_LVL_RAT = 2;
 static const int NUM_LVL_INT = 3;
 
-typedef set<EvalObj*> EvalObjAddrHash;
 typedef vector<EvalObj*> EvalObjVec;
 typedef map<string, EvalObj*> Str2EvalObj;
 typedef EvalObj* (*BuiltinProc)(Pair *, const string &);
