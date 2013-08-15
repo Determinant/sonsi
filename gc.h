@@ -44,6 +44,13 @@ extern GarbageCollector gc;
         gc.collect(); \
     } while (0)
 
+struct ObjEntry {
+    EvalObj *obj;
+    size_t gc_cnt;
+    ObjEntry *prev, *next;
+    ObjEntry(ObjEntry *prev, ObjEntry *next);
+};
+
 class GarbageCollector {
 
     struct PendingEntry {
@@ -52,18 +59,20 @@ class GarbageCollector {
         PendingEntry(EvalObj *obj, PendingEntry *next);
     };
 
-    EvalObjSet joined;
+    ObjEntry *joined;
     PendingEntry *pending_list;
     size_t resolve_threshold;
+    size_t joined_size;
 
     public:
+
     GarbageCollector();
     void collect();
     void cycle_resolve();
     void force();
     void expose(EvalObj *ptr);
     void set_resolve_threshold(size_t new_thres);
-    void join(EvalObj *ptr);
+    ObjEntry *join(EvalObj *ptr);
     void quit(EvalObj *ptr);
     size_t get_remaining();
     EvalObj *attach(EvalObj *ptr);

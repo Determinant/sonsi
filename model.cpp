@@ -23,13 +23,9 @@ bool FrameObj::is_parse_bracket() {
     return ftype & CLS_PAR_BRA;
 }
 
-bool EvalObj::gc_dec() { return --gc_cnt == 0; }
-void EvalObj::gc_inc() { gc_cnt++; }
-size_t EvalObj::gc_get_cnt() { return gc_cnt; }
-
 EvalObj::EvalObj(int _otype) : 
-    FrameObj(CLS_EVAL_OBJ), gc_cnt(0), otype(_otype) {
-    gc.join(this);
+    FrameObj(CLS_EVAL_OBJ), otype(_otype) {
+    gc_obj = gc.join(this);
 }
 
 EvalObj::~EvalObj() {

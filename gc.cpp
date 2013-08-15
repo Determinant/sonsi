@@ -10,9 +10,12 @@ typedef unsigned long long ull;
 
 static EvalObj *gcq[GC_QUEUE_SIZE];
 static Container *cyc_list[GC_QUEUE_SIZE];
+ObjEntry *oe_null;
 
 GarbageCollector::GarbageCollector() {
-    joined.clear();
+    joined = new ObjEntry(NULL, NULL);
+    joined->next = oe_null = new ObjEntry(NULL, NULL);
+    joined_size = 0;
     pending_list = NULL;
     resolve_threshold = GC_CYC_THRESHOLD;
 }
@@ -22,14 +25,12 @@ GarbageCollector::PendingEntry::PendingEntry(
 
 
 void GarbageCollector::expose(EvalObj *ptr) {
-    if (ptr == NULL) return;
+    if (ptr == NULL || ptr->gc_obj == NULL) return;
 #ifdef GC_DEBUG
     fprintf(stderr, "GC: 0x%llx exposed. count = %lu \"%s\"\n", 
-            (ull)ptr, ptr->gc_get_cnt() - 1, ptr->ext_repr().c_str());
+            (ull)ptr, ptr->gc_obj->gc_cnt - 1, ptr->ext_repr().c_str());
 #endif
-    /*        if (ptr->gc_get_cnt() == 0)
-              puts("oops");*/
-    if (ptr->gc_dec())
+    if (--ptr->gc_obj->gc_cnt == 0)
     {
 #ifdef GC_DEBUG
         fprintf(stderr, "GC: 0x%llx pending. \n", (ull)ptr);
@@ -44,18 +45,15 @@ void GarbageCollector::force() {
     {
         np = p->next;
         EvalObj *obj = p->obj;
-        if (joined.count(obj) && obj->gc_get_cnt() == 0)
+        if (obj->gc_obj && !obj->gc_obj->gc_cnt)
             *r++ = obj;
         delete p;
     }   // fetch the pending pointers in the list
     // clear the list
     pending_list = NULL; 
-/*    for (EvalObj2Int::iterator it = mapping.begin(); 
-            it != mapping.end(); it++)
-        if (it->second == 0) *r++ = it->first;*/
 
 #ifdef GC_INFO
-    fprintf(stderr, "%ld\n", joined.size());
+    fprintf(stderr, "%ld\n", joined_size);
     size_t cnt = 0;
 #endif
 #ifdef GC_DEBUG
@@ -66,7 +64,8 @@ void GarbageCollector::force() {
     for (; l != r; l++)
     {
 #ifdef GC_DEBUG
-        fprintf(stderr, "GC: !!! destroying space 0x%llx: %s. \n", (ull)*l, (*l)->ext_repr().c_str());
+        fprintf(stderr, "GC: !!! destroying space 0x%llx: %s. \n", 
+                (ull)*l, (*l)->ext_repr().c_str());
 #endif
 #ifdef GC_INFO
         cnt++;
@@ -87,13 +86,10 @@ void GarbageCollector::force() {
 #ifdef GC_INFO
     fprintf(stderr, "GC: Forced clear, %lu objects are freed, "
             "%lu remains\n"
-            "=============================\n", cnt, joined.size());
+            "=============================\n", cnt, joined_size);
         
 #endif
 #ifdef GC_DEBUG
-    for (EvalObjSet::iterator it = joined.begin();
-            it != joined.end(); it++)
-        fprintf(stderr, "%llx => %s\n", (ull)*it, (*it)->ext_repr().c_str());
 #endif
 }
 
@@ -103,10 +99,10 @@ EvalObj *GarbageCollector::attach(EvalObj *ptr) {
     if (flag) mapping[ptr]++;
     else mapping[ptr] = 1;
     */
-    ptr->gc_inc();
+    ptr->gc_obj->gc_cnt++;
 #ifdef GC_DEBUG
     fprintf(stderr, "GC: 0x%llx attached. count = %lu \"%s\"\n", 
-            (ull)ptr, ptr->gc_get_cnt(), ptr->ext_repr().c_str());
+            (ull)ptr, ptr->gc_obj->gc_cnt, ptr->ext_repr().c_str());
 #endif
 /*    if (mapping.size() > GC_QUEUE_SIZE >> 1)
         force();*/
@@ -114,17 +110,18 @@ EvalObj *GarbageCollector::attach(EvalObj *ptr) {
 }
 
 void GarbageCollector::cycle_resolve() {
-//    if (joined.size() < resolve_threshold) return; 
     EvalObjSet visited;
     Container **clptr = cyc_list;
-    for (EvalObjSet::iterator it = joined.begin();
-            it != joined.end(); it++)
-        if ((*it)->is_container())
+    for (ObjEntry *i = joined->next; i != oe_null; i = i->next)
+    {
+        EvalObj *obj = i->obj;
+        if (obj->is_container())
         {
-            Container *p = static_cast<Container*>(*it);
-            (*clptr++ = p)->gc_refs = (*it)->gc_get_cnt();   // init the count
+            Container *p = static_cast<Container*>(obj);
+            (*clptr++ = p)->gc_refs = i->gc_cnt;   // init the count
             p->keep = false;
         }
+    }
 
     EvalObj **l = gcq, **r = l;
     for (Container **p = cyc_list; p < clptr; p++)
@@ -153,23 +150,39 @@ void GarbageCollector::cycle_resolve() {
 
 void GarbageCollector::collect() {
     force();
-    if (joined.size() < resolve_threshold) return; 
-    cycle_resolve();
-    force();
+//    if (joined_size >= resolve_threshold) 
+    {
+        cycle_resolve();
+        force();
+    }
 }
 
 size_t GarbageCollector::get_remaining() {
-    return joined.size();
+    return joined_size;
 }
 
 void GarbageCollector::set_resolve_threshold(size_t new_thres) {
     resolve_threshold = new_thres;
 }
 
-void GarbageCollector::join(EvalObj *ptr) {
-    joined.insert(ptr);
+ObjEntry *GarbageCollector::join(EvalObj *ptr) {
+    ObjEntry *p = new ObjEntry(joined, joined->next);
+    p->prev->next = p;
+    p->next->prev = p;
+    p->gc_cnt = 0;
+    p->obj = ptr;
+    joined_size++;
+    return p;
 }
 
 void GarbageCollector::quit(EvalObj *ptr) {
-    joined.erase(ptr);
+    ObjEntry *p = ptr->gc_obj;
+    p->prev->next = p->next;
+    p->next->prev = p->prev;
+    ptr->gc_obj = NULL;
+    delete p;
+    joined_size--;
 }
+
+ObjEntry::ObjEntry(ObjEntry *_prev, ObjEntry *_next) :
+   prev(_prev), next(_next) {} 
