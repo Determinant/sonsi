@@ -49,7 +49,7 @@ Pair *SpecialOptIf::call(Pair *args, Environment * &lenvt,
         {
             gc.expose(*top_ptr);
             *top_ptr++ = gc.attach(TO_PAIR(args->cdr)->car);
-            EXIT_CURRENT_CONT(lenvt, cont);
+            EXIT_CURRENT_EXEC(lenvt, cont);
             gc.expose(args);
             return ret_addr->next;          // Move to the next instruction
         }
@@ -84,7 +84,7 @@ Pair *SpecialOptIf::call(Pair *args, Environment * &lenvt,
             {
                 gc.expose(*top_ptr);
                 *top_ptr++ = gc.attach(unspec_obj);
-                EXIT_CURRENT_CONT(lenvt, cont);
+                EXIT_CURRENT_EXEC(lenvt, cont);
                 gc.expose(args);
                 return ret_addr->next;
             }
@@ -176,7 +176,7 @@ Pair *SpecialOptLambda::call(Pair *args, Environment * &lenvt,
 
     gc.expose(*top_ptr);
     *top_ptr++ = gc.attach(new ProcObj(body, lenvt, params));
-    EXIT_CURRENT_CONT(lenvt, cont);
+    EXIT_CURRENT_EXEC(lenvt, cont);
     gc.expose(args);
     return ret_addr->next;  // Move to the next instruction
 }
@@ -253,7 +253,7 @@ Pair *SpecialOptDefine::call(Pair *args, Environment * &lenvt,
     lenvt->add_binding(id, obj);
     gc.expose(*top_ptr);
     *top_ptr++ = gc.attach(unspec_obj);
-    EXIT_CURRENT_CONT(lenvt, cont);
+    EXIT_CURRENT_EXEC(lenvt, cont);
     gc.expose(args);
     return ret_addr->next;
 }
@@ -301,7 +301,7 @@ Pair *SpecialOptSet::call(Pair *args, Environment * &lenvt,
     if (!flag) throw TokenError(id->ext_repr(), RUN_ERR_UNBOUND_VAR);
     gc.expose(*top_ptr);
     *top_ptr++ = gc.attach(unspec_obj);
-    EXIT_CURRENT_CONT(lenvt, cont);
+    EXIT_CURRENT_EXEC(lenvt, cont);
     gc.expose(args);
     return ret_addr->next;
 }
@@ -319,7 +319,7 @@ Pair *SpecialOptQuote::call(Pair *args, Environment * &lenvt,
     Pair *pc = static_cast<Pair*>(ret_addr->car);
     gc.expose(*top_ptr);
     *top_ptr++ = gc.attach(TO_PAIR(pc->cdr)->car);
-    EXIT_CURRENT_CONT(lenvt, cont);
+    EXIT_CURRENT_EXEC(lenvt, cont);
     gc.expose(args);
     return ret_addr->next;
 }
@@ -340,7 +340,7 @@ Pair *SpecialOptEval::call(Pair *args, Environment * &lenvt,
         gc.expose(cont->state);     // Exec done
         gc.expose(*top_ptr);
         *top_ptr++ = gc.attach(TO_PAIR(args->cdr)->car);
-        EXIT_CURRENT_CONT(lenvt, cont);
+        EXIT_CURRENT_EXEC(lenvt, cont);
         gc.expose(args);
         return ret_addr->next;          // Move to the next instruction
     }
@@ -371,7 +371,7 @@ Pair *SpecialOptAnd::call(Pair *args, Environment * &lenvt,
     {
         gc.expose(*top_ptr);
         *top_ptr++ = gc.attach(new BoolObj(true));
-        EXIT_CURRENT_CONT(lenvt, cont);
+        EXIT_CURRENT_EXEC(lenvt, cont);
         gc.expose(args);
         return ret_addr->next;
     }
@@ -391,7 +391,7 @@ Pair *SpecialOptAnd::call(Pair *args, Environment * &lenvt,
         {
             gc.expose(*top_ptr);
             *top_ptr++ = gc.attach(ret);
-            EXIT_CURRENT_CONT(lenvt, cont);
+            EXIT_CURRENT_EXEC(lenvt, cont);
             gc.expose(args);
             return ret_addr->next;
         }
@@ -409,7 +409,7 @@ Pair *SpecialOptAnd::call(Pair *args, Environment * &lenvt,
     {
         gc.expose(*top_ptr);
         *top_ptr++ = gc.attach(ret);
-        EXIT_CURRENT_CONT(lenvt, cont);
+        EXIT_CURRENT_EXEC(lenvt, cont);
         gc.expose(args);
         return ret_addr->next;
     }
@@ -430,7 +430,7 @@ Pair *SpecialOptOr::call(Pair *args, Environment * &lenvt,
     {
         gc.expose(*top_ptr);
         *top_ptr++ = gc.attach(new BoolObj(false));
-        EXIT_CURRENT_CONT(lenvt, cont);
+        EXIT_CURRENT_EXEC(lenvt, cont);
         gc.expose(args);
         return ret_addr->next;
     }
@@ -450,7 +450,7 @@ Pair *SpecialOptOr::call(Pair *args, Environment * &lenvt,
         {
             gc.expose(*top_ptr);
             *top_ptr++ = gc.attach(ret);
-            EXIT_CURRENT_CONT(lenvt, cont);
+            EXIT_CURRENT_EXEC(lenvt, cont);
             gc.expose(args);
             return ret_addr->next;
         }
@@ -468,7 +468,7 @@ Pair *SpecialOptOr::call(Pair *args, Environment * &lenvt,
     {
         gc.expose(*top_ptr);
         *top_ptr++ = gc.attach(ret);
-        EXIT_CURRENT_CONT(lenvt, cont);
+        EXIT_CURRENT_EXEC(lenvt, cont);
         gc.expose(args);
         return ret_addr->next;
     }
@@ -539,7 +539,7 @@ Pair *SpecialOptForce::call(Pair *_args, Environment * &lenvt,
         prom->feed_mem(mem);
         gc.expose(*top_ptr);
         *top_ptr++ = gc.attach(mem);
-        EXIT_CURRENT_CONT(lenvt, cont);
+        EXIT_CURRENT_EXEC(lenvt, cont);
         gc.expose(_args);
         return ret_addr->next;          // Move to the next instruction
     }
@@ -553,7 +553,7 @@ Pair *SpecialOptForce::call(Pair *_args, Environment * &lenvt,
         {
             gc.expose(*top_ptr);
             *top_ptr++ = gc.attach(mem);
-            EXIT_CURRENT_CONT(lenvt, cont);
+            EXIT_CURRENT_EXEC(lenvt, cont);
             gc.expose(_args);
             return ret_addr->next;      
         }
@@ -584,7 +584,7 @@ Pair *SpecialOptDelay::call(Pair *args, Environment * &lenvt,
     Pair *pc = static_cast<Pair*>(ret_addr->car);
     gc.expose(*top_ptr);
     *top_ptr++ = gc.attach(new PromObj(TO_PAIR(pc->cdr)->car));
-    EXIT_CURRENT_CONT(lenvt, cont);
+    EXIT_CURRENT_EXEC(lenvt, cont);
     gc.expose(args);
     return ret_addr->next;          // Move to the next instruction
 }

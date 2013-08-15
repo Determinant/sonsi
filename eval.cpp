@@ -117,27 +117,26 @@ inline bool make_exec(Pair *ptr) {
     return ptr->cdr == empty_list;
 }
 
-inline void push(Pair * &pc, EvalObj ** &top_ptr, Environment * &envt, Continuation * &cont) {
-//    if (pc->car == NULL)
- //       puts("oops");
+inline void push(Pair * &pc, EvalObj ** &top_ptr, 
+        Environment * &envt, Continuation * &cont) {
     if (pc->car->is_simple_obj())           // Not an opt invocation
     {
         *top_ptr++ = gc.attach(envt->get_obj(pc->car));  // Objectify the symbol
         pc = pc->next;                      // Move to the next instruction
-//        if (pc == empty_list)
-//        puts("oops");
     }
     else                                    // Operational Invocation
     {
         if (pc->car == empty_list)
             throw NormalError(SYN_ERR_EMPTY_COMB);
 
-        gc.expose(cont);
-        cont = new Continuation(envt, pc, cont);
-        gc.attach(cont);
-
-        *top_ptr++ = gc.attach(cont);
-
+        if (!cont->tail)                    // a normal invocation
+        {
+            gc.expose(cont);
+            cont = new Continuation(envt, pc, cont);
+            gc.attach(cont);
+            *top_ptr++ = gc.attach(cont);
+        }
+        else cont->tail = false;
 
         if (!make_exec(TO_PAIR(pc->car)))
             throw TokenError(pc->car->ext_repr(), RUN_ERR_WRONG_NUM_OF_ARGS);
@@ -150,7 +149,9 @@ inline void push(Pair * &pc, EvalObj ** &top_ptr, Environment * &envt, Continuat
 EvalObj *Evaluator::run_expr(Pair *prog) {
     EvalObj **top_ptr = eval_stack;
     Pair *pc = prog;
-    Continuation *cont = NULL;
+    Continuation *bcont = new Continuation(NULL, NULL, NULL), // dummy cont
+                 *cont = bcont; 
+    gc.attach(cont);
 #ifdef GC_DEBUG
     fprintf(stderr, "Start the evaluation...\n");
 #endif
@@ -158,7 +159,7 @@ EvalObj *Evaluator::run_expr(Pair *prog) {
     push(pc, top_ptr, envt, cont);
     gc.attach(prog);
 
-    while (cont)
+    while (cont != bcont)
     {
         if (top_ptr == eval_stack + EVAL_STACK_SIZE)
             throw TokenError("Evaluation", RUN_ERR_STACK_OVERFLOW);

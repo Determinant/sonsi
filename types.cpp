@@ -88,17 +88,25 @@ Pair *ProcObj::call(Pair *_args, Environment * &lenvt,
         {
             gc.expose(*top_ptr);
             *top_ptr++ = gc.attach(TO_PAIR(_args->cdr)->car);
-            EXIT_CURRENT_CONT(lenvt, cont);
+            EXIT_CURRENT_EXEC(lenvt, cont); // exit cont and envt
             gc.expose(_args);
             return ret_addr->next;
         }
         else 
         {
-            gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
+            if (!nexp->is_simple_obj() && nexp->cdr == empty_list)    // tail recursion opt
+            {
+                cont->tail = true;
+                cont->state = NULL;
+            }
+            else
+            {
+                gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
+                cont->state = nexp;
+            }
             top_ptr++;
-            cont->state = nexp;
             gc.expose(_args);
-            return cont->state;
+            return nexp;
         }
     }
     else
@@ -302,7 +310,7 @@ BuiltinProcObj::BuiltinProcObj(BuiltinProc f, string _name) :
         Pair *ret_addr = cont->pc;
         gc.expose(*top_ptr);
         *top_ptr++ = gc.attach(handler(TO_PAIR(args->cdr), name));
-        EXIT_CURRENT_CONT(lenvt, cont);
+        EXIT_CURRENT_EXEC(lenvt, cont);
         gc.expose(args);
         return ret_addr->next;          // Move to the next instruction
     }
@@ -398,7 +406,7 @@ Environment *Environment::get_prev() {
 }
 
 Continuation::Continuation(Environment *_envt, Pair *_pc, Continuation *_prev_cont ) :
-    Container(), prev_cont(_prev_cont), envt(_envt), pc(_pc), state(NULL) {
+    Container(), prev_cont(_prev_cont), envt(_envt), pc(_pc), state(NULL), tail(false) {
         gc.attach(prev_cont);
         gc.attach(envt);
     }

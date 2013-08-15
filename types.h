@@ -385,6 +385,7 @@ class Continuation : public Container {/*{{{*/
         Environment *envt;  /**< The saved envt */
         Pair *pc;           /**< The saved pc */
         Pair *state;        /**< The state of this compound */
+        bool tail;          /**< If the proper tail opt is on */
 
         /** Create a continuation */
         Continuation(Environment *envt, Pair *pc, Continuation *prev_cont);

@@ -4,7 +4,7 @@
 #include "model.h"
 #include <map>
 
-const int GC_QUEUE_SIZE = 64 * 1024 * 1024;
+const int GC_QUEUE_SIZE = 262144;
 const size_t GC_CYC_THRESHOLD = GC_QUEUE_SIZE >> 1;
 
 typedef std::set<EvalObj*> EvalObjSet;
