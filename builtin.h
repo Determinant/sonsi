@@ -3,6 +3,7 @@
 
 #include "model.h"
 #include "types.h"
+
 #include <string>
 
 using std::string;
@@ -13,8 +14,6 @@ const int EQUAL_QUEUE_SIZE = 262144;
  * The implementation of `if` operator
  */
 class SpecialOptIf: public SpecialOptObj {/*{{{*/
-    private:
-        unsigned char state; /**< 0 for prepared, 1 for pre_called */
     public:
         /** Construct a `if` operator */
         SpecialOptIf();
@@ -89,12 +88,10 @@ class SpecialOptQuote: public SpecialOptObj {/*{{{*/
  * The implementation of `eval` operator
  */
 class SpecialOptEval: public SpecialOptObj {/*{{{*/
-    private:
-        unsigned char state; /**< 0 for prepared, 1 for pre_called */
     public:
         /** Construct an `eval` operator */
         SpecialOptEval();
-        /** Set state to 0 */
+        /** Nothing special */
         void prepare(Pair *pc);
         /** Behaves like the one in `SpecialOptIf` */
         Pair *call(Pair *args, Environment * &envt,
@@ -139,7 +136,7 @@ class SpecialOptApply: public SpecialOptObj {/*{{{*/
     public:
         /** Construct an `apply` operator */
         SpecialOptApply();
-        /** Do nothing */
+        /** Nothing special */
         void prepare(Pair *pc);
         /** Provoke the <proc> with args */
         Pair *call(Pair *args, Environment * &envt,
@@ -154,7 +151,7 @@ class SpecialOptDelay: public SpecialOptObj {/*{{{*/
     public:
         /** Construct a `delay` operator */
         SpecialOptDelay();
-        /** Do nothing */
+        /** Nothing special */
         void prepare(Pair *pc);
         /** Make up a PromObj and push into the stack */
         Pair *call(Pair *args, Environment * &envt,
@@ -167,12 +164,10 @@ class SpecialOptDelay: public SpecialOptObj {/*{{{*/
  */
 class SpecialOptForce: public SpecialOptObj {/*{{{*/
     private:
-        unsigned char state;
         PromObj* prom;
     public:
         /** Construct a `force` operator */
         SpecialOptForce();
-        /** Set the state to 0 */
         void prepare(Pair *pc);
         /** Force the evaluation of a promise. If the promise has not been
          * evaluated yet, then evaluate and feed the result to its memory,
@@ -182,6 +177,10 @@ class SpecialOptForce: public SpecialOptObj {/*{{{*/
                 Continuation * &cont, EvalObj ** &top_ptr, Pair *pc);
 
 };/*}}}*/
+
+/* The following lines are the implementation of various simple built-in
+ * procedures. Some library procdures are implemented here for the sake of
+ * efficiency. */
 
 #define BUILTIN_PROC_DEF(func)\
     EvalObj *(func)(Pair *args, const string &name)

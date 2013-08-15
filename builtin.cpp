@@ -1,39 +1,36 @@
+#include "consts.h"
+#include "builtin.h"
+#include "exc.h"
+#include "gc.h"
+
 #include <cstdio>
 #include <cctype>
 #include <cstdlib>
-
-#include "consts.h"
-#include "builtin.h"
-#include "model.h"
-#include "exc.h"
-#include "types.h"
-#include "gc.h"
 
 using std::stringstream;
 
 extern EmptyList *empty_list;
 extern UnspecObj *unspec_obj;
 
+#define EXC_WRONG_ARG_NUM \
+        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
+
 SpecialOptIf::SpecialOptIf() : SpecialOptObj("if") {}
 
 void SpecialOptIf::prepare(Pair *pc) {
-#define IF_EXP_ERR \
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
 
     Pair *first, *second, *third;
 
-    if (pc->cdr == empty_list)
-        IF_EXP_ERR;
+    if (pc->cdr == empty_list) EXC_WRONG_ARG_NUM;
     first = TO_PAIR(pc->cdr);
 
-    if (first->cdr == empty_list)
-        IF_EXP_ERR;
+    if (first->cdr == empty_list) EXC_WRONG_ARG_NUM;
     second = TO_PAIR(first->cdr);
 
     if (second->cdr != empty_list)
     {
         third = TO_PAIR(second->cdr);
-        if (third->cdr != empty_list) IF_EXP_ERR;
+        if (third->cdr != empty_list) EXC_WRONG_ARG_NUM;
     }
     pc->next = NULL;
 }
@@ -197,17 +194,14 @@ SpecialOptDefine::SpecialOptDefine() : SpecialOptObj("define") {}
 
 void SpecialOptDefine::prepare(Pair *pc) {
     Pair *first, *second;
-    if (pc->cdr == empty_list)
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    if (pc->cdr == empty_list) EXC_WRONG_ARG_NUM;
     first = TO_PAIR(pc->cdr);
 
     if (first->car->is_simple_obj())  // Simple value assignment
     {
-        if (first->cdr == empty_list)
-            throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+        if (first->cdr == empty_list) EXC_WRONG_ARG_NUM;
         second = TO_PAIR(first->cdr);
-        if (second->cdr != empty_list)
-            throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+        if (second->cdr != empty_list) EXC_WRONG_ARG_NUM;
     }                                           // Procedure definition
     pc->next = NULL;
 }
@@ -272,16 +266,13 @@ SpecialOptSet::SpecialOptSet() : SpecialOptObj("set!") {}
 
 void SpecialOptSet::prepare(Pair *pc) {
     Pair *first, *second;
-    if (pc->cdr == empty_list)
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    if (pc->cdr == empty_list) EXC_WRONG_ARG_NUM;
     first = TO_PAIR(pc->cdr);
 
-    if (first->cdr == empty_list)
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    if (first->cdr == empty_list) EXC_WRONG_ARG_NUM;
     second = TO_PAIR(first->cdr);
 
-    if (second->cdr != empty_list)
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    if (second->cdr != empty_list) EXC_WRONG_ARG_NUM;
 
     pc->next = NULL;
 }
@@ -335,7 +326,7 @@ SpecialOptEval::SpecialOptEval() : SpecialOptObj("eval") {}
 void SpecialOptEval::prepare(Pair *pc) {
     if (pc->cdr == empty_list ||
         TO_PAIR(pc->cdr)->cdr != empty_list)
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+        EXC_WRONG_ARG_NUM;
 }
 
 Pair *SpecialOptEval::call(Pair *args, Environment * &lenvt,
@@ -524,8 +515,7 @@ Pair *SpecialOptApply::call(Pair *_args, Environment * &lenvt,
         Continuation * &cont, EvalObj ** &top_ptr, Pair *pc) {
     Pair *args = _args;
     top_ptr++;          // Recover the return address
-    if (args->cdr == empty_list)
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    if (args->cdr == empty_list) EXC_WRONG_ARG_NUM;
 
     args = TO_PAIR(args->cdr);
     if (!args->car->is_opt_obj())
@@ -533,8 +523,7 @@ Pair *SpecialOptApply::call(Pair *_args, Environment * &lenvt,
 
     *top_ptr++ = gc.attach(args->car);          // Push the operator into the stack
     args = TO_PAIR(args->cdr);                  // Examine arguments
-    if (args == empty_list)
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    if (args == empty_list) EXC_WRONG_ARG_NUM;
 
     for (; args->cdr != empty_list; args = TO_PAIR(args->cdr))
         *top_ptr++ = gc.attach(args->car);      // Add leading arguments: arg_1 ...
@@ -566,7 +555,7 @@ SpecialOptForce::SpecialOptForce() : SpecialOptObj("force") {}
 void SpecialOptForce::prepare(Pair *pc) {
     if (pc->cdr == empty_list ||
         TO_PAIR(pc->cdr)->cdr != empty_list)
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+        EXC_WRONG_ARG_NUM;
 }
 
 Pair *SpecialOptForce::call(Pair *_args, Environment * &lenvt,
@@ -614,7 +603,7 @@ SpecialOptDelay::SpecialOptDelay() : SpecialOptObj("delay") {}
 void SpecialOptDelay::prepare(Pair *pc) {
     if (pc->cdr == empty_list ||
         TO_PAIR(pc->cdr)->cdr != empty_list)
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+        EXC_WRONG_ARG_NUM;
     pc->next = NULL;
 }
 
@@ -627,26 +616,23 @@ Pair *SpecialOptDelay::call(Pair *args, Environment * &lenvt,
     return ret_addr->next;          // Move to the next instruction
 }
 
-/*************************************************************************/
-
 /* The following lines are the implementation of various simple built-in
  * procedures. Some library procdures are implemented here for the sake of
  * efficiency. */
 
 #define ARGS_EXACTLY_TWO \
     if (args == empty_list ||  \
-        args->cdr == empty_list || \
-        TO_PAIR(args->cdr)->cdr != empty_list) \
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
+            args->cdr == empty_list || \
+            TO_PAIR(args->cdr)->cdr != empty_list) \
+                EXC_WRONG_ARG_NUM
 
 #define ARGS_EXACTLY_ONE \
     if (args == empty_list || \
-        args->cdr != empty_list ) \
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
+            args->cdr != empty_list ) \
+                EXC_WRONG_ARG_NUM
 
 #define ARGS_AT_LEAST_ONE \
-    if (args == empty_list) \
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
+    if (args == empty_list) EXC_WRONG_ARG_NUM
 
 BUILTIN_PROC_DEF(make_pair) {
     ARGS_EXACTLY_TWO;
@@ -1526,22 +1512,22 @@ BUILTIN_PROC_DEF(make_vector) {
     else if (args->cdr == empty_list)
         fill = args->car;
     else
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+        EXC_WRONG_ARG_NUM;
 
     VecObj *res = new VecObj(size_t(len), fill);
     return res;
 }
 
 BUILTIN_PROC_DEF(vector_set) {
-    if (args == empty_list)
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    if (args == empty_list) EXC_WRONG_ARG_NUM;
     if (!args->car->is_vect_obj())
         throw TokenError("a vector", RUN_ERR_WRONG_TYPE);
+
     VecObj *vect = static_cast<VecObj*>(args->car);
 
     args = TO_PAIR(args->cdr);
-    if (args == empty_list)
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    if (args == empty_list) EXC_WRONG_ARG_NUM;
+
     EvalObj *second = args->car;
     CHECK_NUMBER(second);
     CHECK_EXACT(second);
@@ -1552,27 +1538,23 @@ BUILTIN_PROC_DEF(vector_set) {
         throw TokenError("a non-negative integer", RUN_ERR_WRONG_TYPE);
 
     args = TO_PAIR(args->cdr);
-    if (args == empty_list)
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
-    if (args->cdr != empty_list)
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    if (args == empty_list) EXC_WRONG_ARG_NUM;
+    if (args->cdr != empty_list) EXC_WRONG_ARG_NUM;
 
     vect->set(k, args->car);
     return unspec_obj;
 }
 
 BUILTIN_PROC_DEF(vector_ref) {
-    if (args == empty_list)
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    if (args == empty_list) EXC_WRONG_ARG_NUM;
     if (!args->car->is_vect_obj())
         throw TokenError("a vector", RUN_ERR_WRONG_TYPE);
+
     VecObj *vect = static_cast<VecObj*>(args->car);
 
     args = TO_PAIR(args->cdr);
-    if (args == empty_list)
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
-    if (args->cdr != empty_list)
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    if (args == empty_list) EXC_WRONG_ARG_NUM;
+    if (args->cdr != empty_list) EXC_WRONG_ARG_NUM;
 
     EvalObj *second = args->car;
     CHECK_NUMBER(second);
@@ -1586,19 +1568,17 @@ BUILTIN_PROC_DEF(vector_ref) {
 }
 
 BUILTIN_PROC_DEF(vector_length) {
-    if (args == empty_list)
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    if (args == empty_list) EXC_WRONG_ARG_NUM;
     if (!args->car->is_vect_obj())
         throw TokenError("a vector", RUN_ERR_WRONG_TYPE);
-    if (args->cdr != empty_list)
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    if (args->cdr != empty_list) EXC_WRONG_ARG_NUM;
+
     VecObj *vect = static_cast<VecObj*>(args->car);
     return new IntNumObj(vect->get_size());
 }
 
 BUILTIN_PROC_DEF(gc_status) {
-    if (args != empty_list)
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS);
+    if (args != empty_list) EXC_WRONG_ARG_NUM;
     return new IntNumObj(gc.get_remaining());
 }
 
