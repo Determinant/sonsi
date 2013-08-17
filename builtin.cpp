@@ -590,7 +590,7 @@ Pair *SpecialOptForce::call(Pair *_args, Environment * &lenvt,
         {
             gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
             top_ptr++;
-            nexp = cont->state = prom->get_entry();
+            nexp = cont->state = prom->get_exp();
             nexp->next = NULL;
             gc.expose(_args);
             return nexp;

@@ -42,11 +42,12 @@ class PairReprCons;
 class Pair : public Container {/*{{{*/
     public:
         EvalObj *car;                   /**< car (as in Scheme) */
-        EvalObj *cdr;                      /**< cdr (as in Scheme) */
-        Pair* next;                     /**< The next branch in effect */
+        EvalObj *cdr;                   /**< cdr (as in Scheme) */
+        /** The next branch in effect (make sense only in evaluation) */
+        Pair* next;
 
-        Pair(EvalObj *car, EvalObj *cdr);  /**< Create a Pair (car . cdr) */
-        ~Pair();
+        Pair(EvalObj *car, EvalObj *cdr);   /**< Create a Pair (car . cdr) */
+        ~Pair();                            /**< The destructor */
         ReprCons *get_repr_cons();
         void gc_decrement();
         void gc_trigger(EvalObj ** &tail);
@@ -57,40 +58,62 @@ class Pair : public Container {/*{{{*/
  */
 class EmptyList: public Pair {/*{{{*/
     public:
-        EmptyList();
+        EmptyList();        /**< The constructor */
         ReprCons *get_repr_cons();
 };/*}}}*/
 
+/** @class ReprCons
+ * The abstraction class to represent a representation construction, which is
+ * used as stack frame in `ext_repr`.
+ */
 class ReprCons {/*{{{*/
     public:
-        EvalObj *ori;
-        bool done;
+        EvalObj *ori;           /**< Reflexive pointer to the obj */
+        bool prim;             /**< true if no further expansion is needed */
+        /** The finally generated external represenation of the EvalObj */
         string repr;
-        ReprCons(bool done, EvalObj *ori = NULL);
+        /** The constructor */
+        ReprCons(bool prim, EvalObj *ori = NULL);
+        /** This function is called to get the next component in a complex
+         * EvalObj
+         * @param prev Feed the string form of the previous component */
         virtual EvalObj *next(const string &prev) = 0;
 };/*}}}*/
 
+/** @class ReprStr
+ * Used to store the generated external representation.
+ */
 class ReprStr : public ReprCons {/*{{{*/
     public:
+        /** The constructor */
         ReprStr(string repr);
         EvalObj *next(const string &prev);
 };/*}}}*/
 
+/** @class PairReprCons
+ * The ReprCons implementation of Pair
+ */
 class PairReprCons : public ReprCons {/*{{{*/
     private:
         int state;
         EvalObj *ptr;
     public:
+        /** The constructor */
         PairReprCons(Pair *ptr, EvalObj *ori);
         EvalObj *next(const string &prev);
 };/*}}}*/
 
 class VecObj;
+
+/** @class VectReprCons
+ * The ReprCons implementation of VecObj
+ */
 class VectReprCons : public ReprCons {/*{{{*/
     private:
         VecObj *ptr;
         size_t idx;
     public:
+        /** The constructor */
         VectReprCons(VecObj *ptr, EvalObj *ori);
         EvalObj *next(const string &prev);
 };/*}}}*/
@@ -110,13 +133,13 @@ class UnspecObj: public EvalObj {/*{{{*/
  */
 class SymObj: public EvalObj {/*{{{*/
     public:
+        /** Storage implementation: string */
         string val;
-
+        /** The constructor */
         SymObj(const string &);
         ReprCons *get_repr_cons();
 };/*}}}*/
 
-// Everything is cons
 class Environment;
 class Continuation;
 
@@ -126,6 +149,7 @@ class Continuation;
 class OptObj: public Container {/*{{{*/
     public:
 
+        /** The constructor */
         OptObj(int otype = 0);
         /**
          * The function is called when an operation is needed.
@@ -133,6 +157,7 @@ class OptObj: public Container {/*{{{*/
          * @param envt The current environment (may be modified)
          * @param cont The current continuation (may be modified)
          * @param top_ptr Pointing to the top of the stack (may be modified)
+         * @param pc Pointing to the entry of the call in AST
          * @return New value for pc register
          */
         virtual Pair *call(Pair *args, Environment * &envt,
@@ -149,7 +174,7 @@ class ProcObj: public OptObj {/*{{{*/
     public:
         /** The procedure body, a list of expressions to be evaluated */
         Pair *body;
-        /** The arguments: <list> | var1 ... | var1 var2 ... . varn */
+        /** The arguments: \<list\> | var_1 ... | var_1 var_2 ... . var_n */
         EvalObj *params;
         /** Pointer to the environment */
         Environment *envt;
@@ -170,8 +195,10 @@ class ProcObj: public OptObj {/*{{{*/
  */
 class SpecialOptObj: public OptObj {/*{{{*/
     protected:
+        /** The name of this operator */
         string name;
     public:
+        /** The constructor */
         SpecialOptObj(string name);
         ReprCons *get_repr_cons();
 };/*}}}*/
@@ -214,7 +241,6 @@ class BoolObj: public EvalObj {/*{{{*/
 /** @class NumObj
  * The top level abstract of numbers
  */
-
 class NumObj: public EvalObj {/*{{{*/
     protected:
         /** True if the number is of exact value */
@@ -229,20 +255,23 @@ class NumObj: public EvalObj {/*{{{*/
          * Construct a general Numeric object
          */
         NumObj(NumLvl level, bool _exactness);
+        /** Deep-copy a NumObj */
         virtual NumObj *clone() const = 0;
+        /** @return true if it's an exact numeric value */
         bool is_exact();
+        /** Upper convert a NumObj `r` to the same type as `this` */
         virtual NumObj *convert(NumObj *r) = 0;
-        virtual void add(NumObj *r) = 0;
-        virtual void sub(NumObj *r) = 0;
-        virtual void mul(NumObj *r) = 0;
-        virtual void div(NumObj *r) = 0;
-        virtual void abs();
+        virtual void add(NumObj *r) = 0;    /**< Addition */
+        virtual void sub(NumObj *r) = 0;    /**< Substraction */
+        virtual void mul(NumObj *r) = 0;    /**< Multiplication */
+        virtual void div(NumObj *r) = 0;    /**< Division */
+        virtual void abs();                 /**< Absolute function */
 
-        virtual bool lt(NumObj *r);
-        virtual bool gt(NumObj *r);
-        virtual bool le(NumObj *r);
-        virtual bool ge(NumObj *r);
-        virtual bool eq(NumObj *r) = 0;
+        virtual bool lt(NumObj *r);         /**< "<" implementation of numbers */
+        virtual bool gt(NumObj *r);         /**< ">" implementation of numbers */
+        virtual bool le(NumObj *r);         /**< "<=" implementation of numbers */
+        virtual bool ge(NumObj *r);         /**< ">=" implementation of numbers */
+        virtual bool eq(NumObj *r) = 0;     /**< "=" implementation of numbers */
 };/*}}}*/
 
 /** @class StrObj
@@ -250,6 +279,7 @@ class NumObj: public EvalObj {/*{{{*/
  */
 class StrObj: public EvalObj {/*{{{*/
     public:
+        /** Storage implementation: C++ string */
         string str;
 
         /** Construct a string object */
@@ -258,11 +288,13 @@ class StrObj: public EvalObj {/*{{{*/
          * @return NULL if failed
          */
         static StrObj *from_string(string repr);
-        bool lt(StrObj *r);
-        bool gt(StrObj *r);
-        bool le(StrObj *r);
-        bool ge(StrObj *r);
-        bool eq(StrObj *r);
+
+        bool lt(StrObj *r);     /**< "<" implementation of strings */
+        bool gt(StrObj *r);     /**< ">" implementation of strings */
+        bool le(StrObj *r);     /**< "<=" implementation of strings */
+        bool ge(StrObj *r);     /**< ">=" implementation of strings */
+        bool eq(StrObj *r);     /**< "="  implementation of strings */
+
         ReprCons *get_repr_cons();
 };/*}}}*/
 
@@ -271,8 +303,8 @@ class StrObj: public EvalObj {/*{{{*/
  */
 class CharObj: public EvalObj {/*{{{*/
     public:
+        /** Storage implementation */
         char ch;
-
         /** Construct a string object */
         CharObj(char ch);
         /** Try to construct an CharObj object
@@ -289,10 +321,12 @@ class CharObj: public EvalObj {/*{{{*/
  */
 class VecObj: public Container {/*{{{*/
     public:
+        /** Storage implementation: C++ STL vector */
         EvalObjVec vec;
         /** Construct a vector object */
         VecObj(size_t size = 0, EvalObj *fill = NULL);
         ~VecObj();
+        /** Get the actual size of this vector */
         size_t get_size();
         /** Add a new element to the rear */
         void push_back(EvalObj *new_elem);
@@ -300,6 +334,7 @@ class VecObj: public Container {/*{{{*/
         void fill(EvalObj *obj);
         /** Replace an existing element in the vector */
         void set(size_t idx, EvalObj *obj);
+        /** Get the pointer to an element by index */
         EvalObj *get(size_t idx);
         ReprCons *get_repr_cons();
 
@@ -313,13 +348,20 @@ class VecObj: public Container {/*{{{*/
  */
 class PromObj: public Container {/*{{{*/
     private:
-        Pair *entry;
+        /** The delayed expression */
+        Pair *exp;
+        /** The memorized result */
         EvalObj *mem;
     public:
+        /** Construct with a delayed expression */
         PromObj(EvalObj *exp);
+        /** The destructor */
         ~PromObj();
-        Pair *get_entry();
+        /** Get the delayed expression */
+        Pair *get_exp();
+        /** Extract the memorized result */
         EvalObj *get_mem();
+        /** Provide with the result to let the PromObj remember */
         void feed_mem(EvalObj *res);
         ReprCons *get_repr_cons();
 
@@ -343,6 +385,8 @@ class Environment : public Container{/*{{{*/
         ~Environment();
         /** Add a binding entry which binds sym_obj to eval_obj
          * @param def true to force the assignment
+         * @param sym_obj SymbolObj which provides with the identifier
+         * @param eval_obj EvalObj to which the identifier is binding
          * @return when def is set to false, this return value is true iff. the
          * assignment carried out successfully
          */
@@ -353,7 +397,6 @@ class Environment : public Container{/*{{{*/
          * */
         EvalObj *get_obj(EvalObj *obj);
         ReprCons *get_repr_cons();
-        Environment *get_prev();
 
         void gc_decrement();
         void gc_trigger(EvalObj ** &tail);
@@ -388,6 +431,7 @@ class Continuation : public Container {/*{{{*/
  */
 class InexactNumObj: public NumObj {/*{{{*/
     public:
+        /** Construct an InexactNumObj */
         InexactNumObj(NumLvl level);
 };/*}}}*/
 
@@ -396,7 +440,10 @@ class InexactNumObj: public NumObj {/*{{{*/
  */
 class CompNumObj: public InexactNumObj {/*{{{*/
     public:
-        double real, imag;
+        /** Storage implementation: real part */
+        double real;
+        /** Storage implementation: imaginary part */
+        double imag;
 
         /** Construct a complex number */
         CompNumObj(double _real, double _imag);
@@ -421,6 +468,7 @@ class CompNumObj: public InexactNumObj {/*{{{*/
  */
 class RealNumObj: public InexactNumObj {/*{{{*/
     public:
+        /** Storage implementation: real part */
         double real;
         /** Construct a real number */
         RealNumObj(double _real);
@@ -453,7 +501,10 @@ class IntNumObj;
  */
 class ExactNumObj: public NumObj {/*{{{*/
     public:
+        /** Construct an ExactNumObj */
         ExactNumObj(NumLvl level);
+        /** Convert an exact number to an integer.  An exception will be
+         * throwed if it fails.  */
         virtual IntNumObj *to_int() = 0;
 };/*}}}*/
 
@@ -463,10 +514,14 @@ class ExactNumObj: public NumObj {/*{{{*/
 class RatNumObj: public ExactNumObj {/*{{{*/
     public:
 #ifndef GMP_SUPPORT
-        int a, b;
+        /** Storage implementation of numerator: C-integer */
+        int a;
+        /** Storage implementation of denominator: C-integer */
+        int b;
         /** Construct a rational number */
         RatNumObj(int _a, int _b);
 #else
+        /** Storage implementation: GMP Rational */
         mpq_class val;
         RatNumObj(mpq_class val);
         RatNumObj(const RatNumObj &ori);
@@ -500,19 +555,22 @@ class RatNumObj: public ExactNumObj {/*{{{*/
 class IntNumObj: public ExactNumObj {/*{{{*/
     public:
 #ifndef GMP_SUPPORT
+        /** Storage implementation: C-integer */
         int val;
         /** Construct a integer */
         IntNumObj(int val);
-        int get_i();
 #else
+        /** Storage implementation: GMP integer */
         mpz_class val;
         /** Construct a integer */
         IntNumObj(mpz_class val);
-        int get_i();
         /** Copy constructor */
         IntNumObj *to_int();
         IntNumObj(const IntNumObj &ori);
 #endif
+        /** Get the C-format integer representation of the storage
+         * implementation value */
+        int get_i();
         NumObj *clone() const;
         /** Try to construct an IntNumObj object
          * @return NULL if failed
@@ -526,11 +584,12 @@ class IntNumObj: public ExactNumObj {/*{{{*/
         void mul(NumObj *r);
         void div(NumObj *r);
         void abs();
-        void mod(NumObj *r);
-        void rem(NumObj *r);
-        void quo(NumObj *r);
-        void gcd(NumObj *r);
-        void lcm(NumObj *r);
+
+        void mod(NumObj *r);    /**< Modulo */
+        void rem(NumObj *r);    /**< Remainder */
+        void quo(NumObj *r);    /**< Quotient */
+        void gcd(NumObj *r);    /**< The greatest common divisor */
+        void lcm(NumObj *r);    /**< The least common divisor */
 
         bool lt(NumObj *r);
         bool gt(NumObj *r);

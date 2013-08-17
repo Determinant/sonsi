@@ -3,7 +3,7 @@
   - model --- done
   - eval  --- done
   - builtin --- almost
-  - types
+  - types --- done
   - gc
   - consts
   - parser

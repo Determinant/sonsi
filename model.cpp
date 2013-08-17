@@ -100,9 +100,9 @@ string EvalObj::ext_repr() {
     *top_ptr++ = this->get_repr_cons();
     EvalObj *obj;
     hash.insert(this);
-    while (!(*repr_stack)->done)
+    while (!(*repr_stack)->prim)
     {
-        if ((*(top_ptr - 1))->done)
+        if ((*(top_ptr - 1))->prim)
         {
             top_ptr -= 2;
             obj = (*top_ptr)->next((*(top_ptr + 1))->repr);

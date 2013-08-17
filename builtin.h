@@ -17,10 +17,10 @@ class SpecialOptIf: public SpecialOptObj {/*{{{*/
     public:
         /** Construct a `if` operator */
         SpecialOptIf();
-        /** Prevent <condition> and <consequence> from being evaluated */
+        /** Prevent \<condition\> and \<consequence\> from being evaluated */
         void prepare(Pair *pc);
         /** When it's invoked at the first time, it will determined which of
-         * <condition> and <consequence> should be evaluated.  Then when it's
+         * \<condition\> and \<consequence\> should be evaluated.  Then when it's
          * invoked again, it will tell the system the corresponding result.*/
         Pair *call(Pair *args, Environment * &envt,
                 Continuation * &cont, EvalObj ** &top_ptr, Pair *pc);
@@ -138,7 +138,7 @@ class SpecialOptApply: public SpecialOptObj {/*{{{*/
         SpecialOptApply();
         /** Nothing special */
         void prepare(Pair *pc);
-        /** Provoke the <proc> with args */
+        /** Provoke the \<proc\> with args */
         Pair *call(Pair *args, Environment * &envt,
                 Continuation * &cont, EvalObj ** &top_ptr, Pair *pc);
 
