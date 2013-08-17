@@ -16,11 +16,11 @@ EvalObj *eval_stack[EVAL_STACK_SIZE];
 void Evaluator::add_builtin_routines() {
 
 #define ADD_ENTRY(name, rout) \
-do { \
-    SymObj *tmp = new SymObj(name); \
-    envt->add_binding(tmp, rout); \
-    delete tmp; \
-} while (0)
+    do { \
+        SymObj *tmp = new SymObj(name); \
+        envt->add_binding(tmp, rout); \
+        delete tmp; \
+    } while (0)
 
 #define ADD_BUILTIN_PROC(name, rout) \
     ADD_ENTRY(name, new BuiltinProcObj(rout, name))
@@ -208,8 +208,8 @@ EvalObj *Evaluator::run_expr(Pair *prog) {
             }
             else
                 throw TokenError((args->car)->ext_repr(), SYN_ERR_CAN_NOT_APPLY);
-//            gc.collect(); THIS IS DEPRECATED BECAUSE IT'S NOT A SAFE POINT
-//            ANYMORE DUE TO THE TAIL RECURSION OPT
+            //            gc.collect(); THIS IS DEPRECATED BECAUSE IT'S NOT A SAFE POINT
+            //            ANYMORE DUE TO THE TAIL RECURSION OPT
         }
     }
     // remove the protection

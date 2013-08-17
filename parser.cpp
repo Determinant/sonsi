@@ -186,8 +186,8 @@ Pair *ASTGenerator::absorb(Tokenizor *tk) {
                 if (obj->is_sym_obj() && static_cast<SymObj*>(obj)->val == ".")
                 {
                     if (improper ||
-                        lst == empty_list ||
-                        TO_PAIR(lst)->cdr != empty_list)
+                            lst == empty_list ||
+                            TO_PAIR(lst)->cdr != empty_list)
                         throw NormalError(PAR_ERR_IMPROPER_PAIR);
                     improper = true;
                     Pair *_lst = TO_PAIR(lst);

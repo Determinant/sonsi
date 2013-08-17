@@ -87,7 +87,7 @@ void GarbageCollector::force() {
     fprintf(stderr, "GC: Forced clear, %lu objects are freed, "
             "%lu remains\n"
             "=============================\n", cnt, joined_size);
-        
+
 #endif
 #ifdef GC_DEBUG
 #endif
@@ -95,17 +95,17 @@ void GarbageCollector::force() {
 
 EvalObj *GarbageCollector::attach(EvalObj *ptr) {
     if (!ptr) return NULL;   // NULL pointer
-/*    bool flag = mapping.count(ptr);
-    if (flag) mapping[ptr]++;
-    else mapping[ptr] = 1;
-    */
+    /*    bool flag = mapping.count(ptr);
+          if (flag) mapping[ptr]++;
+          else mapping[ptr] = 1;
+          */
     ptr->gc_rec->gc_cnt++;
 #ifdef GC_DEBUG
     fprintf(stderr, "GC: 0x%llx attached. count = %lu \"%s\"\n", 
             (ull)ptr, ptr->gc_rec->gc_cnt, ptr->ext_repr().c_str());
 #endif
-/*    if (mapping.size() > GC_QUEUE_SIZE >> 1)
-        force();*/
+    /*    if (mapping.size() > GC_QUEUE_SIZE >> 1)
+          force();*/
     return ptr; // passing through
 }
 
@@ -183,4 +183,4 @@ void GarbageCollector::quit(EvalObj *ptr) {
 }
 
 GCRecord::GCRecord(GCRecord *_prev, GCRecord *_next) :
-   prev(_prev), next(_next) {} 
+prev(_prev), next(_next) {} 

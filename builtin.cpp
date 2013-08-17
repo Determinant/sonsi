@@ -13,7 +13,7 @@ extern EmptyList *empty_list;
 extern UnspecObj *unspec_obj;
 
 #define EXC_WRONG_ARG_NUM \
-        throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
+    throw TokenError(name, RUN_ERR_WRONG_NUM_OF_ARGS)
 
 SpecialOptIf::SpecialOptIf() : SpecialOptObj("if") {}
 
@@ -114,28 +114,28 @@ Pair *SpecialOptIf::call(Pair *args, Environment * &lenvt,
 }
 
 #define CHECK_SYMBOL(ptr) \
-do \
+    do \
 { \
     if (!(ptr)->is_sym_obj()) \
-        throw TokenError("a symbol", RUN_ERR_WRONG_TYPE); \
+    throw TokenError("a symbol", RUN_ERR_WRONG_TYPE); \
 } while (0)
 
 #define CHECK_NUMBER(ptr) \
-do \
+    do \
 { \
     if (!(ptr)->is_num_obj()) \
-        throw TokenError("a number", RUN_ERR_WRONG_TYPE); \
+    throw TokenError("a number", RUN_ERR_WRONG_TYPE); \
 } while (0)
 
 #define CHECK_EXACT(ptr) \
-do \
+    do \
 { \
     if (!(static_cast<NumObj*>(ptr))->is_exact()) \
-        throw TokenError("an integer", RUN_ERR_WRONG_TYPE); \
+    throw TokenError("an integer", RUN_ERR_WRONG_TYPE); \
 } while (0)
 
 #define CHECK_PARA_LIST(p) \
-do  \
+    do  \
 { \
     if (p == empty_list) break; \
     EvalObj *nptr; \
@@ -144,11 +144,11 @@ do  \
     { \
         CHECK_SYMBOL(ptr->car); \
         if ((nptr = ptr->cdr)->is_pair_obj()) \
-            ptr = TO_PAIR(nptr); \
+        ptr = TO_PAIR(nptr); \
         else break; \
     } \
     if (ptr->cdr != empty_list) \
-       CHECK_SYMBOL(ptr->cdr); \
+    CHECK_SYMBOL(ptr->cdr); \
 } \
 while (0)
 
@@ -325,7 +325,7 @@ SpecialOptEval::SpecialOptEval() : SpecialOptObj("eval") {}
 
 void SpecialOptEval::prepare(Pair *pc) {
     if (pc->cdr == empty_list ||
-        TO_PAIR(pc->cdr)->cdr != empty_list)
+            TO_PAIR(pc->cdr)->cdr != empty_list)
         EXC_WRONG_ARG_NUM;
 }
 
@@ -554,7 +554,7 @@ SpecialOptForce::SpecialOptForce() : SpecialOptObj("force") {}
 
 void SpecialOptForce::prepare(Pair *pc) {
     if (pc->cdr == empty_list ||
-        TO_PAIR(pc->cdr)->cdr != empty_list)
+            TO_PAIR(pc->cdr)->cdr != empty_list)
         EXC_WRONG_ARG_NUM;
 }
 
@@ -603,7 +603,7 @@ SpecialOptDelay::SpecialOptDelay() : SpecialOptObj("delay") {}
 
 void SpecialOptDelay::prepare(Pair *pc) {
     if (pc->cdr == empty_list ||
-        TO_PAIR(pc->cdr)->cdr != empty_list)
+            TO_PAIR(pc->cdr)->cdr != empty_list)
         EXC_WRONG_ARG_NUM;
     pc->next = NULL;
 }
@@ -625,12 +625,12 @@ Pair *SpecialOptDelay::call(Pair *args, Environment * &lenvt,
     if (args == empty_list ||  \
             args->cdr == empty_list || \
             TO_PAIR(args->cdr)->cdr != empty_list) \
-                EXC_WRONG_ARG_NUM
+EXC_WRONG_ARG_NUM
 
 #define ARGS_EXACTLY_ONE \
     if (args == empty_list || \
             args->cdr != empty_list ) \
-                EXC_WRONG_ARG_NUM
+EXC_WRONG_ARG_NUM
 
 #define ARGS_AT_LEAST_ONE \
     if (args == empty_list) EXC_WRONG_ARG_NUM
@@ -662,7 +662,7 @@ BUILTIN_PROC_DEF(make_list) {
 }
 
 BUILTIN_PROC_DEF(num_add) {
-//    ARGS_AT_LEAST_ONE;
+    //    ARGS_AT_LEAST_ONE;
     NumObj *res = new IntNumObj(0), *opr; // the most accurate type
     for (;args != empty_list; args = TO_PAIR(args->cdr))
     {
@@ -722,7 +722,7 @@ BUILTIN_PROC_DEF(num_sub) {
 }
 
 BUILTIN_PROC_DEF(num_mul) {
-//    ARGS_AT_LEAST_ONE;
+    //    ARGS_AT_LEAST_ONE;
     NumObj *res = new IntNumObj(1), *opr; // the most accurate type
     for (;args != empty_list; args = TO_PAIR(args->cdr))
     {
@@ -1161,12 +1161,12 @@ BUILTIN_PROC_DEF(is_eqv) {
     if (otype != obj2->get_otype()) return new BoolObj(false);
     if (otype & CLS_BOOL_OBJ)
         return new BoolObj(
-            static_cast<BoolObj*>(obj1)->val ==
-            static_cast<BoolObj*>(obj2)->val);
+                static_cast<BoolObj*>(obj1)->val ==
+                static_cast<BoolObj*>(obj2)->val);
     if (otype & CLS_SYM_OBJ)
         return new BoolObj(
-            static_cast<SymObj*>(obj1)->val ==
-            static_cast<SymObj*>(obj2)->val);
+                static_cast<SymObj*>(obj1)->val ==
+                static_cast<SymObj*>(obj2)->val);
     if (otype & CLS_NUM_OBJ)
     {
         NumObj *num1 = static_cast<NumObj*>(obj1);
@@ -1180,29 +1180,29 @@ BUILTIN_PROC_DEF(is_eqv) {
     }
     if (otype & CLS_CHAR_OBJ)
         return new BoolObj(
-            static_cast<CharObj*>(obj1)->ch ==
-            static_cast<CharObj*>(obj2)->ch);    // (char=?)
+                static_cast<CharObj*>(obj1)->ch ==
+                static_cast<CharObj*>(obj2)->ch);    // (char=?)
     return new BoolObj(obj1 == obj2);
 }
 
 
 BUILTIN_PROC_DEF(is_equal) {
 
-//#define INC1(x) (++(x) == t1 ? (x) = q1:0)
-//#define INC2(x) (++(x) == t2 ? (x) = q2:0)
+    //#define INC1(x) (++(x) == t1 ? (x) = q1:0)
+    //#define INC2(x) (++(x) == t2 ? (x) = q2:0)
 #define INC1(x) (++(x))
 #define INC2(x) (++(x))
 #define CHK1 \
-do { \
-    if (r1 == q1 + EQUAL_QUEUE_SIZE)  \
+    do { \
+        if (r1 == q1 + EQUAL_QUEUE_SIZE)  \
         throw NormalError(RUN_ERR_QUEUE_OVERFLOW); \
-} while (0)
+    } while (0)
 
 #define CHK2 \
-do { \
-    if (r2 == q2 + EQUAL_QUEUE_SIZE)  \
+    do { \
+        if (r2 == q2 + EQUAL_QUEUE_SIZE)  \
         throw NormalError(RUN_ERR_QUEUE_OVERFLOW); \
-} while (0)
+    } while (0)
 
 
     static EvalObj *q1[EQUAL_QUEUE_SIZE], *q2[EQUAL_QUEUE_SIZE];
@@ -1222,7 +1222,7 @@ do { \
         if (otype != (b = *l2)->get_otype())
             return new BoolObj(false);
         if (a != empty_list && b != empty_list &&
-            otype & CLS_PAIR_OBJ)
+                otype & CLS_PAIR_OBJ)
         {
             *r1 = TO_PAIR(a)->car;
             INC1(r1);
@@ -1265,13 +1265,13 @@ do { \
         else if (otype & CLS_BOOL_OBJ)
         {
             if (static_cast<BoolObj*>(a)->val !=
-                static_cast<BoolObj*>(b)->val)
+                    static_cast<BoolObj*>(b)->val)
                 return new BoolObj(false);
         }
         else if (otype & CLS_SYM_OBJ)
         {
             if (static_cast<SymObj*>(a)->val !=
-                static_cast<SymObj*>(b)->val)
+                    static_cast<SymObj*>(b)->val)
                 return new BoolObj(false);
         }
         else if (otype & CLS_NUM_OBJ)
@@ -1279,7 +1279,7 @@ do { \
             NumObj *num1 = static_cast<NumObj*>(a);
             NumObj *num2 = static_cast<NumObj*>(b);
             if (num1->is_exact() != num2->is_exact())
-            return new BoolObj(false);
+                return new BoolObj(false);
             if (num1->level < num2->level)
             {
                 if (!num1->eq(num1->convert(num2)))
@@ -1294,13 +1294,13 @@ do { \
         else if (otype & CLS_CHAR_OBJ)
         {
             if (static_cast<CharObj*>(a)->ch !=
-                static_cast<CharObj*>(b)->ch)
+                    static_cast<CharObj*>(b)->ch)
                 return new BoolObj(false); // (char=?)
         }
         else if (otype & CLS_STR_OBJ)
         {
             if (static_cast<StrObj*>(a)->str !=
-                static_cast<StrObj*>(b)->str)
+                    static_cast<StrObj*>(b)->str)
                 return new BoolObj(false); // (string=?)
         }
         else if (a != b)
@@ -1334,13 +1334,13 @@ BUILTIN_PROC_DEF(is_real) {
 BUILTIN_PROC_DEF(is_rational) {
     ARGS_EXACTLY_ONE;
     return new BoolObj(args->car->is_num_obj() &&
-                    static_cast<NumObj*>(args->car)->level >= NUM_LVL_RAT);
+            static_cast<NumObj*>(args->car)->level >= NUM_LVL_RAT);
 }
 
 BUILTIN_PROC_DEF(is_integer) {
     ARGS_EXACTLY_ONE;
     return new BoolObj(args->car->is_num_obj() &&
-                    static_cast<NumObj*>(args->car)->level >= NUM_LVL_INT);
+            static_cast<NumObj*>(args->car)->level >= NUM_LVL_INT);
 }
 
 BUILTIN_PROC_DEF(num_abs) {
@@ -1406,7 +1406,7 @@ BUILTIN_PROC_DEF(num_rem) {
 }
 
 BUILTIN_PROC_DEF(num_gcd) {
-//    ARGS_AT_LEAST_ONE;
+    //    ARGS_AT_LEAST_ONE;
     IntNumObj *res = new IntNumObj(0);
     IntNumObj *opr;
     for (;args != empty_list; args = TO_PAIR(args->cdr))
@@ -1423,7 +1423,7 @@ BUILTIN_PROC_DEF(num_gcd) {
 }
 
 BUILTIN_PROC_DEF(num_lcm) {
-//    ARGS_AT_LEAST_ONE;
+    //    ARGS_AT_LEAST_ONE;
     IntNumObj *res = new IntNumObj(1);
     IntNumObj *opr;
     for (;args != empty_list; args = TO_PAIR(args->cdr))

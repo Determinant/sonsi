@@ -396,7 +396,7 @@ EvalObj *Environment::get_obj(EvalObj *obj) {
 }
 
 Continuation::Continuation(Environment *_envt, Pair *_pc, 
-                            Continuation *_prev_cont ) :
+        Continuation *_prev_cont ) :
 Container(), prev_cont(_prev_cont), envt(_envt), pc(_pc), 
 state(NULL), prog(NULL), tail(false) {
     gc.attach(prev_cont);
