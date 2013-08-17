@@ -19,13 +19,21 @@ class GeneralError {
         string get_msg();                   /**< Get the error message */
 };
 
+/** @class TokenError
+ * Error with some hints
+ */
 class TokenError : public GeneralError {
     public:
-        TokenError(string token, ErrCode code);     /**< Construct an TokenError */
+        /** Construct an TokenError */
+        TokenError(string token, ErrCode code);     
 };
 
+/** @class NormalError
+ * Error with constant plain text 
+ */
 class NormalError : public GeneralError {
     public:
+        /** Construct a NormalError */
         NormalError(ErrCode code);
 };
 

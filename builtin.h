@@ -69,8 +69,8 @@ class SpecialOptSet: public SpecialOptObj {/*{{{*/
                 Continuation * &cont, EvalObj ** &top_ptr, Pair *pc);
 };/*}}}*/
 
-/** @class SpecialOptLambda
- * The implementation of `lambda` operator
+/** @class SpecialOptQuote
+ * The implementation of `quote` operator
  */
 class SpecialOptQuote: public SpecialOptObj {/*{{{*/
     public:

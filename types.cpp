@@ -1018,11 +1018,13 @@ void RatNumObj::abs() {
 #endif
 }
 
+#ifdef GMP_SUPPORT
 IntNumObj *RatNumObj::to_int() {
     if (val.get_den() != 1)
         throw TokenError("an integer", RUN_ERR_WRONG_TYPE);
     return new IntNumObj(val.get_num());
 }
+#endif
 
 ReprCons *RatNumObj::get_repr_cons() {
 #ifndef GMP_SUPPORT
@@ -1149,9 +1151,11 @@ bool IntNumObj::eq(NumObj *_r) {
     return val == static_cast<IntNumObj*>(_r)->val;
 }
 
+#ifdef GMP_SUPPORT
 IntNumObj* IntNumObj::to_int() {
     return new IntNumObj(val);
 }
+#endif
 
 ReprCons *IntNumObj::get_repr_cons() {
 #ifndef GMP_SUPPORT

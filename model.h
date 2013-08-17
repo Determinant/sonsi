@@ -48,7 +48,7 @@ class FrameObj {/*{{{*/
         bool is_parse_bracket();
 };/*}}}*/
 
-class ObjEntry;
+class GCRecord;
 class Pair;
 class ReprCons;
 /** @class EvalObj
@@ -65,7 +65,7 @@ class EvalObj : public FrameObj {/*{{{*/
         /**
          * The pointer to the corresponding record in GC
          */
-        ObjEntry *gc_rec;
+        GCRecord *gc_rec;
         /**
          * Construct an EvalObj
          * @param otype the type of the EvalObj (CLS_PAIR_OBJ for a pair,

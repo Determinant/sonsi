@@ -10,11 +10,11 @@ typedef unsigned long long ull;
 
 static EvalObj *gcq[GC_QUEUE_SIZE];
 static Container *cyc_list[GC_QUEUE_SIZE];
-ObjEntry *oe_null;
+GCRecord *oe_null;
 
 GarbageCollector::GarbageCollector() {
-    joined = new ObjEntry(NULL, NULL);
-    joined->next = oe_null = new ObjEntry(NULL, NULL);
+    joined = new GCRecord(NULL, NULL);
+    joined->next = oe_null = new GCRecord(NULL, NULL);
     joined_size = 0;
     pending_list = NULL;
     resolve_threshold = GC_CYC_THRESHOLD;
@@ -111,7 +111,7 @@ EvalObj *GarbageCollector::attach(EvalObj *ptr) {
 
 void GarbageCollector::cycle_resolve() {
     Container **clptr = cyc_list;
-    for (ObjEntry *i = joined->next; i != oe_null; i = i->next)
+    for (GCRecord *i = joined->next; i != oe_null; i = i->next)
     {
         EvalObj *obj = i->obj;
         if (obj->is_container())
@@ -163,8 +163,8 @@ void GarbageCollector::set_resolve_threshold(size_t new_thres) {
     resolve_threshold = new_thres;
 }
 
-ObjEntry *GarbageCollector::join(EvalObj *ptr) {
-    ObjEntry *p = new ObjEntry(joined, joined->next);
+GCRecord *GarbageCollector::join(EvalObj *ptr) {
+    GCRecord *p = new GCRecord(joined, joined->next);
     p->prev->next = p;
     p->next->prev = p;
     p->gc_cnt = 0;
@@ -174,7 +174,7 @@ ObjEntry *GarbageCollector::join(EvalObj *ptr) {
 }
 
 void GarbageCollector::quit(EvalObj *ptr) {
-    ObjEntry *p = ptr->gc_rec;
+    GCRecord *p = ptr->gc_rec;
     p->prev->next = p->next;
     p->next->prev = p->prev;
     ptr->gc_rec = NULL;
@@ -182,5 +182,5 @@ void GarbageCollector::quit(EvalObj *ptr) {
     joined_size--;
 }
 
-ObjEntry::ObjEntry(ObjEntry *_prev, ObjEntry *_next) :
+GCRecord::GCRecord(GCRecord *_prev, GCRecord *_next) :
    prev(_prev), next(_next) {} 
