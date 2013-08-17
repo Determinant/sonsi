@@ -564,9 +564,10 @@ Pair *SpecialOptForce::call(Pair *_args, Environment * &lenvt,
     args = TO_PAIR(args->cdr);
     Pair *ret_addr = cont->pc;
     Pair *nexp = cont->state;
+    PromObj *prom = static_cast<PromObj*>(args->car);
     if (nexp)
     {
-        EvalObj *mem = args->car;
+        EvalObj *mem = TO_PAIR(args->cdr)->car;
         prom->feed_mem(mem);
         gc.expose(*top_ptr);
         *top_ptr++ = gc.attach(mem);
@@ -577,7 +578,6 @@ Pair *SpecialOptForce::call(Pair *_args, Environment * &lenvt,
     {
         if (!args->car->is_prom_obj())
             throw TokenError("a promise", RUN_ERR_WRONG_TYPE);
-        prom = static_cast<PromObj*>(args->car);
         EvalObj *mem = prom->get_mem();
         if (mem)                        // fetch from memorized result
         {
@@ -588,6 +588,7 @@ Pair *SpecialOptForce::call(Pair *_args, Environment * &lenvt,
         }
         else                            // force
         {
+            gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
             gc.attach(static_cast<EvalObj*>(*(++top_ptr)));
             top_ptr++;
             nexp = cont->state = prom->get_exp();

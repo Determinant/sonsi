@@ -393,3 +393,11 @@ x
 
 (display (queen 8))
 (display "\n")
+
+(define prom (delay (and (display "world\n") (lambda () 3))))
+(define prom2 (delay (and (display "hello\n") (force prom))))
+(force prom2)
+(force prom2)
+(force prom2)
+(force prom2)
+

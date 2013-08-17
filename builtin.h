@@ -163,8 +163,6 @@ class SpecialOptDelay: public SpecialOptObj {/*{{{*/
  * The implementation of `force` operator
  */
 class SpecialOptForce: public SpecialOptObj {/*{{{*/
-    private:
-        PromObj* prom;
     public:
         /** Construct a `force` operator */
         SpecialOptForce();
