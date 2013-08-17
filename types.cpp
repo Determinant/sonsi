@@ -486,9 +486,9 @@ EvalObj *VectReprCons::next(const string &prev) {
     }
 }
 
-PromObj::PromObj(EvalObj *exp) :
+PromObj::PromObj(EvalObj *_exp) :
 Container(CLS_SIM_OBJ | CLS_PROM_OBJ),
-exp(new Pair(exp, empty_list)), mem(NULL) {
+exp(new Pair(_exp, empty_list)), mem(NULL) {
     gc.attach(exp);
     exp->next = NULL;
 }

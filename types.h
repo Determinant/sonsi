@@ -354,7 +354,7 @@ class PromObj: public Container {/*{{{*/
         EvalObj *mem;
     public:
         /** Construct with a delayed expression */
-        PromObj(EvalObj *exp);
+        PromObj(EvalObj *_exp);
         /** The destructor */
         ~PromObj();
         /** Get the delayed expression */
