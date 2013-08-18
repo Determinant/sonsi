@@ -1600,5 +1600,6 @@ BUILTIN_PROC_DEF(set_gc_resolve_threshold) {
 BUILTIN_PROC_DEF(display) {
     ARGS_EXACTLY_ONE;
     printf("%s", args->car->ext_repr().c_str());
+    fflush(stdout);
     return unspec_obj;
 }

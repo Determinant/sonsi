@@ -25,7 +25,7 @@ $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 $(BUILD_DIR)/%.o : %.cpp
-	$(CXX) -o $@ -c $< -Wall 
+	$(CXX) -o $@ -c $< -Wall
 
 clean:
 	rm -rf $(BUILD_DIR)

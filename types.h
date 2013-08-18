@@ -74,6 +74,7 @@ class ReprCons {/*{{{*/
         string repr;
         /** The constructor */
         ReprCons(bool prim, EvalObj *ori = NULL);
+        ~ReprCons() {}
         /** This function is called to get the next component in a complex
          * EvalObj
          * @param prev Feed the string form of the previous component */
