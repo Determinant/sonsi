@@ -72,6 +72,8 @@ class EvalObj : public FrameObj {/*{{{*/
          * CLS_SIM_OBJ for a simple object), which defaults to CLS_SIM_OBJ, etc.
          */
         EvalObj(int otype = CLS_SIM_OBJ);
+        /** The copy constructor */
+        EvalObj(const EvalObj &src);
         /**
          * The destructor
          */

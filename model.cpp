@@ -27,6 +27,11 @@ bool FrameObj::is_parse_bracket() {
     return ftype & CLS_PAR_BRA;
 }
 
+EvalObj::EvalObj(const EvalObj &src) :
+FrameObj(CLS_EVAL_OBJ), otype(src.otype) {
+    gc_rec = gc.join(this);
+}
+
 EvalObj::EvalObj(int _otype) : 
 FrameObj(CLS_EVAL_OBJ), otype(_otype) {
     /** To notify GC when an EvalObj is constructed */
