@@ -219,7 +219,7 @@ Features
 - GC Built-ins ( ``gc-status`` 和 ``set-gc-resolve-threshold!`` )
 - Accurate GC (Tested, using ``(set-gc-resolve-threshold! 0)`` at the end of the script)
 - Vector support
-- Nearly full literal/quote support ( ``#(1 2 3 (4 5 (6 7)) 8 9)'', `` '(a, b, c)``, etc.)
+- Nearly full literal/quote support ( ``#(1 2 3 (4 5 (6 7)) 8 9)`` , ``'(a, b, c)``, etc.)
 - Extensive interface (can easily write more built-ins)
 - And more...
 
